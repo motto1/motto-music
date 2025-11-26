@@ -1,0 +1,465 @@
+import 'package:flutter/material.dart';
+import 'dart:ui';
+import 'package:motto_music/models/bilibili/search_strategy.dart';
+import 'package:motto_music/services/bilibili/api_service.dart';
+import 'package:motto_music/services/bilibili/api_client.dart';
+import 'package:motto_music/services/bilibili/cookie_manager.dart';
+import 'package:motto_music/services/bilibili/url_parser_service.dart';
+import 'package:motto_music/views/bilibili/global_search_result_page.dart';
+import 'package:motto_music/views/bilibili/video_detail_page.dart';
+import 'package:motto_music/views/bilibili/favorite_detail_page.dart';
+import 'package:motto_music/views/bilibili/user_videos_page.dart';
+import 'package:motto_music/utils/theme_utils.dart';
+import 'package:motto_music/widgets/show_aware_page.dart';
+import 'package:motto_music/router/router.dart';
+import 'package:motto_music/contants/app_contants.dart';
+import 'package:motto_music/widgets/expandable_player.dart';
+import 'package:motto_music/widgets/expandable_player_content.dart';
+import 'package:motto_music/widgets/frosted_container.dart';
+import 'package:motto_music/services/player_provider.dart';
+import 'package:motto_music/animations/page_transitions.dart';
+import 'package:provider/provider.dart';
+import 'package:motto_music/widgets/apple_music_card.dart';
+import 'package:motto_music/widgets/themed_background.dart';
+
+/// 全局智能搜索页面
+/// 
+/// 支持多种输入格式：
+/// - BV号: BV1xx4y1x7xx
+/// - AV号: av12345678
+/// - b23.tv短链: https://b23.tv/xxxxx
+/// - 完整URL: 收藏夹/合集/UP主链接
+/// - 关键词: 任意搜索词
+class GlobalSearchPage extends StatefulWidget {
+  final String? initialQuery;
+  
+  const GlobalSearchPage({super.key, this.initialQuery});
+
+  @override
+  State<GlobalSearchPage> createState() => _GlobalSearchPageState();
+}
+
+class _GlobalSearchPageState extends State<GlobalSearchPage> with ShowAwarePage {
+  late final TextEditingController _searchController;
+  late final BilibiliUrlParserService _urlParser;
+  late final BilibiliApiService _apiService;
+  
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    _searchController = TextEditingController(text: widget.initialQuery);
+    
+    // 初始化服务
+    final cookieManager = CookieManager();
+    final apiClient = BilibiliApiClient(cookieManager);
+    _apiService = BilibiliApiService(apiClient);
+    _urlParser = BilibiliUrlParserService(_apiService);
+  }
+
+  @override
+  void onPageShow() {
+    // 如果有初始查询，自动执行搜索
+    if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
+      _handleSearch();
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  /// 处理搜索
+  Future<void> _handleSearch() async {
+    final query = _searchController.text.trim();
+    
+    if (query.isEmpty) {
+      setState(() {
+        _errorMessage = '请输入搜索内容';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      // 匹配搜索策略
+      final strategy = await _urlParser.matchSearchStrategy(query);
+      
+      if (mounted) {
+        setState(() => _isLoading = false);
+        
+        // 根据策略导航
+        await _navigateWithStrategy(strategy);
+      }
+      
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = '搜索失败: $e';
+        });
+      }
+    }
+  }
+
+  /// 根据搜索策略导航到对应页面
+  Future<void> _navigateWithStrategy(SearchStrategy strategy) async {
+    switch (strategy.type) {
+      case SearchStrategyType.bvid:
+        // 跳转到视频详情页
+        if (strategy.bvid != null && mounted) {
+          Navigator.of(context).push(
+            NamidaPageRoute(
+              page: VideoDetailPage(
+                bvid: strategy.bvid!,
+                title: '视频详情',
+              ),
+              type: PageTransitionType.slideLeft,
+            ),
+          );
+        }
+        break;
+        
+      case SearchStrategyType.favorite:
+        // 跳转到收藏夹详情页
+        if (strategy.id != null && mounted) {
+          final favoriteId = int.tryParse(strategy.id!);
+          if (favoriteId != null) {
+            Navigator.of(context).push(
+              NamidaPageRoute(
+                page: FavoriteDetailPage(
+                  favoriteId: favoriteId,
+                  title: '收藏夹',
+                ),
+                type: PageTransitionType.slideLeft,
+              ),
+            );
+          }
+        }
+        break;
+        
+      case SearchStrategyType.collection:
+        // TODO: 跳转到合集详情页
+        _showMessage('识别为合集: ${strategy.id}');
+        break;
+        
+      case SearchStrategyType.uploader:
+        // 跳转到UP主页面
+        if (strategy.mid != null && mounted) {
+          final mid = int.tryParse(strategy.mid!);
+          if (mid != null) {
+            Navigator.of(context).push(
+              NamidaPageRoute(
+                page: UserVideosPage(
+                  mid: mid,
+                  userName: 'UP主',
+                ),
+                type: PageTransitionType.slideLeft,
+              ),
+            );
+          }
+        }
+        break;
+        
+      case SearchStrategyType.search:
+        // 跳转到全局搜索结果页
+        if (strategy.query != null && strategy.query!.isNotEmpty && mounted) {
+          Navigator.of(context).push(
+            NamidaPageRoute(
+              page: GlobalSearchResultPage(query: strategy.query!),
+              type: PageTransitionType.slideLeft,
+            ),
+          );
+        }
+        break;
+        
+      case SearchStrategyType.b23ResolveError:
+        _showMessage('b23.tv短链解析失败: ${strategy.error}');
+        break;
+        
+      case SearchStrategyType.b23NoBvidError:
+        _showMessage('短链解析成功，但未找到可识别内容\n解析结果: ${strategy.resolvedUrl}');
+        break;
+        
+      case SearchStrategyType.avParseError:
+        _showMessage('AV号解析失败');
+        break;
+        
+      case SearchStrategyType.invalidUrlNoCtype:
+        _showMessage('链接缺少必要参数，请检查是否复制完整');
+        break;
+    }
+  }
+
+  /// 显示消息提示
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final statusBarHeight = MediaQuery.of(context).padding.top;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(20),
+          bottomRight: Radius.circular(20),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.blue.withOpacity(0.15)
+                : Colors.blue.withOpacity(0.2),
+            blurRadius: 20,
+            spreadRadius: 0,
+            offset: const Offset(0, 4),
+          ),
+          if (!isDark)
+            BoxShadow(
+              color: Colors.blue.withOpacity(0.08),
+              blurRadius: 30,
+              spreadRadius: 2,
+              offset: const Offset(0, 6),
+            ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(20),
+          bottomRight: Radius.circular(20),
+        ),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            decoration: BoxDecoration(
+              color: isDark
+                  ? ThemeUtils.backgroundColor(context).withOpacity(0.97)
+                  : Colors.white.withOpacity(0.95),
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(20),
+              ),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withOpacity(0.12)
+                    : Colors.white.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: Column(
+              children: [
+                SizedBox(height: statusBarHeight),
+                SizedBox(
+                  height: 56,
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back_ios, size: 20),
+                        onPressed: () => Navigator.of(context).pop(),
+                        tooltip: '返回',
+                      ),
+                      const Expanded(
+                        child: Text(
+                          '智能搜索',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.history, size: 20),
+                        onPressed: () {
+                          // TODO: 历史记录
+                        },
+                        tooltip: '历史记录',
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+                  child: _buildSearchField(context),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchField(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      height: 38,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFE5E5EA),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 8),
+          Icon(
+            Icons.search,
+            size: 20,
+            color: isDark ? Colors.white.withOpacity(0.5) : Colors.black.withOpacity(0.5),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              onSubmitted: (_) => _handleSearch(),
+              style: TextStyle(
+                fontSize: 17,
+                color: isDark ? Colors.white : Colors.black,
+              ),
+              decoration: InputDecoration(
+                hintText: '输入BV/AV号、链接或关键词',
+                hintStyle: TextStyle(
+                  fontSize: 16,
+                  color: isDark ? Colors.white.withOpacity(0.35) : Colors.black.withOpacity(0.35),
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                isDense: true,
+              ),
+            ),
+          ),
+          if (_isLoading)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12.0),
+              child: SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.send, size: 20),
+              onPressed: _handleSearch,
+              tooltip: '搜索',
+              padding: const EdgeInsets.all(8),
+              constraints: const BoxConstraints(),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _wrapWithoutStretch(Widget child) {
+    return NotificationListener<OverscrollIndicatorNotification>(
+      onNotification: (notification) {
+        notification.disallowIndicator();
+        return true;
+      },
+      child: child,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: ThemeUtils.backgroundColor(context),
+      body: Column(
+        children: [
+          _buildHeader(context),
+          Expanded(
+            child: _wrapWithoutStretch(
+              SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 24, 16, 32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_errorMessage != null) _buildErrorBanner(),
+                    _buildUsageGuide(),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 构建使用说明
+  Widget _buildUsageGuide() {
+    final hintCards = [
+      (
+        title: 'BV / AV 视频',
+        subtitle: '输入 BV1xx4y1x7xx 或 av12345678，自动跳转视频详情',
+        accent: const Color(0xFF6A8BFF)
+      ),
+      (
+        title: '收藏夹 / UP 链接',
+        subtitle: '粘贴收藏夹、合集或 UP 主链接，直接打开对应页',
+        accent: const Color(0xFF50C878)
+      ),
+      (
+        title: 'b23.tv 短链',
+        subtitle: '自动解析真实目标，支持番剧 / 视频 / 收藏夹',
+        accent: const Color(0xFFFF9F0A)
+      ),
+      (
+        title: '关键词搜索',
+        subtitle: '任意关键词，进入全局搜索结果',
+        accent: const Color(0xFFFF375F)
+      ),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '支持的输入格式',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ...hintCards.asMap().entries.map(
+          (entry) => AppleMusicCard(
+            title: entry.value.title,
+            subtitle: entry.value.subtitle,
+            accentColor: entry.value.accent,
+            margin: EdgeInsets.fromLTRB(16, entry.key == 0 ? 16 : 8, 16, 8),
+            onTap: () {}, // 仅展示
+            trailing: const Icon(
+              Icons.info_outline,
+              size: 20,
+              color: Colors.white54,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildErrorBanner() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: AppleMusicCard(
+        title: '搜索失败',
+        subtitle: _errorMessage ?? '',
+        accentColor: Colors.redAccent,
+        onTap: () => _handleSearch(),
+        trailing: const Icon(Icons.refresh, color: Colors.white70, size: 20),
+      ),
+    );
+  }
+}

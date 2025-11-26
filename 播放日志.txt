@@ -1,0 +1,1396 @@
+I/flutter (20550): [播放调试] ========== 开始播放 ==========
+I/flutter (20550): [播放调试] 歌曲: 【Hi-Res无损/字幕】陶喆-《不爱》 “I Love You Forever 不能说出来~”
+I/flutter (20550): [播放调试] 艺术家: 指环zHhhhh
+I/flutter (20550): [播放调试] 来源: bilibili
+I/flutter (20550): [播放调试] 📋 设置播放列表，总数: 19, 当前索引: 1
+I/flutter (20550): [播放调试] AudioHandler 状态: ✅ 已初始化
+I/flutter (20550): [播放调试] 🔄 开始转换 19 首歌曲为 MediaItem...
+I/flutter (20550): 🔍 请求视频分P列表 API: bvid=BV1c3CdBiEWd
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/pagelist
+I/flutter (20550): 📋 请求参数: {bvid: BV1c3CdBiEWd}
+I/flutter (20550): 🔍 请求视频分P列表 API: bvid=BV1R7gnzZE3M
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/pagelist
+I/flutter (20550): 📋 请求参数: {bvid: BV1R7gnzZE3M}
+I/flutter (20550): 🔍 请求视频分P列表 API: bvid=BV1ESRoYMEkT
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/pagelist
+I/flutter (20550): 📋 请求参数: {bvid: BV1ESRoYMEkT}
+I/flutter (20550): 🔍 请求视频分P列表 API: bvid=BV17K421y7uX
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/pagelist
+I/flutter (20550): 📋 请求参数: {bvid: BV17K421y7uX}
+I/flutter (20550): 🔍 请求视频分P列表 API: bvid=BV1PDDLYQEgr
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/pagelist
+I/flutter (20550): 📋 请求参数: {bvid: BV1PDDLYQEgr}
+I/flutter (20550): 🔍 请求视频分P列表 API: bvid=BV1RE421M7tr
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/pagelist
+I/flutter (20550): 📋 请求参数: {bvid: BV1RE421M7tr}
+I/flutter (20550): 🔍 请求视频分P列表 API: bvid=BV1HV5Mz2Eqt
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/pagelist
+I/flutter (20550): 📋 请求参数: {bvid: BV1HV5Mz2Eqt}
+I/flutter (20550): 🔍 请求视频分P列表 API: bvid=BV1X8sszKEHD
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/pagelist
+I/flutter (20550): 📋 请求参数: {bvid: BV1X8sszKEHD}
+I/flutter (20550): 🔍 请求视频分P列表 API: bvid=BV1o2WYzYEis
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/pagelist
+I/flutter (20550): 📋 请求参数: {bvid: BV1o2WYzYEis}
+I/flutter (20550): 🔍 请求视频分P列表 API: bvid=BV1ahH7zrE2L
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/pagelist
+I/flutter (20550): 📋 请求参数: {bvid: BV1ahH7zrE2L}
+I/flutter (20550): 🔍 请求视频分P列表 API: bvid=BV1Gb4jzQEof
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/pagelist
+I/flutter (20550): 📋 请求参数: {bvid: BV1Gb4jzQEof}
+I/flutter (20550): 🔍 请求视频分P列表 API: bvid=BV1Uu4y1r7Ls
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/pagelist
+I/flutter (20550): 📋 请求参数: {bvid: BV1Uu4y1r7Ls}
+I/flutter (20550): 🔍 请求视频分P列表 API: bvid=BV1tP411d7gn
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/pagelist
+I/flutter (20550): 📋 请求参数: {bvid: BV1tP411d7gn}
+I/flutter (20550): 🔍 请求视频分P列表 API: bvid=BV1kN411P7NL
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/pagelist
+I/flutter (20550): 📋 请求参数: {bvid: BV1kN411P7NL}
+I/flutter (20550): 🔍 请求视频分P列表 API: bvid=BV1ZnsfzgEh7
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/pagelist
+I/flutter (20550): 📋 请求参数: {bvid: BV1ZnsfzgEh7}
+I/flutter (20550): 🔍 请求视频分P列表 API: bvid=BV1Mc48zEEoj
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/pagelist
+I/flutter (20550): 📋 请求参数: {bvid: BV1Mc48zEEoj}
+I/flutter (20550): 🔍 请求视频分P列表 API: bvid=BV1igW2zvEzk
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/pagelist
+I/flutter (20550): 📋 请求参数: {bvid: BV1igW2zvEzk}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): [播放调试] 🎵 解析 Bilibili 音频源: 蒲公英的约定删减版
+I/flutter (20550): [播放调试]    默认音质: 高音质
+I/flutter (20550): [播放调试] 🎵 解析 Bilibili 音频源: 蒲公英的约定完整版
+I/flutter (20550): [播放调试]    默认音质: 高音质
+I/flutter (20550): [PlayerContent] 🎵 检测到歌曲变化: 【Hi-Res无损/字幕】陶喆-《不爱》 “I Love You Forever 不能说出来~”
+I/flutter (20550): 📝 开始加载歌词: 【Hi-Res无损/字幕】陶喆-《不爱》 “I Love You Forever 不能说出来~”
+I/flutter (20550): [播放调试] 🔄 使用自动缓存服务获取音频...
+I/flutter (20550): 🔍 查询自动缓存: bilibili:///audio/BV1K3sQzPEec/33452723951/30232
+I/flutter (20550): 🔽 自动缓存下载: BV1K3sQzPEec (CID: 33452723951, 音质: 高音质)
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1K3sQzPEec
+I/flutter (20550):   - CID: 33452723951
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1K3sQzPEec, cid: 33452723951, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): [播放调试] 🔄 使用自动缓存服务获取音频...
+I/flutter (20550): 🔍 查询自动缓存: bilibili:///audio/BV1K3sQzPEec/33452723990/30232
+I/flutter (20550): 🔽 自动缓存下载: BV1K3sQzPEec (CID: 33452723990, 音质: 高音质)
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1K3sQzPEec
+I/flutter (20550):   - CID: 33452723990
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1K3sQzPEec, cid: 33452723990, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): 🔑 [Bilibili] key: 5dde3a3184306c2c0637401507bbda12 (bvid: BV1R7gnzZE3M, cid: null)
+I/flutter (20550): ✅ 从缓存加载歌词: 【Hi-Res无损/字幕】陶喆-《不爱》 “I Love You Forever 不能说出来~”
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): ✅ 视频分P列表 API 响应成功: 1 个分P
+I/flutter (20550): [播放调试] 🎵 解析 Bilibili 音频源: 陶喆 feat.玛丽亚凯莉 天天 x Never Too Far mashup【原编曲】牛光闪闪共鸣全开
+I/flutter (20550): [播放调试]    默认音质: 高音质
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): ✅ 视频分P列表 API 响应成功: 1 个分P
+I/flutter (20550): [播放调试] 🎵 解析 Bilibili 音频源: 玛丽亚凯莉 feat.陶喆 - 太美丽 x There For Me【mashup】牛美丽缠绵悱恻的爱情故事…
+I/flutter (20550): [播放调试]    默认音质: 高音质
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): ✅ 视频分P列表 API 响应成功: 1 个分P
+I/flutter (20550): [播放调试] 🎵 解析 Bilibili 音频源: 【ASMR♡无损Hires】从软到硬…让哥哥感受舒服到发抖の各种道具摩擦深入耳朵♡鹅毛棒 棉签 金手指 耳勺 硬质掏耳 吹气 解压球
+I/flutter (20550): [播放调试]    默认音质: 高音质
+I/flutter (20550): [播放调试] 🔄 使用自动缓存服务获取音频...
+I/flutter (20550): 🔍 查询自动缓存: bilibili:///audio/BV1tP411d7gn/1132998236/30232
+I/flutter (20550): 🔽 自动缓存下载: BV1tP411d7gn (CID: 1132998236, 音质: 高音质)
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1tP411d7gn
+I/flutter (20550):   - CID: 1132998236
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1tP411d7gn, cid: 1132998236, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): [播放调试] 🔄 使用自动缓存服务获取音频...
+I/flutter (20550): 🔍 查询自动缓存: bilibili:///audio/BV1Uu4y1r7Ls/1274404150/30232
+I/flutter (20550): 🔽 自动缓存下载: BV1Uu4y1r7Ls (CID: 1274404150, 音质: 高音质)
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1Uu4y1r7Ls
+I/flutter (20550):   - CID: 1274404150
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1Uu4y1r7Ls, cid: 1274404150, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): [播放调试] 🔄 使用自动缓存服务获取音频...
+I/flutter (20550): 🔍 查询自动缓存: bilibili:///audio/BV1c3CdBiEWd/34055782919/30232
+I/flutter (20550): 🔽 自动缓存下载: BV1c3CdBiEWd (CID: 34055782919, 音质: 高音质)
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1c3CdBiEWd
+I/flutter (20550):   - CID: 34055782919
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1c3CdBiEWd, cid: 34055782919, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): ✅ 视频分P列表 API 响应成功: 1 个分P
+I/flutter (20550): [播放调试] 🎵 解析 Bilibili 音频源: 《大东北我的家乡》但是R&B
+I/flutter (20550): [播放调试]    默认音质: 高音质
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): ✅ 视频分P列表 API 响应成功: 1 个分P
+I/flutter (20550): [播放调试] 🎵 解析 Bilibili 音频源: 赵雷《鼓楼》但是R＆B
+I/flutter (20550): [播放调试]    默认音质: 高音质
+I/flutter (20550): [播放调试] 🔄 使用自动缓存服务获取音频...
+I/flutter (20550): 🔍 查询自动缓存: bilibili:///audio/BV1Mc48zEEoj/33074121132/30232
+I/flutter (20550): 🔽 自动缓存下载: BV1Mc48zEEoj (CID: 33074121132, 音质: 高音质)
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1Mc48zEEoj
+I/flutter (20550):   - CID: 33074121132
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1Mc48zEEoj, cid: 33074121132, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): [播放调试] 🔄 使用自动缓存服务获取音频...
+I/flutter (20550): 🔍 查询自动缓存: bilibili:///audio/BV1igW2zvEzk/33240516177/30232
+I/flutter (20550): 🔽 自动缓存下载: BV1igW2zvEzk (CID: 33240516177, 音质: 高音质)
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1igW2zvEzk
+I/flutter (20550):   - CID: 33240516177
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1igW2zvEzk, cid: 33240516177, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): ✅ 视频分P列表 API 响应成功: 1 个分P
+I/flutter (20550): [播放调试] 🎵 解析 Bilibili 音频源: 【AI 陶喆】《新鸳鸯蝴蝶梦》『昨日像那东流水 离我远去不可留』
+I/flutter (20550): [播放调试]    默认音质: 高音质
+I/flutter (20550): [播放调试] 🔄 使用自动缓存服务获取音频...
+I/flutter (20550): 🔍 查询自动缓存: bilibili:///audio/BV1HV5Mz2Eqt/29860760445/30232
+I/flutter (20550): 🔽 自动缓存下载: BV1HV5Mz2Eqt (CID: 29860760445, 音质: 高音质)
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1HV5Mz2Eqt
+I/flutter (20550):   - CID: 29860760445
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1HV5Mz2Eqt, cid: 29860760445, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): ✅ 视频分P列表 API 响应成功: 1 个分P
+I/flutter (20550): [播放调试] 🎵 解析 Bilibili 音频源: “不要用他人的墨水书写自己的故事”（游京cover）
+I/flutter (20550): [播放调试]    默认音质: 高音质
+I/flutter (20550): [播放调试] 🔄 使用自动缓存服务获取音频...
+I/flutter (20550): 🔍 查询自动缓存: bilibili:///audio/BV1o2WYzYEis/33111805018/30232
+I/flutter (20550): 🔽 自动缓存下载: BV1o2WYzYEis (CID: 33111805018, 音质: 高音质)
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1o2WYzYEis
+I/flutter (20550):   - CID: 33111805018
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1o2WYzYEis, cid: 33111805018, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): ✅ 视频分P列表 API 响应成功: 1 个分P
+I/flutter (20550): [播放调试] 🎵 解析 Bilibili 音频源: 宿命感伴随着音乐来袭!
+I/flutter (20550): [播放调试]    默认音质: 高音质
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): ✅ 视频分P列表 API 响应成功: 1 个分P
+I/flutter (20550): [播放调试] 🎵 解析 Bilibili 音频源: 【和声美哭】陶喆 feat.玛丽亚凯莉 - 二十二 x Dreamlover（美丽R＆Bmashup）伴唱牛大妈怒飚C7加戏
+I/flutter (20550): [播放调试]    默认音质: 高音质
+I/flutter (20550): [播放调试] 🔄 使用自动缓存服务获取音频...
+I/flutter (20550): 🔍 查询自动缓存: bilibili:///audio/BV1Gb4jzQEof/32955632198/30232
+I/flutter (20550): 🔽 自动缓存下载: BV1Gb4jzQEof (CID: 32955632198, 音质: 高音质)
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1Gb4jzQEof
+I/flutter (20550):   - CID: 32955632198
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1Gb4jzQEof, cid: 32955632198, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): ✅ 视频分P列表 API 响应成功: 1 个分P
+I/flutter (20550): [播放调试] 🎵 解析 Bilibili 音频源: 【Hi-Res无损/字幕】陶喆-《不爱》 “I Love You Forever 不能说出来~”
+I/flutter (20550): [播放调试]    默认音质: 高音质
+I/flutter (20550): [播放调试] 🔄 使用自动缓存服务获取音频...
+I/flutter (20550): 🔍 查询自动缓存: bilibili:///audio/BV1kN411P7NL/1074093882/30232
+I/flutter (20550): [播放调试] 🔄 使用自动缓存服务获取音频...
+I/flutter (20550): 🔍 查询自动缓存: bilibili:///audio/BV1R7gnzZE3M/31199988191/30232
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): ✅ 视频分P列表 API 响应成功: 1 个分P
+I/flutter (20550): [播放调试] 🎵 解析 Bilibili 音频源: [0932]我改了调子，这样你才知道我唱的是陶喆
+I/flutter (20550): [播放调试]    默认音质: 高音质
+I/flutter (20550): [播放调试] 🔄 使用自动缓存服务获取音频...
+I/flutter (20550): 🔍 查询自动缓存: bilibili:///audio/BV1ESRoYMEkT/29248718417/30232
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): ✅ 视频分P列表 API 响应成功: 1 个分P
+I/flutter (20550): [播放调试] 🎵 解析 Bilibili 音频源: 【阿梓】最好听的一版！《我们的歌》升调版神级现场！
+I/flutter (20550): [播放调试]    默认音质: 高音质
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): ✅ 视频分P列表 API 响应成功: 1 个分P
+I/flutter (20550): [播放调试] 🎵 解析 Bilibili 音频源: [SUNO V5] 我落泪情绪零碎 Neo soul Cover (原唱: 周杰伦)
+I/flutter (20550): [播放调试]    默认音质: 高音质
+I/flutter (20550): [播放调试] 🔄 使用自动缓存服务获取音频...
+I/flutter (20550): 🔍 查询自动缓存: bilibili:///audio/BV17K421y7uX/1433948773/30232
+I/flutter (20550): [播放调试] 🔄 使用自动缓存服务获取音频...
+I/flutter (20550): 🔍 查询自动缓存: bilibili:///audio/BV1X8sszKEHD/33367984980/30232
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): ✅ 视频分P列表 API 响应成功: 1 个分P
+I/flutter (20550): [播放调试] 🎵 解析 Bilibili 音频源: Suno V5 爱是怀疑 r&b 陶喆&黄宣
+I/flutter (20550): [播放调试]    默认音质: 高音质
+I/flutter (20550): [播放调试] 🔄 使用自动缓存服务获取音频...
+I/flutter (20550): 🔍 查询自动缓存: bilibili:///audio/BV1ahH7zrE2L/32759088266/30232
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): ✅ 视频分P列表 API 响应成功: 1 个分P
+I/flutter (20550): [播放调试] 🎵 解析 Bilibili 音频源: 【阿梓】《乌兰巴托的夜》
+I/flutter (20550): [播放调试]    默认音质: 高音质
+I/flutter (20550): [播放调试] 🔄 使用自动缓存服务获取音频...
+I/flutter (20550): 🔍 查询自动缓存: bilibili:///audio/BV1PDDLYQEgr/26659850959/30232
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): ✅ 视频分P列表 API 响应成功: 1 个分P
+I/flutter (20550): [播放调试] 🎵 解析 Bilibili 音频源: 为陶喆版本的《泪桥》再流泪一次吧
+I/flutter (20550): [播放调试]    默认音质: 高音质
+I/flutter (20550): [播放调试] 🔄 使用自动缓存服务获取音频...
+I/flutter (20550): 🔍 查询自动缓存: bilibili:///audio/BV1RE421M7tr/1498859619/30232
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): ✅ 视频分P列表 API 响应成功: 1 个分P
+I/flutter (20550): [播放调试] 🎵 解析 Bilibili 音频源: 我想是我太心急 却忽略了你
+I/flutter (20550): [播放调试]    默认音质: 高音质
+I/flutter (20550): [播放调试] 🔄 使用自动缓存服务获取音频...
+I/flutter (20550): 🔍 查询自动缓存: bilibili:///audio/BV1ZnsfzgEh7/33388497813/30232
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ❌ Hi-Res/FLAC: 不可用（需要会员）
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 203347 | Codec: 0
+I/flutter (20550):      [1] ID: 30216 | Size: 0.0 MB | Bandwidth: 65720 | Codec: 0
+I/flutter (20550):      [2] ID: 30232 | Size: 0.0 MB | Bandwidth: 96152 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-09.bilivideo.com/upgcxcode/9...
+I/flutter (20550): ✅ 自动缓存下载开始: https://cn-hbwh-fx-01-09.bilivideo.com/upgcxcode/9...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ❌ Hi-Res/FLAC: 不可用（需要会员）
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 200130 | Codec: 0
+I/flutter (20550):      [1] ID: 30232 | Size: 0.0 MB | Bandwidth: 94471 | Codec: 0
+I/flutter (20550):      [2] ID: 30216 | Size: 0.0 MB | Bandwidth: 66081 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-07.bilivideo.com/upgcxcode/5...
+I/flutter (20550): ✅ 自动缓存下载开始: https://cn-hbwh-fx-01-07.bilivideo.com/upgcxcode/5...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 279600 | Codec: 0
+I/flutter (20550):      [1] ID: 30216 | Size: 0.0 MB | Bandwidth: 65678 | Codec: 0
+I/flutter (20550):      [2] ID: 30232 | Size: 0.0 MB | Bandwidth: 183684 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-08.bilivideo.com/upgcxcode/1...
+I/flutter (20550): ✅ 自动缓存下载开始: https://cn-hbwh-fx-01-08.bilivideo.com/upgcxcode/1...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ❌ Hi-Res/FLAC: 不可用（需要会员）
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 174377 | Codec: 0
+I/flutter (20550):      [1] ID: 30232 | Size: 0.0 MB | Bandwidth: 99030 | Codec: 0
+I/flutter (20550):      [2] ID: 30216 | Size: 0.0 MB | Bandwidth: 48942 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-12.bilivideo.com/upgcxcode/5...
+I/flutter (20550): ✅ 自动缓存下载开始: https://cn-hbwh-fx-01-12.bilivideo.com/upgcxcode/5...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ❌ Hi-Res/FLAC: 不可用（需要会员）
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 150082 | Codec: 0
+I/flutter (20550):      [1] ID: 30216 | Size: 0.0 MB | Bandwidth: 45738 | Codec: 0
+I/flutter (20550):      [2] ID: 30232 | Size: 0.0 MB | Bandwidth: 92891 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-02.bilivideo.com/upgcxcode/3...
+I/flutter (20550): ✅ 自动缓存下载开始: https://cn-hbwh-fx-01-02.bilivideo.com/upgcxcode/3...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ❌ Hi-Res/FLAC: 不可用（需要会员）
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 192423 | Codec: 0
+I/flutter (20550):      [1] ID: 30232 | Size: 0.0 MB | Bandwidth: 96534 | Codec: 0
+I/flutter (20550):      [2] ID: 30216 | Size: 0.0 MB | Bandwidth: 65630 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-15.bilivideo.com/upgcxcode/9...
+I/flutter (20550): ✅ 自动缓存下载开始: https://cn-hbwh-fx-01-15.bilivideo.com/upgcxcode/9...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ❌ Hi-Res/FLAC: 不可用（需要会员）
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 194792 | Codec: 0
+I/flutter (20550):      [1] ID: 30216 | Size: 0.0 MB | Bandwidth: 66075 | Codec: 0
+I/flutter (20550):      [2] ID: 30232 | Size: 0.0 MB | Bandwidth: 98617 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-06.bilivideo.com/upgcxcode/1...
+I/flutter (20550): ✅ 自动缓存下载开始: https://cn-hbwh-fx-01-06.bilivideo.com/upgcxcode/1...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ❌ Hi-Res/FLAC: 不可用（需要会员）
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 184289 | Codec: 0
+I/flutter (20550):      [1] ID: 30232 | Size: 0.0 MB | Bandwidth: 92134 | Codec: 0
+I/flutter (20550):      [2] ID: 30216 | Size: 0.0 MB | Bandwidth: 66133 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-15.bilivideo.com/upgcxcode/3...
+I/flutter (20550): ✅ 自动缓存下载开始: https://cn-hbwh-fx-01-15.bilivideo.com/upgcxcode/3...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ❌ Hi-Res/FLAC: 不可用（需要会员）
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 207231 | Codec: 0
+I/flutter (20550):      [1] ID: 30232 | Size: 0.0 MB | Bandwidth: 106270 | Codec: 0
+I/flutter (20550):      [2] ID: 30216 | Size: 0.0 MB | Bandwidth: 52615 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-14.bilivideo.com/upgcxcode/4...
+I/flutter (20550): ✅ 自动缓存下载开始: https://cn-hbwh-fx-01-14.bilivideo.com/upgcxcode/4...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ❌ Hi-Res/FLAC: 不可用（需要会员）
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 203038 | Codec: 0
+I/flutter (20550):      [1] ID: 30232 | Size: 0.0 MB | Bandwidth: 102447 | Codec: 0
+I/flutter (20550):      [2] ID: 30216 | Size: 0.0 MB | Bandwidth: 65599 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-02.bilivideo.com/upgcxcode/7...
+I/flutter (20550): ✅ 自动缓存下载开始: https://cn-hbwh-fx-01-02.bilivideo.com/upgcxcode/7...
+I/flutter (20550): ❌ 自动缓存获取失败: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-07.bilivideo.com/upgcxcode/51/39/33452723951/33452723951-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&og=cos&deadline=1763701874&nbs=1&uipk=5&platform=pc&oi=1862557578&trid=00008433da0e4a8c451687ef07093015089u&mid=2137162731&gen=playurlv3&os=bcache&upsig=0dd797ae3e1b0e451afb3d7c9493929d&uparams=e,og,deadline,nbs,uipk,platform,oi,trid,mid,gen,os&cdnid=3877&bvc=vod&nettype=0&bw=94697&buvid=&build=0&dl=0&f=u_0_0&agrr=0&np=151388311&orderid=0,3
+I/flutter (20550): [播放调试] ❌ 缓存获取失败，回退到流式播放: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-07.bilivideo.com/upgcxcode/51/39/33452723951/33452723951-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&og=cos&deadline=1763701874&nbs=1&uipk=5&platform=pc&oi=1862557578&trid=00008433da0e4a8c451687ef07093015089u&mid=2137162731&gen=playurlv3&os=bcache&upsig=0dd797ae3e1b0e451afb3d7c9493929d&uparams=e,og,deadline,nbs,uipk,platform,oi,trid,mid,gen,os&cdnid=3877&bvc=vod&nettype=0&bw=94697&buvid=&build=0&dl=0&f=u_0_0&agrr=0&np=151388311&orderid=0,3
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1K3sQzPEec
+I/flutter (20550):   - CID: 33452723951
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1K3sQzPEec, cid: 33452723951, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): 🔽 自动缓存下载: BV1kN411P7NL (CID: 1074093882, 音质: 高音质)
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1kN411P7NL
+I/flutter (20550):   - CID: 1074093882
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1kN411P7NL, cid: 1074093882, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): ❌ 自动缓存获取失败: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-08.bilivideo.com/upgcxcode/19/29/34055782919/34055782919-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&deadline=1763701874&nbs=1&uipk=5&oi=1862557578&trid=000028196cd6baf84f37ad178cd762a23d5u&mid=2137162731&platform=pc&gen=playurlv3&os=bcache&og=hw&upsig=ef638d6e1ea9695f58a857943488a63a&uparams=e,deadline,nbs,uipk,oi,trid,mid,platform,gen,os,og&cdnid=3878&bvc=vod&nettype=0&bw=183800&build=0&dl=0&f=u_0_0&np=151388311&agrr=0&buvid=&orderid=0,3
+I/flutter (20550): [播放调试] ❌ 缓存获取失败，回退到流式播放: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-08.bilivideo.com/upgcxcode/19/29/34055782919/34055782919-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&deadline=1763701874&nbs=1&uipk=5&oi=1862557578&trid=000028196cd6baf84f37ad178cd762a23d5u&mid=2137162731&platform=pc&gen=playurlv3&os=bcache&og=hw&upsig=ef638d6e1ea9695f58a857943488a63a&uparams=e,deadline,nbs,uipk,oi,trid,mid,platform,gen,os,og&cdnid=3878&bvc=vod&nettype=0&bw=183800&build=0&dl=0&f=u_0_0&np=151388311&agrr=0&buvid=&orderid=0,3
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1c3CdBiEWd
+I/flutter (20550):   - CID: 34055782919
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1c3CdBiEWd, cid: 34055782919, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): 🔽 自动缓存下载: BV1R7gnzZE3M (CID: 31199988191, 音质: 高音质)
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1R7gnzZE3M
+I/flutter (20550):   - CID: 31199988191
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1R7gnzZE3M, cid: 31199988191, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): ❌ 自动缓存获取失败: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-09.bilivideo.com/upgcxcode/90/39/33452723990/33452723990-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&trid=0000439fa5485e3844a09bcca199a63a133u&mid=2137162731&nbs=1&platform=pc&deadline=1763701874&uipk=5&os=bcache&oi=1862557578&gen=playurlv3&og=hw&upsig=cacffe90f0479a4d4cedffd462842cc4&uparams=e,trid,mid,nbs,platform,deadline,uipk,os,oi,gen,og&cdnid=1236&bvc=vod&nettype=0&bw=96565&buvid=&np=151388311&build=0&dl=0&f=u_0_0&agrr=0&orderid=0,3
+I/flutter (20550): [播放调试] ❌ 缓存获取失败，回退到流式播放: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-09.bilivideo.com/upgcxcode/90/39/33452723990/33452723990-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&trid=0000439fa5485e3844a09bcca199a63a133u&mid=2137162731&nbs=1&platform=pc&deadline=1763701874&uipk=5&os=bcache&oi=1862557578&gen=playurlv3&og=hw&upsig=cacffe90f0479a4d4cedffd462842cc4&uparams=e,trid,mid,nbs,platform,deadline,uipk,os,oi,gen,og&cdnid=1236&bvc=vod&nettype=0&bw=96565&buvid=&np=151388311&build=0&dl=0&f=u_0_0&agrr=0&orderid=0,3
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1K3sQzPEec
+I/flutter (20550):   - CID: 33452723990
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1K3sQzPEec, cid: 33452723990, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): 🔽 自动缓存下载: BV1ESRoYMEkT (CID: 29248718417, 音质: 高音质)
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1ESRoYMEkT
+I/flutter (20550):   - CID: 29248718417
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1ESRoYMEkT, cid: 29248718417, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): ❌ 自动缓存获取失败: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-15.bilivideo.com/upgcxcode/32/11/33074121132/33074121132-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&os=bcache&og=ali&uipk=5&oi=1862557578&trid=000007ba79614e7741cb9183391656ea734u&platform=pc&nbs=1&mid=2137162731&deadline=1763701874&gen=playurlv3&upsig=e1630931c435aafde6b1190412bb2757&uparams=e,os,og,uipk,oi,trid,platform,nbs,mid,deadline,gen&cdnid=3883&bvc=vod&nettype=0&bw=92222&agrr=0&buvid=&build=0&dl=0&f=u_0_0&np=151388311&orderid=0,3
+I/flutter (20550): [播放调试] ❌ 缓存获取失败，回退到流式播放: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-15.bilivideo.com/upgcxcode/32/11/33074121132/33074121132-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&os=bcache&og=ali&uipk=5&oi=1862557578&trid=000007ba79614e7741cb9183391656ea734u&platform=pc&nbs=1&mid=2137162731&deadline=1763701874&gen=playurlv3&upsig=e1630931c435aafde6b1190412bb2757&uparams=e,os,og,uipk,oi,trid,platform,nbs,mid,deadline,gen&cdnid=3883&bvc=vod&nettype=0&bw=92222&agrr=0&buvid=&build=0&dl=0&f=u_0_0&np=151388311&orderid=0,3
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1Mc48zEEoj
+I/flutter (20550):   - CID: 33074121132
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1Mc48zEEoj, cid: 33074121132, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): 🔽 自动缓存下载: BV17K421y7uX (CID: 1433948773, 音质: 高音质)
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV17K421y7uX
+I/flutter (20550):   - CID: 1433948773
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV17K421y7uX, cid: 1433948773, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): ❌ 自动缓存获取失败: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-02.bilivideo.com/upgcxcode/36/82/1132998236/1132998236_nb3-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&oi=1862557578&gen=playurlv3&os=bcache&platform=pc&mid=2137162731&uipk=5&og=hw&deadline=1763701874&trid=0000854a221cb2af4d6d89722b31717bdd7u&nbs=1&upsig=62669822c860b79bc0d07f8744192291&uparams=e,oi,gen,os,platform,mid,uipk,og,deadline,trid,nbs&cdnid=3872&bvc=vod&nettype=0&bw=93145&np=151388311&agrr=0&buvid=&build=0&dl=0&f=u_0_0&orderid=0,3
+I/flutter (20550): [播放调试] ❌ 缓存获取失败，回退到流式播放: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-02.bilivideo.com/upgcxcode/36/82/1132998236/1132998236_nb3-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&oi=1862557578&gen=playurlv3&os=bcache&platform=pc&mid=2137162731&uipk=5&og=hw&deadline=1763701874&trid=0000854a221cb2af4d6d89722b31717bdd7u&nbs=1&upsig=62669822c860b79bc0d07f8744192291&uparams=e,oi,gen,os,platform,mid,uipk,og,deadline,trid,nbs&cdnid=3872&bvc=vod&nettype=0&bw=93145&np=151388311&agrr=0&buvid=&build=0&dl=0&f=u_0_0&orderid=0,3
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1tP411d7gn
+I/flutter (20550):   - CID: 1132998236
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1tP411d7gn, cid: 1132998236, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): 🔽 自动缓存下载: BV1X8sszKEHD (CID: 33367984980, 音质: 高音质)
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1X8sszKEHD
+I/flutter (20550):   - CID: 33367984980
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1X8sszKEHD, cid: 33367984980, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): ❌ 自动缓存获取失败: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-15.bilivideo.com/upgcxcode/98/21/32955632198/32955632198-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&nbs=1&platform=pc&trid=0000e9f1e33f13224a22a5b1215ded38e16u&mid=2137162731&oi=1862557578&uipk=5&deadline=1763701874&gen=playurlv3&os=bcache&og=ali&upsig=5954131188d3c2db444a1418e78aa078&uparams=e,nbs,platform,trid,mid,oi,uipk,deadline,gen,os,og&cdnid=3883&bvc=vod&nettype=0&bw=97185&agrr=0&np=151388311&buvid=&build=0&dl=0&f=u_0_0&orderid=0,3
+I/flutter (20550): [播放调试] ❌ 缓存获取失败，回退到流式播放: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-15.bilivideo.com/upgcxcode/98/21/32955632198/32955632198-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&nbs=1&platform=pc&trid=0000e9f1e33f13224a22a5b1215ded38e16u&mid=2137162731&oi=1862557578&uipk=5&deadline=1763701874&gen=playurlv3&os=bcache&og=ali&upsig=5954131188d3c2db444a1418e78aa078&uparams=e,nbs,platform,trid,mid,oi,uipk,deadline,gen,os,og&cdnid=3883&bvc=vod&nettype=0&bw=97185&agrr=0&np=151388311&buvid=&build=0&dl=0&f=u_0_0&orderid=0,3
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1Gb4jzQEof
+I/flutter (20550):   - CID: 32955632198
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1Gb4jzQEof, cid: 32955632198, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): 🔽 自动缓存下载: BV1ahH7zrE2L (CID: 32759088266, 音质: 高音质)
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1ahH7zrE2L
+I/flutter (20550):   - CID: 32759088266
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1ahH7zrE2L, cid: 32759088266, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): ❌ 自动缓存获取失败: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-12.bilivideo.com/upgcxcode/50/41/1274404150/1274404150-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&deadline=1763701874&platform=pc&mid=2137162731&nbs=1&uipk=5&oi=1862557578&trid=0000aa49ca97e5394de3b4ac426572c8ffau&gen=playurlv3&os=bcache&og=cos&upsig=8c451407fd0932620ff076da4f8c229f&uparams=e,deadline,platform,mid,nbs,uipk,oi,trid,gen,os,og&cdnid=1237&bvc=vod&nettype=0&bw=99267&build=0&dl=0&f=u_0_0&np=151388311&agrr=0&buvid=&orderid=0,3
+I/flutter (20550): [播放调试] ❌ 缓存获取失败，回退到流式播放: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-12.bilivideo.com/upgcxcode/50/41/1274404150/1274404150-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&deadline=1763701874&platform=pc&mid=2137162731&nbs=1&uipk=5&oi=1862557578&trid=0000aa49ca97e5394de3b4ac426572c8ffau&gen=playurlv3&os=bcache&og=cos&upsig=8c451407fd0932620ff076da4f8c229f&uparams=e,deadline,platform,mid,nbs,uipk,oi,trid,gen,os,og&cdnid=1237&bvc=vod&nettype=0&bw=99267&build=0&dl=0&f=u_0_0&np=151388311&agrr=0&buvid=&orderid=0,3
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1Uu4y1r7Ls
+I/flutter (20550):   - CID: 1274404150
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1Uu4y1r7Ls, cid: 1274404150, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): 🔽 自动缓存下载: BV1PDDLYQEgr (CID: 26659850959, 音质: 高音质)
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1PDDLYQEgr
+I/flutter (20550):   - CID: 26659850959
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1PDDLYQEgr, cid: 26659850959, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): ❌ 自动缓存获取失败: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-06.bilivideo.com/upgcxcode/18/50/33111805018/33111805018-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&deadline=1763701874&nbs=1&uipk=5&platform=pc&gen=playurlv3&os=bcache&og=hw&trid=0000c9a88b1f2239445f8175df9b240e297u&mid=2137162731&oi=1862557578&upsig=178a5bb6c0db0c55038ff4d51742a573&uparams=e,deadline,nbs,uipk,platform,gen,os,og,trid,mid,oi&cdnid=3876&bvc=vod&nettype=0&bw=99105&build=0&np=151388311&dl=0&f=u_0_0&agrr=0&buvid=&orderid=0,3
+I/flutter (20550): [播放调试] ❌ 缓存获取失败，回退到流式播放: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-06.bilivideo.com/upgcxcode/18/50/33111805018/33111805018-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&deadline=1763701874&nbs=1&uipk=5&platform=pc&gen=playurlv3&os=bcache&og=hw&trid=0000c9a88b1f2239445f8175df9b240e297u&mid=2137162731&oi=1862557578&upsig=178a5bb6c0db0c55038ff4d51742a573&uparams=e,deadline,nbs,uipk,platform,gen,os,og,trid,mid,oi&cdnid=3876&bvc=vod&nettype=0&bw=99105&build=0&np=151388311&dl=0&f=u_0_0&agrr=0&buvid=&orderid=0,3
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1o2WYzYEis
+I/flutter (20550):   - CID: 33111805018
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1o2WYzYEis, cid: 33111805018, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): 🔽 自动缓存下载: BV1RE421M7tr (CID: 1498859619, 音质: 高音质)
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1RE421M7tr
+I/flutter (20550):   - CID: 1498859619
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1RE421M7tr, cid: 1498859619, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): ❌ 自动缓存获取失败: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-14.bilivideo.com/upgcxcode/45/04/29860760445/29860760445-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&mid=2137162731&uipk=5&deadline=1763701874&gen=playurlv3&os=bcache&og=ali&oi=1862557578&trid=00004bfd2dd0ce194db79b4a425297985b7u&nbs=1&platform=pc&upsig=46260d4686c8b1c7b03922c681eeb545&uparams=e,mid,uipk,deadline,gen,os,og,oi,trid,nbs,platform&cdnid=3882&bvc=vod&nettype=0&bw=106558&f=u_0_0&np=151388311&agrr=0&buvid=&build=0&dl=0&orderid=0,3
+I/flutter (20550): [播放调试] ❌ 缓存获取失败，回退到流式播放: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-14.bilivideo.com/upgcxcode/45/04/29860760445/29860760445-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&mid=2137162731&uipk=5&deadline=1763701874&gen=playurlv3&os=bcache&og=ali&oi=1862557578&trid=00004bfd2dd0ce194db79b4a425297985b7u&nbs=1&platform=pc&upsig=46260d4686c8b1c7b03922c681eeb545&uparams=e,mid,uipk,deadline,gen,os,og,oi,trid,nbs,platform&cdnid=3882&bvc=vod&nettype=0&bw=106558&f=u_0_0&np=151388311&agrr=0&buvid=&build=0&dl=0&orderid=0,3
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1HV5Mz2Eqt
+I/flutter (20550):   - CID: 29860760445
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1HV5Mz2Eqt, cid: 29860760445, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): 🔽 自动缓存下载: BV1ZnsfzgEh7 (CID: 33388497813, 音质: 高音质)
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1ZnsfzgEh7
+I/flutter (20550):   - CID: 33388497813
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1ZnsfzgEh7, cid: 33388497813, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): ❌ 自动缓存获取失败: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-02.bilivideo.com/upgcxcode/77/61/33240516177/33240516177-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&deadline=1763701874&gen=playurlv3&og=hw&platform=pc&oi=1862557578&mid=2137162731&nbs=1&os=bcache&uipk=5&trid=00009fe8553fea2e4131bfc748d01d63b5eu&upsig=3a7339fc5be3e59c3373cc792297f1dd&uparams=e,deadline,gen,og,platform,oi,mid,nbs,os,uipk,trid&cdnid=3872&bvc=vod&nettype=0&bw=102891&build=0&dl=0&f=u_0_0&np=151388311&agrr=0&buvid=&orderid=0,3
+I/flutter (20550): [播放调试] ❌ 缓存获取失败，回退到流式播放: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-02.bilivideo.com/upgcxcode/77/61/33240516177/33240516177-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&deadline=1763701874&gen=playurlv3&og=hw&platform=pc&oi=1862557578&mid=2137162731&nbs=1&os=bcache&uipk=5&trid=00009fe8553fea2e4131bfc748d01d63b5eu&upsig=3a7339fc5be3e59c3373cc792297f1dd&uparams=e,deadline,gen,og,platform,oi,mid,nbs,os,uipk,trid&cdnid=3872&bvc=vod&nettype=0&bw=102891&build=0&dl=0&f=u_0_0&np=151388311&agrr=0&buvid=&orderid=0,3
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1igW2zvEzk
+I/flutter (20550):   - CID: 33240516177
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1igW2zvEzk, cid: 33240516177, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ❌ Hi-Res/FLAC: 不可用（需要会员）
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 200130 | Codec: 0
+I/flutter (20550):      [1] ID: 30232 | Size: 0.0 MB | Bandwidth: 94471 | Codec: 0
+I/flutter (20550):      [2] ID: 30216 | Size: 0.0 MB | Bandwidth: 66081 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-07.bilivideo.com/upgcxcode/5...
+I/flutter (20550): [播放调试] ⚡ 使用流式播放: https://cn-hbwh-fx-01-07.bilivideo.com/upgcxcode/5...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ❌ Hi-Res/FLAC: 不可用（需要会员）
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 147033 | Codec: 0
+I/flutter (20550):      [1] ID: 30216 | Size: 0.0 MB | Bandwidth: 42498 | Codec: 0
+I/flutter (20550):      [2] ID: 30232 | Size: 0.0 MB | Bandwidth: 90458 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-15.bilivideo.com/upgcxcode/8...
+I/flutter (20550): ✅ 自动缓存下载开始: https://cn-hbwh-fx-01-15.bilivideo.com/upgcxcode/8...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 214805 | Codec: 0
+I/flutter (20550):      [1] ID: 30232 | Size: 0.0 MB | Bandwidth: 111026 | Codec: 0
+I/flutter (20550):      [2] ID: 30216 | Size: 0.0 MB | Bandwidth: 51812 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-05.bilivideo.com/upgcxcode/1...
+I/flutter (20550): ✅ 自动缓存下载开始: https://cn-hbwh-fx-01-05.bilivideo.com/upgcxcode/1...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 153055 | Codec: 0
+I/flutter (20550):      [1] ID: 30232 | Size: 0.0 MB | Bandwidth: 90495 | Codec: 0
+I/flutter (20550):      [2] ID: 30216 | Size: 0.0 MB | Bandwidth: 65712 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-15.bilivideo.com/upgcxcode/9...
+I/flutter (20550): ✅ 自动缓存下载开始: https://cn-hbwh-fx-01-15.bilivideo.com/upgcxcode/9...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ❌ Hi-Res/FLAC: 不可用（需要会员）
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 162345 | Codec: 0
+I/flutter (20550):      [1] ID: 30232 | Size: 0.0 MB | Bandwidth: 94056 | Codec: 0
+I/flutter (20550):      [2] ID: 30216 | Size: 0.0 MB | Bandwidth: 46015 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-14.bilivideo.com/upgcxcode/7...
+I/flutter (20550): ✅ 自动缓存下载开始: https://cn-hbwh-fx-01-14.bilivideo.com/upgcxcode/7...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ❌ Hi-Res/FLAC: 不可用（需要会员）
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 177156 | Codec: 0
+I/flutter (20550):      [1] ID: 30216 | Size: 0.0 MB | Bandwidth: 66146 | Codec: 0
+I/flutter (20550):      [2] ID: 30232 | Size: 0.0 MB | Bandwidth: 88217 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-01.bilivideo.com/upgcxcode/8...
+I/flutter (20550): ✅ 自动缓存下载开始: https://cn-hbwh-fx-01-01.bilivideo.com/upgcxcode/8...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 199544 | Codec: 0
+I/flutter (20550):      [1] ID: 30232 | Size: 0.0 MB | Bandwidth: 100790 | Codec: 0
+I/flutter (20550):      [2] ID: 30216 | Size: 0.0 MB | Bandwidth: 51456 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-02.bilivideo.com/upgcxcode/5...
+I/flutter (20550): ✅ 自动缓存下载开始: https://cn-hbwh-fx-01-02.bilivideo.com/upgcxcode/5...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ❌ Hi-Res/FLAC: 不可用（需要会员）
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 192423 | Codec: 0
+I/flutter (20550):      [1] ID: 30216 | Size: 0.0 MB | Bandwidth: 65630 | Codec: 0
+I/flutter (20550):      [2] ID: 30232 | Size: 0.0 MB | Bandwidth: 96534 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-15.bilivideo.com/upgcxcode/9...
+I/flutter (20550): [播放调试] ⚡ 使用流式播放: https://cn-hbwh-fx-01-15.bilivideo.com/upgcxcode/9...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ❌ Hi-Res/FLAC: 不可用（需要会员）
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 194792 | Codec: 0
+I/flutter (20550):      [1] ID: 30216 | Size: 0.0 MB | Bandwidth: 66075 | Codec: 0
+I/flutter (20550):      [2] ID: 30232 | Size: 0.0 MB | Bandwidth: 98617 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-06.bilivideo.com/upgcxcode/1...
+I/flutter (20550): [播放调试] ⚡ 使用流式播放: https://cn-hbwh-fx-01-06.bilivideo.com/upgcxcode/1...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ❌ Hi-Res/FLAC: 不可用（需要会员）
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 174377 | Codec: 0
+I/flutter (20550):      [1] ID: 30232 | Size: 0.0 MB | Bandwidth: 99030 | Codec: 0
+I/flutter (20550):      [2] ID: 30216 | Size: 0.0 MB | Bandwidth: 48942 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-12.bilivideo.com/upgcxcode/5...
+I/flutter (20550): [播放调试] ⚡ 使用流式播放: https://cn-hbwh-fx-01-12.bilivideo.com/upgcxcode/5...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 279600 | Codec: 0
+I/flutter (20550):      [1] ID: 30216 | Size: 0.0 MB | Bandwidth: 65678 | Codec: 0
+I/flutter (20550):      [2] ID: 30232 | Size: 0.0 MB | Bandwidth: 183684 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-08.bilivideo.com/upgcxcode/1...
+I/flutter (20550): [播放调试] ⚡ 使用流式播放: https://cn-hbwh-fx-01-08.bilivideo.com/upgcxcode/1...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ❌ Hi-Res/FLAC: 不可用（需要会员）
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 203347 | Codec: 0
+I/flutter (20550):      [1] ID: 30216 | Size: 0.0 MB | Bandwidth: 65720 | Codec: 0
+I/flutter (20550):      [2] ID: 30232 | Size: 0.0 MB | Bandwidth: 96152 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-09.bilivideo.com/upgcxcode/9...
+I/flutter (20550): [播放调试] ⚡ 使用流式播放: https://cn-hbwh-fx-01-09.bilivideo.com/upgcxcode/9...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ❌ Hi-Res/FLAC: 不可用（需要会员）
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 153749 | Codec: 0
+I/flutter (20550):      [1] ID: 30232 | Size: 0.0 MB | Bandwidth: 78649 | Codec: 0
+I/flutter (20550):      [2] ID: 30216 | Size: 0.0 MB | Bandwidth: 65699 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-07.bilivideo.com/upgcxcode/6...
+I/flutter (20550): ✅ 自动缓存下载开始: https://cn-hbwh-fx-01-07.bilivideo.com/upgcxcode/6...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ❌ Hi-Res/FLAC: 不可用（需要会员）
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 110038 | Codec: 0
+I/flutter (20550):      [1] ID: 30232 | Size: 0.0 MB | Bandwidth: 110038 | Codec: 0
+I/flutter (20550):      [2] ID: 30216 | Size: 0.0 MB | Bandwidth: 50490 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-13.bilivideo.com/upgcxcode/1...
+I/flutter (20550): ✅ 自动缓存下载开始: https://cn-hbwh-fx-01-13.bilivideo.com/upgcxcode/1...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ❌ Hi-Res/FLAC: 不可用（需要会员）
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 150082 | Codec: 0
+I/flutter (20550):      [1] ID: 30216 | Size: 0.0 MB | Bandwidth: 45738 | Codec: 0
+I/flutter (20550):      [2] ID: 30232 | Size: 0.0 MB | Bandwidth: 92891 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-02.bilivideo.com/upgcxcode/3...
+I/flutter (20550): [播放调试] ⚡ 使用流式播放: https://cn-hbwh-fx-01-02.bilivideo.com/upgcxcode/3...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ❌ Hi-Res/FLAC: 不可用（需要会员）
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 184289 | Codec: 0
+I/flutter (20550):      [1] ID: 30232 | Size: 0.0 MB | Bandwidth: 92134 | Codec: 0
+I/flutter (20550):      [2] ID: 30216 | Size: 0.0 MB | Bandwidth: 66133 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-15.bilivideo.com/upgcxcode/3...
+I/flutter (20550): [播放调试] ⚡ 使用流式播放: https://cn-hbwh-fx-01-15.bilivideo.com/upgcxcode/3...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ❌ Hi-Res/FLAC: 不可用（需要会员）
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 207231 | Codec: 0
+I/flutter (20550):      [1] ID: 30232 | Size: 0.0 MB | Bandwidth: 106270 | Codec: 0
+I/flutter (20550):      [2] ID: 30216 | Size: 0.0 MB | Bandwidth: 52615 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-14.bilivideo.com/upgcxcode/4...
+I/flutter (20550): [播放调试] ⚡ 使用流式播放: https://cn-hbwh-fx-01-14.bilivideo.com/upgcxcode/4...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ❌ Hi-Res/FLAC: 不可用（需要会员）
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 91391 | Codec: 0
+I/flutter (20550):      [1] ID: 30232 | Size: 0.0 MB | Bandwidth: 91391 | Codec: 0
+I/flutter (20550):      [2] ID: 30216 | Size: 0.0 MB | Bandwidth: 65721 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-03.bilivideo.com/upgcxcode/1...
+I/flutter (20550): ✅ 自动缓存下载开始: https://cn-hbwh-fx-01-03.bilivideo.com/upgcxcode/1...
+I/flutter (20550): ❌ 自动缓存获取失败: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-15.bilivideo.com/upgcxcode/82/38/1074093882/1074093882_nb3-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&og=hw&nbs=1&trid=0000ca6645d433a84a50841e8285098b3fau&uipk=5&oi=1862557578&os=bcache&platform=pc&mid=2137162731&deadline=1763701874&gen=playurlv3&upsig=dc642565d7994afb8d34738fca7ded82&uparams=e,og,nbs,trid,uipk,oi,os,platform,mid,deadline,gen&cdnid=3883&bvc=vod&nettype=0&bw=90679&np=151388311&agrr=0&buvid=&build=0&dl=0&f=u_0_0&orderid=0,3
+I/flutter (20550): [播放调试] ❌ 缓存获取失败，回退到流式播放: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-15.bilivideo.com/upgcxcode/82/38/1074093882/1074093882_nb3-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&og=hw&nbs=1&trid=0000ca6645d433a84a50841e8285098b3fau&uipk=5&oi=1862557578&os=bcache&platform=pc&mid=2137162731&deadline=1763701874&gen=playurlv3&upsig=dc642565d7994afb8d34738fca7ded82&uparams=e,og,nbs,trid,uipk,oi,os,platform,mid,deadline,gen&cdnid=3883&bvc=vod&nettype=0&bw=90679&np=151388311&agrr=0&buvid=&build=0&dl=0&f=u_0_0&orderid=0,3
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1kN411P7NL
+I/flutter (20550):   - CID: 1074093882
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1kN411P7NL, cid: 1074093882, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ❌ Hi-Res/FLAC: 不可用（需要会员）
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 203038 | Codec: 0
+I/flutter (20550):      [1] ID: 30232 | Size: 0.0 MB | Bandwidth: 102447 | Codec: 0
+I/flutter (20550):      [2] ID: 30216 | Size: 0.0 MB | Bandwidth: 65599 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-02.bilivideo.com/upgcxcode/7...
+I/flutter (20550): [播放调试] ⚡ 使用流式播放: https://cn-hbwh-fx-01-02.bilivideo.com/upgcxcode/7...
+I/flutter (20550): ❌ 自动缓存获取失败: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-15.bilivideo.com/upgcxcode/91/81/31199988191/31199988191-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&platform=pc&deadline=1763701874&nbs=1&oi=1862557578&gen=playurlv3&os=bcache&og=ali&uipk=5&trid=00007f97364d87cc47d59a894c42ca896d2u&mid=2137162731&upsig=06136a653360071619612d49c92e80b3&uparams=e,platform,deadline,nbs,oi,gen,os,og,uipk,trid,mid&cdnid=3883&bvc=vod&nettype=0&bw=90695&build=0&dl=0&np=151388311&f=u_0_0&agrr=0&buvid=&orderid=0,3
+I/flutter (20550): [播放调试] ❌ 缓存获取失败，回退到流式播放: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-15.bilivideo.com/upgcxcode/91/81/31199988191/31199988191-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&platform=pc&deadline=1763701874&nbs=1&oi=1862557578&gen=playurlv3&os=bcache&og=ali&uipk=5&trid=00007f97364d87cc47d59a894c42ca896d2u&mid=2137162731&upsig=06136a653360071619612d49c92e80b3&uparams=e,platform,deadline,nbs,oi,gen,os,og,uipk,trid,mid&cdnid=3883&bvc=vod&nettype=0&bw=90695&build=0&dl=0&np=151388311&f=u_0_0&agrr=0&buvid=&orderid=0,3
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1R7gnzZE3M
+I/flutter (20550):   - CID: 31199988191
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1R7gnzZE3M, cid: 31199988191, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): ❌ 自动缓存获取失败: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-14.bilivideo.com/upgcxcode/73/87/1433948773/1433948773-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&mid=2137162731&os=bcache&og=hw&oi=1862557578&platform=pc&trid=0000e42b1a0a3a144d6cae064ceacf820eau&deadline=1763701874&nbs=1&uipk=5&gen=playurlv3&upsig=09fe3e34e49fe137b745b2a5a2b2fc7d&uparams=e,mid,os,og,oi,platform,trid,deadline,nbs,uipk,gen&cdnid=3882&bvc=vod&nettype=0&bw=94135&build=0&dl=0&f=u_0_0&np=151388311&agrr=0&buvid=&orderid=0,3
+I/flutter (20550): [播放调试] ❌ 缓存获取失败，回退到流式播放: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-14.bilivideo.com/upgcxcode/73/87/1433948773/1433948773-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&mid=2137162731&os=bcache&og=hw&oi=1862557578&platform=pc&trid=0000e42b1a0a3a144d6cae064ceacf820eau&deadline=1763701874&nbs=1&uipk=5&gen=playurlv3&upsig=09fe3e34e49fe137b745b2a5a2b2fc7d&uparams=e,mid,os,og,oi,platform,trid,deadline,nbs,uipk,gen&cdnid=3882&bvc=vod&nettype=0&bw=94135&build=0&dl=0&f=u_0_0&np=151388311&agrr=0&buvid=&orderid=0,3
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV17K421y7uX
+I/flutter (20550):   - CID: 1433948773
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV17K421y7uX, cid: 1433948773, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): ❌ 自动缓存获取失败: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-05.bilivideo.com/upgcxcode/17/84/29248718417/29248718417-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&oi=1862557578&mid=2137162731&deadline=1763701874&uipk=5&trid=0000eea7937e9c644804a5de8bd44e30c2du&platform=pc&gen=playurlv3&os=bcache&nbs=1&og=hw&upsig=c83393284a6426688e3216304164df5b&uparams=e,oi,mid,deadline,uipk,trid,platform,gen,os,nbs,og&cdnid=3875&bvc=vod&nettype=0&bw=111082&agrr=0&buvid=&build=0&dl=0&f=u_0_0&np=151388311&orderid=0,3
+I/flutter (20550): [播放调试] ❌ 缓存获取失败，回退到流式播放: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-05.bilivideo.com/upgcxcode/17/84/29248718417/29248718417-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&oi=1862557578&mid=2137162731&deadline=1763701874&uipk=5&trid=0000eea7937e9c644804a5de8bd44e30c2du&platform=pc&gen=playurlv3&os=bcache&nbs=1&og=hw&upsig=c83393284a6426688e3216304164df5b&uparams=e,oi,mid,deadline,uipk,trid,platform,gen,os,nbs,og&cdnid=3875&bvc=vod&nettype=0&bw=111082&agrr=0&buvid=&build=0&dl=0&f=u_0_0&np=151388311&orderid=0,3
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1ESRoYMEkT
+I/flutter (20550):   - CID: 29248718417
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1ESRoYMEkT, cid: 29248718417, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): ❌ 自动缓存获取失败: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-02.bilivideo.com/upgcxcode/59/09/26659850959/26659850959-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&oi=1862557578&deadline=1763701874&nbs=1&gen=playurlv3&os=bcache&og=cos&trid=0000a612519968d540d898978299082ce4du&platform=pc&mid=2137162731&uipk=5&upsig=f3479c9a85dfa61ecc97fe03a7fa6675&uparams=e,oi,deadline,nbs,gen,os,og,trid,platform,mid,uipk&cdnid=3872&bvc=vod&nettype=0&bw=100845&buvid=&build=0&dl=0&f=u_0_0&np=151388311&agrr=0&orderid=0,3
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1PDDLYQEgr
+I/flutter (20550):   - CID: 26659850959
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1PDDLYQEgr, cid: 26659850959, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): ❌ 自动缓存获取失败: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-01.bilivideo.com/upgcxcode/80/49/33367984980/33367984980-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&nbs=1&oi=1862557578&gen=playurlv3&os=bcache&uipk=5&platform=pc&og=ali&trid=0000575390a9359a4b509c13f894b46c390u&mid=2137162731&deadline=1763701874&upsig=326d360a867728a5ffcbdb888b47821b&uparams=e,nbs,oi,gen,os,uipk,platform,og,trid,mid,deadline&cdnid=3871&bvc=vod&nettype=0&bw=88514&dl=0&f=u_0_0&agrr=0&buvid=&build=0&np=151388311&orderid=0,3
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1X8sszKEHD
+I/flutter (20550):   - CID: 33367984980
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1X8sszKEHD, cid: 33367984980, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): ❌ 自动缓存获取失败: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-07.bilivideo.com/upgcxcode/66/82/32759088266/32759088266-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&nbs=1&uipk=5&gen=playurlv3&os=bcache&og=hw&platform=pc&mid=2137162731&oi=1862557578&trid=000060e1141cd5b04569885a9892b4abb4du&deadline=1763701874&upsig=2d0976bf9bfa97692c8151ba8945b662&uparams=e,nbs,uipk,gen,os,og,platform,mid,oi,trid,deadline&cdnid=3877&bvc=vod&nettype=0&bw=78945&f=u_0_0&np=151388311&agrr=0&buvid=&build=0&dl=0&orderid=0,3
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1ahH7zrE2L
+I/flutter (20550):   - CID: 32759088266
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1ahH7zrE2L, cid: 32759088266, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): ❌ 自动缓存获取失败: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-13.bilivideo.com/upgcxcode/19/96/1498859619/1498859619-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&nbs=1&uipk=5&platform=pc&trid=00006777347bdeba43c8a8f6791494924b9u&mid=2137162731&oi=1862557578&gen=playurlv3&deadline=1763701874&os=bcache&og=cos&upsig=4429e0723c206f07eb9fc44124865bbc&uparams=e,nbs,uipk,platform,trid,mid,oi,gen,deadline,os,og&cdnid=3881&bvc=vod&nettype=0&bw=110106&f=u_0_0&agrr=0&buvid=&np=151388311&build=0&dl=0&orderid=0,3
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1RE421M7tr
+I/flutter (20550):   - CID: 1498859619
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1RE421M7tr, cid: 1498859619, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): ❌ 自动缓存获取失败: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-03.bilivideo.com/upgcxcode/13/78/33388497813/33388497813-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&nbs=1&platform=pc&os=bcache&uipk=5&mid=2137162731&gen=playurlv3&og=cos&deadline=1763701874&oi=1862557578&trid=000099b5ebe3e7a843f4a468fb1e3d18e8cu&upsig=624295fbe5258976350ed4f5f8c0d7e0&uparams=e,nbs,platform,os,uipk,mid,gen,og,deadline,oi,trid&cdnid=3873&bvc=vod&nettype=0&bw=91504&build=0&dl=0&f=u_0_0&np=151388311&agrr=0&buvid=&orderid=0,3
+I/flutter (20550): ✅ 开始获取音频流（音质: 高音质）
+I/flutter (20550):   - BVID: BV1ZnsfzgEh7
+I/flutter (20550):   - CID: 33388497813
+I/flutter (20550): 🌐 发起 GET 请求: /x/player/wbi/playurl
+I/flutter (20550): 📋 请求参数: {bvid: BV1ZnsfzgEh7, cid: 33388497813, fnval: 4048, fnver: 0, fourk: 1, qn: 30232}
+I/flutter (20550): 🍪 Cookie: SESSDATA=92077539,1779246318,5be09*b2CjDbwoSnbIHD-8u-REVjFNJy_SLcj1TjoXp0VoPvKaVELIl86Df86qAEzAGtBFuVax4SVk9RdlhWUHlKX3dYMU5iUUk5cmw4WjhGemJQTmtHYkhuYS1Jc2xXOUNRNFVBbkxoNVN4RUxHSVItUHBTalh0LXU0dmtHRENVUDhsYzBxc21lalRwcndRIIEC; bili_jct=8025a027c2cdc8c3c9a85ecdcac28bb8; DedeUserID=2137162731
+I/flutter (20550): 📱 User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0
+I/flutter (20550): 🔗 Referer: https://www.bilibili.com
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ❌ Hi-Res/FLAC: 不可用（需要会员）
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 147033 | Codec: 0
+I/flutter (20550):      [1] ID: 30232 | Size: 0.0 MB | Bandwidth: 90458 | Codec: 0
+I/flutter (20550):      [2] ID: 30216 | Size: 0.0 MB | Bandwidth: 42498 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-15.bilivideo.com/upgcxcode/8...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 153055 | Codec: 0
+I/flutter (20550):      [1] ID: 30216 | Size: 0.0 MB | Bandwidth: 65712 | Codec: 0
+I/flutter (20550):      [2] ID: 30232 | Size: 0.0 MB | Bandwidth: 90495 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-15.bilivideo.com/upgcxcode/9...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ❌ Hi-Res/FLAC: 不可用（需要会员）
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 162345 | Codec: 0
+I/flutter (20550):      [1] ID: 30216 | Size: 0.0 MB | Bandwidth: 46015 | Codec: 0
+I/flutter (20550):      [2] ID: 30232 | Size: 0.0 MB | Bandwidth: 94056 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-14.bilivideo.com/upgcxcode/7...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 214805 | Codec: 0
+I/flutter (20550):      [1] ID: 30232 | Size: 0.0 MB | Bandwidth: 111026 | Codec: 0
+I/flutter (20550):      [2] ID: 30216 | Size: 0.0 MB | Bandwidth: 51812 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-05.bilivideo.com/upgcxcode/1...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ❌ Hi-Res/FLAC: 不可用（需要会员）
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 110038 | Codec: 0
+I/flutter (20550):      [1] ID: 30216 | Size: 0.0 MB | Bandwidth: 50490 | Codec: 0
+I/flutter (20550):      [2] ID: 30232 | Size: 0.0 MB | Bandwidth: 110038 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-13.bilivideo.com/upgcxcode/1...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ❌ Hi-Res/FLAC: 不可用（需要会员）
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 153749 | Codec: 0
+I/flutter (20550):      [1] ID: 30216 | Size: 0.0 MB | Bandwidth: 65699 | Codec: 0
+I/flutter (20550):      [2] ID: 30232 | Size: 0.0 MB | Bandwidth: 78649 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-07.bilivideo.com/upgcxcode/6...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ❌ Hi-Res/FLAC: 不可用（需要会员）
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 177156 | Codec: 0
+I/flutter (20550):      [1] ID: 30216 | Size: 0.0 MB | Bandwidth: 66146 | Codec: 0
+I/flutter (20550):      [2] ID: 30232 | Size: 0.0 MB | Bandwidth: 88217 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-01.bilivideo.com/upgcxcode/8...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 199544 | Codec: 0
+I/flutter (20550):      [1] ID: 30232 | Size: 0.0 MB | Bandwidth: 100790 | Codec: 0
+I/flutter (20550):      [2] ID: 30216 | Size: 0.0 MB | Bandwidth: 51456 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-02.bilivideo.com/upgcxcode/5...
+I/flutter (20550): ✅ 请求成功: HTTP 200
+I/flutter (20550): 📦 API 响应: code=0, message=0
+I/flutter (20550): 🔍 API 响应调试:
+I/flutter (20550):   - 响应类型: _Map<String, dynamic>
+I/flutter (20550):   - 响应键: [from, result, message, quality, format, timelength, accept_format, accept_description, accept_quality, video_codecid, seek_param, seek_type, dash, support_formats, high_format, last_play_time, last_play_cid, view_info, play_conf, cur_language, cur_production_type]
+I/flutter (20550): 📊 可用音质详情:
+I/flutter (20550):   ❌ Hi-Res/FLAC: 不可用（需要会员）
+I/flutter (20550):   ✅ 普通音频流列表 (3 个):
+I/flutter (20550):      [0] ID: 30280 | Size: 0.0 MB | Bandwidth: 91391 | Codec: 0
+I/flutter (20550):      [1] ID: 30232 | Size: 0.0 MB | Bandwidth: 91391 | Codec: 0
+I/flutter (20550):      [2] ID: 30216 | Size: 0.0 MB | Bandwidth: 65721 | Codec: 0
+I/flutter (20550):   📌 请求的音质 ID: 30232
+I/flutter (20550): ========================================
+I/flutter (20550): 🎯 找到匹配的音质: ID=30232
+I/flutter (20550): ✅ 音频流获取成功
+I/flutter (20550):   - 实际音质: 高音质 (ID=30232, Bitrate=128kbps)
+I/flutter (20550):   - 文件大小: 0.00 MB
+I/flutter (20550):   - URL: https://cn-hbwh-fx-01-03.bilivideo.com/upgcxcode/1...
+I/flutter (20550): [AudioHandler] 📋 设置播放列表: 19 首, 起始: 1
+I/flutter (20550): [AudioHandler] 🎵 播放: 【Hi-Res无损/字幕】陶喆-《不爱》 “I Love You Forever 不能说出来~” (索引: 1)
+D/BufferQueueConsumer(20550): [](id:50460000000c,api:0,p:-1,c:20550) connect: controlledByApp=true
+I/flutter (20550): [IMPORTANT:flutter/shell/platform/android/platform_view_android.cc(356)] Flutter recommends migrating plugins that create and register surface textures to the new surface producer API. See https://docs.flutter.dev/release/breaking-changes/android-surface-plugins
+I/libEGL  (20550): skip_priority_level=0, isWorkaroundEnable=1
+I/ExoPlayerImpl(20550): Init 491ad56 [AndroidXMedia3/1.8.0-o] [PD2419, V2419A, vivo, 36]
+I/DefaultRenderersFactory(20550): Loaded LibvpxVideoRenderer.
+I/DefaultRenderersFactory(20550): Loaded Libgav1VideoRenderer.
+I/DefaultRenderersFactory(20550): Loaded FfmpegVideoRenderer.
+I/DefaultRenderersFactory(20550): Loaded LibopusAudioRenderer.
+I/DefaultRenderersFactory(20550): Loaded LibflacAudioRenderer.
+I/DefaultRenderersFactory(20550): Loaded FfmpegAudioRenderer.
+D/Linux   (20550): [Posix_connect Debug]Process com.example.lzf_music :443 
+I/flutter (20550): [播放调试] ❌ 缓存获取失败，回退到流式播放: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-02.bilivideo.com/upgcxcode/59/09/26659850959/26659850959-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&oi=1862557578&deadline=1763701874&nbs=1&gen=playurlv3&os=bcache&og=cos&trid=0000a612519968d540d898978299082ce4du&platform=pc&mid=2137162731&uipk=5&upsig=f3479c9a85dfa61ecc97fe03a7fa6675&uparams=e,oi,deadline,nbs,gen,os,og,trid,platform,mid,uipk&cdnid=3872&bvc=vod&nettype=0&bw=100845&buvid=&build=0&dl=0&f=u_0_0&np=151388311&agrr=0&orderid=0,3
+I/flutter (20550): [播放调试] ❌ 缓存获取失败，回退到流式播放: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-01.bilivideo.com/upgcxcode/80/49/33367984980/33367984980-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&nbs=1&oi=1862557578&gen=playurlv3&os=bcache&uipk=5&platform=pc&og=ali&trid=0000575390a9359a4b509c13f894b46c390u&mid=2137162731&deadline=1763701874&upsig=326d360a867728a5ffcbdb888b47821b&uparams=e,nbs,oi,gen,os,uipk,platform,og,trid,mid,deadline&cdnid=3871&bvc=vod&nettype=0&bw=88514&dl=0&f=u_0_0&agrr=0&buvid=&build=0&np=151388311&orderid=0,3
+I/flutter (20550): [播放调试] ❌ 缓存获取失败，回退到流式播放: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-07.bilivideo.com/upgcxcode/66/82/32759088266/32759088266-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&nbs=1&uipk=5&gen=playurlv3&os=bcache&og=hw&platform=pc&mid=2137162731&oi=1862557578&trid=000060e1141cd5b04569885a9892b4abb4du&deadline=1763701874&upsig=2d0976bf9bfa97692c8151ba8945b662&uparams=e,nbs,uipk,gen,os,og,platform,mid,oi,trid,deadline&cdnid=3877&bvc=vod&nettype=0&bw=78945&f=u_0_0&np=151388311&agrr=0&buvid=&build=0&dl=0&orderid=0,3
+I/flutter (20550): [播放调试] ❌ 缓存获取失败，回退到流式播放: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-13.bilivideo.com/upgcxcode/19/96/1498859619/1498859619-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&nbs=1&uipk=5&platform=pc&trid=00006777347bdeba43c8a8f6791494924b9u&mid=2137162731&oi=1862557578&gen=playurlv3&deadline=1763701874&os=bcache&og=cos&upsig=4429e0723c206f07eb9fc44124865bbc&uparams=e,nbs,uipk,platform,trid,mid,oi,gen,deadline,os,og&cdnid=3881&bvc=vod&nettype=0&bw=110106&f=u_0_0&agrr=0&buvid=&np=151388311&build=0&dl=0&orderid=0,3
+I/flutter (20550): [播放调试] ❌ 缓存获取失败，回退到流式播放: ClientException: Connection closed while receiving data, uri=https://cn-hbwh-fx-01-03.bilivideo.com/upgcxcode/13/78/33388497813/33388497813-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&nbs=1&platform=pc&os=bcache&uipk=5&mid=2137162731&gen=playurlv3&og=cos&deadline=1763701874&oi=1862557578&trid=000099b5ebe3e7a843f4a468fb1e3d18e8cu&upsig=624295fbe5258976350ed4f5f8c0d7e0&uparams=e,nbs,platform,os,uipk,mid,gen,og,deadline,oi,trid&cdnid=3873&bvc=vod&nettype=0&bw=91504&build=0&dl=0&f=u_0_0&np=151388311&agrr=0&buvid=&orderid=0,3
+I/flutter (20550): [播放调试] ⚡ 使用流式播放: https://cn-hbwh-fx-01-15.bilivideo.com/upgcxcode/8...
+I/flutter (20550): [播放调试] ⚡ 使用流式播放: https://cn-hbwh-fx-01-15.bilivideo.com/upgcxcode/9...
+I/flutter (20550): [播放调试] ⚡ 使用流式播放: https://cn-hbwh-fx-01-14.bilivideo.com/upgcxcode/7...
+I/flutter (20550): [播放调试] ⚡ 使用流式播放: https://cn-hbwh-fx-01-05.bilivideo.com/upgcxcode/1...
+I/flutter (20550): [播放调试] ⚡ 使用流式播放: https://cn-hbwh-fx-01-13.bilivideo.com/upgcxcode/1...
+I/flutter (20550): [播放调试] ⚡ 使用流式播放: https://cn-hbwh-fx-01-07.bilivideo.com/upgcxcode/6...
+I/flutter (20550): [播放调试] ⚡ 使用流式播放: https://cn-hbwh-fx-01-01.bilivideo.com/upgcxcode/8...
+I/flutter (20550): [播放调试] ⚡ 使用流式播放: https://cn-hbwh-fx-01-02.bilivideo.com/upgcxcode/5...
+I/flutter (20550): [播放调试] ⚡ 使用流式播放: https://cn-hbwh-fx-01-03.bilivideo.com/upgcxcode/1...
+I/flutter (20550): [播放调试] ✅ MediaItem 转换完成，设置到 AudioHandler
+I/flutter (20550): [PlayerProvider] 🔄 队列索引变化: 1
+E/ExoPlayerImplInternal(20550): Playback error
+E/ExoPlayerImplInternal(20550):   androidx.media3.exoplayer.ExoPlaybackException: Source error
+E/ExoPlayerImplInternal(20550):       at androidx.media3.exoplayer.ExoPlayerImplInternal.handleIoException(ExoPlayerImplInternal.java:927)
+E/ExoPlayerImplInternal(20550):       at androidx.media3.exoplayer.ExoPlayerImplInternal.handleMessage(ExoPlayerImplInternal.java:899)
+E/ExoPlayerImplInternal(20550):       at android.os.Handler.dispatchMessage(Handler.java:110)
+E/ExoPlayerImplInternal(20550):       at android.os.Looper.loopOnce(Looper.java:266)
+E/ExoPlayerImplInternal(20550):       at android.os.Looper.loop(Looper.java:361)
+E/ExoPlayerImplInternal(20550):       at android.os.HandlerThread.run(HandlerThread.java:103)
+E/ExoPlayerImplInternal(20550):   Caused by: androidx.media3.datasource.HttpDataSource$InvalidResponseCodeException: Response code: 403
+E/ExoPlayerImplInternal(20550):       at androidx.media3.datasource.DefaultHttpDataSource.open(DefaultHttpDataSource.java:400)
+E/ExoPlayerImplInternal(20550):       at androidx.media3.datasource.DefaultDataSource.open(DefaultDataSource.java:275)
+E/ExoPlayerImplInternal(20550):       at androidx.media3.datasource.StatsDataSource.open(StatsDataSource.java:88)
+E/ExoPlayerImplInternal(20550):       at androidx.media3.exoplayer.source.ProgressiveMediaPeriod$ExtractingLoadable.load(ProgressiveMediaPeriod.java:1109)
+E/ExoPlayerImplInternal(20550):       at androidx.media3.exoplayer.upstream.Loader$LoadTask.run(Loader.java:453)
+E/ExoPlayerImplInternal(20550):       at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1156)
+E/ExoPlayerImplInternal(20550):       at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:651)
+E/ExoPlayerImplInternal(20550):       at java.lang.Thread.run(Thread.java:1149)
+E/AudioPlayer(20550): TYPE_SOURCE: Response code: 403
+I/ExoPlayerImpl(20550): Release 491ad56 [AndroidXMedia3/1.8.0-o] [PD2419, V2419A, vivo, 36] [media3.common, media3.exoplayer, media3.decoder, media3.datasource]
+D/BufferQueueConsumer(20550): [SurfaceTexture-0-20550-8](id:50460000000c,api:0,p:-1,c:20550) disconnect
+I/flutter (20550): [AudioHandler] ✅ 播放设置完成 (时长: null)
+I/flutter (20550): [AudioHandler] 📋 队列更新 (长度: 19)
+I/flutter (20550): [播放调试] ✅ 播放列表已设置到 AudioHandler
+I/flutter (20550): [播放调试] 🎯 跳转到索引 1 并播放
+I/flutter (20550): [AudioHandler] 🎵 播放: 【Hi-Res无损/字幕】陶喆-《不爱》 “I Love You Forever 不能说出来~” (索引: 1)
+D/BufferQueueConsumer(20550): [](id:50460000000d,api:0,p:-1,c:20550) connect: controlledByApp=true
+I/flutter (20550): [IMPORTANT:flutter/shell/platform/android/platform_view_android.cc(356)] Flutter recommends migrating plugins that create and register surface textures to the new surface producer API. See https://docs.flutter.dev/release/breaking-changes/android-surface-plugins
+I/libEGL  (20550): skip_priority_level=0, isWorkaroundEnable=1
+I/ExoPlayerImpl(20550): Init 4f63ec7 [AndroidXMedia3/1.8.0-o] [PD2419, V2419A, vivo, 36]
+I/DefaultRenderersFactory(20550): Loaded LibvpxVideoRenderer.
+I/DefaultRenderersFactory(20550): Loaded Libgav1VideoRenderer.
+I/DefaultRenderersFactory(20550): Loaded FfmpegVideoRenderer.
+I/DefaultRenderersFactory(20550): Loaded LibopusAudioRenderer.
+I/DefaultRenderersFactory(20550): Loaded LibflacAudioRenderer.
+I/DefaultRenderersFactory(20550): Loaded FfmpegAudioRenderer.
+E/ExoPlayerImplInternal(20550): Playback error
+E/ExoPlayerImplInternal(20550):   androidx.media3.exoplayer.ExoPlaybackException: Source error
+E/ExoPlayerImplInternal(20550):       at androidx.media3.exoplayer.ExoPlayerImplInternal.handleIoException(ExoPlayerImplInternal.java:927)
+E/ExoPlayerImplInternal(20550):       at androidx.media3.exoplayer.ExoPlayerImplInternal.handleMessage(ExoPlayerImplInternal.java:899)
+E/ExoPlayerImplInternal(20550):       at android.os.Handler.dispatchMessage(Handler.java:110)
+E/ExoPlayerImplInternal(20550):       at android.os.Looper.loopOnce(Looper.java:266)
+E/ExoPlayerImplInternal(20550):       at android.os.Looper.loop(Looper.java:361)
+E/ExoPlayerImplInternal(20550):       at android.os.HandlerThread.run(HandlerThread.java:103)
+E/ExoPlayerImplInternal(20550):   Caused by: androidx.media3.datasource.HttpDataSource$InvalidResponseCodeException: Response code: 403
+E/ExoPlayerImplInternal(20550):       at androidx.media3.datasource.DefaultHttpDataSource.open(DefaultHttpDataSource.java:400)
+E/ExoPlayerImplInternal(20550):       at androidx.media3.datasource.DefaultDataSource.open(DefaultDataSource.java:275)
+E/ExoPlayerImplInternal(20550):       at androidx.media3.datasource.StatsDataSource.open(StatsDataSource.java:88)
+E/ExoPlayerImplInternal(20550):       at androidx.media3.exoplayer.source.ProgressiveMediaPeriod$ExtractingLoadable.load(ProgressiveMediaPeriod.java:1109)
+E/ExoPlayerImplInternal(20550):       at androidx.media3.exoplayer.upstream.Loader$LoadTask.run(Loader.java:453)
+E/ExoPlayerImplInternal(20550):       at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1156)
+E/ExoPlayerImplInternal(20550):       at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:651)
+E/ExoPlayerImplInternal(20550):       at java.lang.Thread.run(Thread.java:1149)
+E/AudioPlayer(20550): TYPE_SOURCE: Response code: 403
+I/ExoPlayerImpl(20550): Release 4f63ec7 [AndroidXMedia3/1.8.0-o] [PD2419, V2419A, vivo, 36] [media3.common, media3.exoplayer, media3.decoder, media3.datasource]
+D/BufferQueueConsumer(20550): [SurfaceTexture-0-20550-9](id:50460000000d,api:0,p:-1,c:20550) disconnect
+I/flutter (20550): [AudioHandler] ✅ 播放设置完成 (时长: null)
+I/flutter (20550): [播放调试] ▶️ 发送播放命令
+I/flutter (20550): [AudioHandler] ▶️ play() 调用 (suppressNext: false, 播放中: true)
+I/flutter (20550): [AudioHandler] ✅ play() 执行完成
+I/flutter (20550): ! 数据库更新失败（不影响播放）: SqliteException(1555): while executing statement, UNIQUE constraint failed: songs.id, constraint failed (code 1555)
+I/flutter (20550):   Causing statement: INSERT INTO "songs" ("id", "title", "artist", "album", "file_path", "lyrics", "bitrate", "sample_rate", "duration", "album_art_path", "date_added", "is_favorite", "last_played_time", "played_count", "source", "bvid", "cid", "page_number", "bilibili_video_id", "bilibili_favorite_id", "downloaded_qualities", "current_quality") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?), parameters: -2, 【Hi-Res无损/字幕】陶喆-《不爱》 “I Love You Forever 不能说出来~”, 指环zHhhhh, null, , null, null, null, 206, http://i2.hdslb.com/bfs/archive/ee92bfa68d356b0bc4e8b86c8ff5a58dc4c8b5ab.jpg, 1763694673, 0, 1763694681, 1, bilibili, BV1R7gnzZE3M, null, null, null, null, null, null
+I/flutter (20550): 📝 开始加载歌词: 【Hi-Res无损/字幕】陶喆-《不爱》 “I Love You Forever 不能说出来~”
+I/flutter (20550): 🔑 [Bilibili] key: 5dde3a3184306c2c0637401507bbda12 (bvid: BV1R7gnzZE3M, cid: null)
+I/flutter (20550): ✅ 从缓存加载歌词: 【Hi-Res无损/字幕】陶喆-《不爱》 “I Love You Forever 不能说出来~”
+I/ample.lzf_music(20550): vart_dgc, 8192KB,32MB,0.5
+I/ample.lzf_music(20550): NativeAlloc concurrent copying GC freed 2623KB AllocSpace bytes, 14(536KB) LOS objects, 86% free, 3906KB(1912KB_92KB)/27MB, 2Fd, itvl 72.799s, cpu 19.253ms, paused 35us,18us total 19.752ms

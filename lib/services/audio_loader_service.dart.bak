@@ -1,0 +1,297 @@
+import 'dart:async';
+import 'package:motto_music/database/database.dart';
+import 'package:motto_music/services/bilibili/stream_service.dart';
+import 'package:motto_music/services/bilibili/audio_cache_service.dart';
+import 'package:motto_music/services/bilibili/api_service.dart';
+import 'package:media_kit/media_kit.dart';
+
+/// 音频加载服务
+/// 
+/// 负责根据歌曲来源（本地/Bilibili）加载相应的音频资源
+/// 
+/// Bilibili 歌曲播放流程：
+/// 1. 检查本地缓存
+/// 2. 如果缓存存在：直接播放本地文件
+/// 3. 如果缓存不存在：下载到本地 → 播放
+class AudioLoaderService {
+  final Player _player;
+  final BilibiliAudioCacheService? _cacheService;
+  final BilibiliApiService? _apiService;
+  
+  // 错误监听器订阅
+  StreamSubscription? _errorSubscription;
+  
+  // 当前正在播放的 Bilibili 歌曲信息
+  String? _currentBvid;
+  int? _currentCid;
+  bool _hasRetried = false;
+  
+  // 下载进度回调
+  Function(int received, int total)? onDownloadProgress;
+  
+  AudioLoaderService(
+    this._player, {
+    BilibiliAudioCacheService? cacheService,
+    BilibiliApiService? apiService,
+  }) : _cacheService = cacheService,
+       _apiService = apiService {
+    _setupErrorListener();
+  }
+  
+  /// 暴露缓存服务给外部访问
+  BilibiliAudioCacheService? get cacheService => _cacheService;
+  
+  /// 播放歌曲
+  /// 
+  /// 根据歌曲来源自动处理：
+  /// - 本地歌曲：直接使用文件路径
+  /// - Bilibili 歌曲：使用本地缓存或下载
+  Future<void> playSong(Song song, {bool playNow = true}) async {
+    if (song.source == 'bilibili') {
+      await _playBilibiliSong(song, playNow: playNow);
+    } else {
+      await _playLocalSong(song, playNow: playNow);
+    }
+  }
+  
+  /// 播放本地歌曲
+  Future<void> _playLocalSong(Song song, {required bool playNow}) async {
+    try {
+      await _player.open(
+        Media(song.filePath),
+        play: playNow,
+      );
+    } catch (e) {
+      print('播放本地歌曲失败: $e');
+      rethrow;
+    }
+  }
+  
+  /// 播放 Bilibili 歌曲
+  Future<void> _playBilibiliSong(Song song, {required bool playNow}) async {
+    if (_cacheService == null) {
+      throw Exception('BilibiliAudioCacheService 未初始化');
+    }
+    
+    final bvid = song.bvid;
+    if (bvid == null) {
+      throw Exception('Bilibili 歌曲缺少必要的 bvid');
+    }
+    
+    // 获取 CID（如果没有则从 API 获取）
+    int cid;
+    if (song.cid == null) {
+      if (_apiService == null) {
+        throw Exception('BilibiliApiService 未初始化，无法获取 CID');
+      }
+      
+      print('⚠️ CID 为空，尝试从分P列表获取');
+      print('  - 正在获取 $bvid 的分P列表...');
+      
+      final pages = await _apiService!.getVideoPages(bvid);
+      if (pages.isEmpty) {
+        throw Exception('视频 $bvid 没有分P信息');
+      }
+      
+      cid = pages[0].cid;
+      print('✅ 从分P列表获取到 CID: $cid');
+      print('  - 分P数量: ${pages.length}');
+      print('  - 第一P标题: ${pages[0].part}');
+      print('  - 第一P时长: ${pages[0].duration}秒');
+    } else {
+      cid = song.cid!;
+    }
+    
+    // 如果是新歌曲，重置重试标志
+    if (_currentBvid != bvid || _currentCid != cid) {
+      _hasRetried = false;
+    }
+    
+    _currentBvid = bvid;
+    _currentCid = cid;
+    
+    try {
+      print('🎵 准备播放 Bilibili 歌曲: ${song.title}');
+      print('  - BVID: $bvid');
+      print('  - CID: $cid');
+      
+      // 1. 检查本地缓存
+      final cachedPath = await _cacheService!.getCachedAudioPath(
+        bvid: bvid,
+        cid: cid,
+        quality: BilibiliAudioQuality.flac,
+      );
+      
+      if (cachedPath != null) {
+        // 有缓存，直接播放本地文件
+        print('✅ 使用本地缓存: $cachedPath');
+        await _player.open(
+          Media(cachedPath),
+          play: playNow,
+        );
+      } else {
+        // 无缓存，获取直链立即播放，同时后台缓存
+        print('📡 无缓存，使用直链播放');
+        
+        // 获取流 URL
+        final streamService = _cacheService!.streamService;
+        final streamInfo = await streamService.getAudioStream(
+          bvid: bvid,
+          cid: cid,
+          quality: BilibiliAudioQuality.flac,
+        );
+        
+        print('🎵 播放直链: ${streamInfo.url.substring(0, 50)}...');
+        
+        // 立即播放流 URL
+        await _player.open(
+          Media(
+            streamInfo.url,
+            httpHeaders: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+              'Referer': 'https://www.bilibili.com',
+            },
+          ),
+          play: playNow,
+        );
+        
+        // 异步后台下载缓存（不阻塞播放）
+        print('🔽 开始后台缓存...');
+        _cacheService!.downloadInBackground(
+          bvid: bvid,
+          cid: cid,
+          quality: BilibiliAudioQuality.flac,
+        ).then((_) {
+          print('✅ 后台缓存完成: ${song.title}');
+        }).catchError((e) {
+          print('⚠️ 后台缓存失败: $e');
+        });
+      }
+      
+    } catch (e) {
+      print('播放 Bilibili 歌曲失败: $e');
+      rethrow;
+    }
+  }
+  
+  /// 设置统一的错误监听器（仅在构造时调用一次）
+  void _setupErrorListener() {
+    _errorSubscription = _player.stream.error.listen((error) async {
+      if (error != null && _currentBvid != null && _currentCid != null && !_hasRetried) {
+        print('❌ 检测到播放错误: $error');
+        await _retryPlayback();
+      }
+    });
+  }
+  
+  /// 执行重试播放
+  Future<void> _retryPlayback() async {
+    if (_hasRetried || _currentBvid == null || _currentCid == null || _cacheService == null) {
+      return;
+    }
+    
+    print('🔄 尝试清除缓存并重新下载...');
+    
+    _hasRetried = true;
+    
+    try {
+      // 清除此歌曲的本地缓存
+      await _cacheService!.deleteSongCache(
+        bvid: _currentBvid!,
+        cid: _currentCid!,
+      );
+      
+      // 重新下载并播放
+      final localFilePath = await _cacheService!.getOrDownloadAudio(
+        bvid: _currentBvid!,
+        cid: _currentCid!,
+        quality: BilibiliAudioQuality.flac,
+      );
+      
+      print('✅ 重新下载成功，尝试播放');
+      
+      // 重新播放
+      await _player.open(
+        Media(localFilePath),
+        play: true,
+      );
+      
+    } catch (retryError) {
+      print('💥 重试失败: $retryError');
+    }
+  }
+  
+  /// 预加载歌曲
+  /// 
+  /// 对于 Bilibili 歌曲，如果无缓存则提前下载到本地
+  Future<void> preloadSong(Song song) async {
+    if (song.source != 'bilibili' || _cacheService == null) {
+      return;
+    }
+    
+    final bvid = song.bvid;
+    if (bvid == null) {
+      return;
+    }
+    
+    try {
+      // 获取 CID（如果没有则从 API 获取）
+      int cid;
+      if (song.cid == null) {
+        if (_apiService == null) {
+          print('预加载失败: BilibiliApiService 未初始化');
+          return;
+        }
+        
+        final pages = await _apiService!.getVideoPages(bvid);
+        if (pages.isEmpty) {
+          print('预加载失败: 视频 $bvid 没有分P信息');
+          return;
+        }
+        
+        cid = pages[0].cid;
+      } else {
+        cid = song.cid!;
+      }
+      
+      // 检查是否已有缓存
+      final cachedPath = await _cacheService!.getCachedAudioPath(
+        bvid: bvid,
+        cid: cid,
+        quality: BilibiliAudioQuality.flac,
+      );
+      
+      if (cachedPath != null) {
+        print('⏩ 预加载跳过（已有缓存）: ${song.title}');
+        return;
+      }
+      
+      // 无缓存，后台下载
+      print('⏩ 预加载开始: ${song.title}');
+      await _cacheService!.downloadInBackground(
+        bvid: bvid,
+        cid: cid,
+        quality: BilibiliAudioQuality.flac,
+      );
+      print('✅ 预加载完成: ${song.title}');
+    } catch (e) {
+      print('⚠️ 预加载失败: $e');
+      // 预加载失败不抛出异常，只记录日志
+    }
+  }
+  
+  /// 批量预加载歌曲
+  Future<void> preloadSongs(List<Song> songs) async {
+    for (final song in songs) {
+      await preloadSong(song);
+    }
+  }
+  
+  /// 清理资源
+  void dispose() {
+    _errorSubscription?.cancel();
+    _currentBvid = null;
+    _currentCid = null;
+    _hasRetried = false;
+  }
+}

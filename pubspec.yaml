@@ -1,0 +1,78 @@
+name: motto_music
+description: "A new Flutter project."
+publish_to: 'none'
+version: 0.2.6
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  path: ^1.9.1
+  file_picker: ^10.2.0
+  drift: ^2.28.0
+  sqlite3_flutter_libs: ^0.5.0
+  audio_metadata_reader:
+    git:
+      url: https://github.com/GerryDush/audio_metadata_reader.git
+      ref: v0.0.3
+  path_provider: ^2.1.2
+  provider: ^6.1.5
+
+  # 缓存系统
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # 音频播放和通知服务（使用 namida 的 fork 版本以获得最佳兼容性）
+  just_audio:
+    git:
+      url: https://github.com/MSOB7YY/just_audio
+      path: just_audio/
+      ref: video
+  audio_service:
+    git:
+      url: https://github.com/MSOB7YY/audio_service
+      path: audio_service/
+  audio_session: ^0.2.2
+
+  window_manager: ^0.5.1
+  shared_preferences: ^2.5.3
+  url_launcher: ^6.3.2
+  bitsdojo_window: ^0.1.6
+  webdav_client: ^1.2.2
+  tray_manager: ^0.5.1
+  crypto: ^3.0.0
+  flutter_colorpicker: ^1.1.0
+  flutter_acrylic: ^1.1.4
+  open_filex: ^4.5.0
+
+  # Bilibili 功能依赖
+  dio: ^5.4.0                    # HTTP 客户端
+  http: ^1.2.0                   # HTTP 客户端（用于歌词服务）
+  json_annotation: ^4.8.1        # JSON 序列化
+  qr_flutter: ^4.1.0             # 二维码生成
+  cached_network_image: ^3.3.0   # 图片缓存
+  permission_handler: ^11.3.1
+  connectivity_plus: ^6.0.5      # 网络状态检测
+  flutter_cache_manager: ^3.4.1  # 自动缓存管理（播放时使用）
+  image: ^4.1.7
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  drift_dev: ^2.14.1
+  build_runner: ^2.4.8
+  json_serializable: ^6.7.1      # JSON 序列化代码生成
+
+flutter:
+  uses-material-design: true
+  fonts:
+    - family: SFIcons
+      fonts:
+        - asset: assets/fonts/sf_icons.ttf
+  assets:
+    - assets/icons/
+    - assets/windows/icons/

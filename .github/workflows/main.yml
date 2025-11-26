@@ -1,0 +1,293 @@
+name: Build and Release Flutter App
+
+on:
+  push:
+    tags:
+      - 'v*' 
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos:
+    runs-on: macos-26
+    strategy:
+      matrix:
+        arch: [x86_64, arm64, universal]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      # 切换 EXCLUDED_ARCHS
+      - name: Switch EXCLUDED_ARCHS
+        run: |
+          PBXPROJ="macos/Runner.xcodeproj/project.pbxproj"
+          ARCH=${{ matrix.arch }}
+          if [[ "$ARCH" == "universal" ]]; then
+            sed -i '' 's/EXCLUDED_ARCHS = .*;/EXCLUDED_ARCHS = "";/g' "$PBXPROJ"
+          elif [[ "$ARCH" == "x86_64" ]]; then
+            sed -i '' 's/EXCLUDED_ARCHS = .*;/EXCLUDED_ARCHS = "arm64";/g' "$PBXPROJ"
+          elif [[ "$ARCH" == "arm64" ]]; then
+            sed -i '' 's/EXCLUDED_ARCHS = .*;/EXCLUDED_ARCHS = "x86_64";/g' "$PBXPROJ"
+          fi
+
+      # 安装打包工具
+      - run: dart pub global activate fastforge
+      - run: npm install -g appdmg
+
+      # 打包 DMG
+      - run: fastforge package --platform macos --targets dmg
+
+      # 获取 Flutter 版本号
+      - name: Get Flutter version
+        id: get_version
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
+          echo "Version: $VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      # 重命名 DMG 文件，加入架构
+      - name: Rename DMG with architecture
+        run: |
+          ARCH=${{ matrix.arch }}
+          VERSION=${{ steps.get_version.outputs.version }}
+          SRC="dist/$VERSION/lzf_music-$VERSION-macos.dmg"
+          DST="dist/$VERSION/LZF-Music-$VERSION-macos-$ARCH.dmg"
+          mv "$SRC" "$DST"
+
+      # 上传 macOS 制品
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.arch }}-dmg
+          path: dist/${{ steps.get_version.outputs.version }}/LZF-Music-${{ steps.get_version.outputs.version }}-macos-${{ matrix.arch }}.dmg
+          retention-days: 1
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      # 安装 Inno Setup 6（fastforge 的依赖）
+      - name: Install Inno Setup 6
+        run: |
+          $url = "https://jrsoftware.org/download.php/is.exe"
+          $output = "${{ runner.temp }}\innosetup.exe"
+          
+          Write-Host "Downloading Inno Setup 6..."
+          Invoke-WebRequest -Uri $url -OutFile $output
+          
+          Write-Host "Installing Inno Setup 6..."
+          Start-Process -FilePath $output -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait
+          
+          # 添加到PATH
+          $innoPath = "C:\Program Files (x86)\Inno Setup 6"
+          echo "$innoPath" >> $env:GITHUB_PATH
+
+      - name: Copy Chinese language pack
+        run: |
+          $sourceFile = "windows\packaging\exe\ChineseSimplified.isl"
+          $targetDir = "C:\Program Files (x86)\Inno Setup 6\Languages"
+          $targetFile = "$targetDir\ChineseSimplified.isl"
+          
+          if (Test-Path $sourceFile) {
+            Copy-Item $sourceFile $targetFile -Force
+            Write-Host "Chinese language pack copied successfully"
+          } else {
+            Write-Host "Chinese language pack not found in project"
+          }
+
+      # 安装 fastforge
+      - name: Install fastforge
+        run: dart pub global activate fastforge
+
+      # 获取 Flutter 版本号
+      - name: Get Flutter version
+        id: get_version
+        run: |
+          $VERSION = (Get-Content pubspec.yaml | Select-String "version:" | ForEach-Object { $_ -replace "version:\s*", "" } | ForEach-Object { $_ -replace "\+.*", "" })
+          echo "Version: $VERSION"
+          echo "version=$VERSION" >> $env:GITHUB_OUTPUT
+
+      # 使用 fastforge 打包 Windows exe
+      - name: Package Windows exe
+        run: fastforge package --platform windows --targets exe
+
+      # 重命名生成的安装程序
+      - name: Rename Windows installer
+        run: |
+          $VERSION = "${{ steps.get_version.outputs.version }}"
+          
+          # fastforge 生成的文件通常在 dist 目录中
+          $DIST_DIR = "dist\$VERSION"
+          $INSTALLER_NAME = "LZF-Music-$VERSION-windows-x64-setup.exe"
+          
+          # 查找生成的 exe 文件
+          Get-ChildItem "$DIST_DIR" -Filter "*.exe" | ForEach-Object {
+            $SRC = $_.FullName
+            Write-Host "Found installer: $SRC"
+            Copy-Item $SRC $INSTALLER_NAME -Force
+            Write-Host "Renamed to: $INSTALLER_NAME"
+          }
+
+      # 上传 Windows 制品
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: LZF-Music-${{ steps.get_version.outputs.version }}-windows-x64-setup.exe
+          retention-days: 1
+
+  # 统一发布 Release
+  create-release:
+    needs: [build-macos, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 获取 Flutter 版本号
+      - name: Get Flutter version
+        id: get_version
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
+          echo "Version: $VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      # 下载所有制品
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      # 创建统一的 Release
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            🎉 发布版本 ${{ github.ref_name }}
+            
+            🖥️ Windows 版本
+            • 安装程序：支持 Windows 10/11 (x64)
+            • 功能：自动创建桌面快捷方式
+            • 智能音频控制：
+            • 拔掉耳机自动暂停播放
+            • 耳机按钮控制播放 / 暂停 / 切歌
+            • ⌨️ 快捷键支持：
+            • 空格：播放 / 暂停
+            • Ctrl ⌘ + 左右方向键：快进 / 快退
+            • Ctrl ⌘ + 上下方向键：上一首 / 下一首
+            • 播放页面动画优化：修改了播放页面的进入动画
+            • 更多状态保存：播放状态、列表位置、侧边栏状态等
+            • 支持主题切换
+            • 支持背景高斯模糊与透明度调整
+
+            🍎 macOS 版本
+            • Intel (x86_64)：适用于 Intel Mac
+            • Apple Silicon (arm64)：适用于 M1/M2 Mac
+            • 通用版 (universal)：同时支持 Intel 和 Apple Silicon
+            • 智能音频控制：
+            • 拔掉耳机自动暂停播放
+            • 耳机按钮控制播放 / 暂停 / 切歌
+            • ⌨️ 快捷键支持：
+            • 空格：播放 / 暂停
+            • Command ⌘ + 左右方向键：快进 / 快退
+            • Command ⌘ + 上下方向键：上一首 / 下一首
+            • 支持主题切换
+            • 背景高斯模糊与透明度调整
+
+            📱 iOS 版本
+            • 适用版本：iOS 14 及以上
+            • 智能音频控制：
+            • 拔掉耳机自动暂停播放
+            • 耳机 / 蓝牙按钮控制播放 / 暂停 / 切歌
+            • 控制中心播放支持
+            • 背景播放支持
+            • 支持主题切换
+            • 支持小组件显示当前播放歌曲及控制
+
+            ✨ 更新内容
+            • 支持按照添加时间排序
+            • 支持批量选择删除
+            • 优化音频播放稳定性与耳机控制体验
+            • 新增支持 M4A 与 ALAC 格式的比特率与采样率读取
+            • 支持系统托盘与后台运行
+            • 新增播放状态保存：退出应用后自动保存播放进度、音量、播放模式
+            • 新增自动定位当前歌曲：切换歌曲时列表自动滚动到当前播放位置
+            • 新增歌曲导入进度显示：可查看导入的实时进度与完成状态
+            • 新增歌词功能：支持 LRC、TTML 格式解析，支持逐字歌词显示
+            • 新增封面导入功能：支持选择图片覆盖旧封面
+            • 播放页面动画优化，更多状态保存（列表位置、侧边栏展开状态）
+            • 支持主题切换
+            • 支持背景高斯模糊与透明度调整
+
+            ⸻
+
+            🎉 Release ${{ github.ref_name }}
+
+            🖥️ Windows
+            • Installer: Supports Windows 10/11 (x64)
+            • Feature: Auto-create desktop shortcut
+            • Smart Audio Control:
+            • Auto-pause when headphones are unplugged
+            • Headset buttons for play / pause / next / previous
+            • ⌨️ Keyboard Shortcuts:
+            • Space: Play / Pause
+            • Ctrl ⌘ + Left/Right Arrow: Seek backward / forward
+            • Ctrl ⌘ + Up/Down Arrow: Previous / Next track
+            • Playback page animation optimized
+            • More state persistence: playback state, playlist position, sidebar state
+            • Theme switching support
+            • Background blur & transparency adjustment
+
+            🍎 macOS
+            • Intel (x86_64): for Intel-based Macs
+            • Apple Silicon (arm64): for M1/M2 Macs
+            • Universal: supports both Intel & Apple Silicon
+            • Smart Audio Control:
+            • Auto-pause when headphones are unplugged
+            • Headset buttons for play / pause / next / previous
+            • ⌨️ Keyboard Shortcuts:
+            • Space: Play / Pause
+            • Command ⌘ + Left/Right Arrow: Seek backward / forward
+            • Command ⌘ + Up/Down Arrow: Previous / Next track
+            • Theme switching support
+            • Background blur & transparency adjustment
+
+            📱 iOS
+            • Supported: iOS 14+
+            • Smart Audio Control:
+            • Auto-pause when headphones are unplugged
+            • Headset / Bluetooth buttons for play / pause / next / previous
+            • Control Center playback support
+            • Background playback support
+            • Theme switching support
+            • Home screen widget shows current track & controls
+
+            ✨ What’s New
+            • Support sorting by added time
+            • Batch delete support
+            • Improved audio playback stability & headset control experience
+            • Added support for M4A & ALAC bitrate and sample rate parsing
+            • Added system tray integration and background running support
+            • New: Playback state persistence (save progress, volume, and play mode when exiting)
+            • New: Auto-scroll to current song in playlist when switching tracks
+            • New: Song import progress indicator (view real-time progress and completion status)
+            • New: Lyrics support — parse LRC & TTML formats, with word-by-word synchronized lyrics
+            • New: Cover import — select an image to overwrite existing album art
+            • Playback page animation optimized, more state persistence (playlist position, sidebar state)
+            • Theme switching support
+
+            <img src="https://github.com/user-attachments/assets/8d5b9065-8cd8-4b1e-bb6e-32b9ae5f0f25" height="500">
+          files: |
+            macos-x86_64-dmg/*.dmg
+            macos-arm64-dmg/*.dmg
+            macos-universal-dmg/*.dmg
+            windows-installer/*.exe
