@@ -1,18 +1,51 @@
+// 字级时间戳数据
+class CharTimestamp {
+  final String char;  // 单个字符
+  final double startMs;  // 起始时间（毫秒）
+  final double endMs;  // 结束时间（毫秒）
+
+  const CharTimestamp({
+    required this.char,
+    required this.startMs,
+    required this.endMs,
+  });
+
+  factory CharTimestamp.fromJson(Map<String, dynamic> json) {
+    return CharTimestamp(
+      char: json['char'] as String,
+      startMs: (json['startMs'] as num).toDouble(),
+      endMs: (json['endMs'] as num).toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'char': char,
+      'startMs': startMs,
+      'endMs': endMs,
+    };
+  }
+}
+
 // 歌词数据模型
 class LyricLine {
   /// 歌词的起始时间，单位：秒
   final double timestamp;
-  
+
   /// 原始歌词内容
   final String text;
-  
+
   /// 翻译歌词
   final String? translation;
+
+  /// 字级时间戳（用于逐字高亮）
+  final List<CharTimestamp>? charTimestamps;
 
   const LyricLine({
     required this.timestamp,
     required this.text,
     this.translation,
+    this.charTimestamps,
   });
 
   factory LyricLine.fromJson(Map<String, dynamic> json) {
@@ -20,6 +53,9 @@ class LyricLine {
       timestamp: (json['timestamp'] as num).toDouble(),
       text: json['text'] as String,
       translation: json['translation'] as String?,
+      charTimestamps: (json['charTimestamps'] as List?)
+          ?.map((e) => CharTimestamp.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 
@@ -28,6 +64,8 @@ class LyricLine {
       'timestamp': timestamp,
       'text': text,
       if (translation != null) 'translation': translation,
+      if (charTimestamps != null)
+        'charTimestamps': charTimestamps!.map((e) => e.toJson()).toList(),
     };
   }
 
@@ -35,11 +73,13 @@ class LyricLine {
     double? timestamp,
     String? text,
     String? translation,
+    List<CharTimestamp>? charTimestamps,
   }) {
     return LyricLine(
       timestamp: timestamp ?? this.timestamp,
       text: text ?? this.text,
       translation: translation ?? this.translation,
+      charTimestamps: charTimestamps ?? this.charTimestamps,
     );
   }
 }

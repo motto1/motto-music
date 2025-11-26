@@ -18,6 +18,7 @@ import '../models/lyrics/lyric_models.dart';
 import '../models/bilibili/video.dart' as bili_models;
 import '../utils/lyric_parser.dart';
 import 'audio_handler_service.dart';
+import 'lyrics_notification_service.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -61,9 +62,13 @@ class PlayerProvider with ChangeNotifier {
   ParsedLrc? _currentLyrics;
   bool _isLoadingLyrics = false;
   String? _lyricsError;
+  int _currentLyricLineIndex = -1;  // 当前歌词行索引
 
   StreamSubscription? _positionSub;
   StreamSubscription? _playbackStateSub;
+
+  // 通知栏歌词服务
+  final LyricsNotificationService _lyricsNotificationService = LyricsNotificationService();
 
   // Getters
   Song? get currentSong => _currentSong;
@@ -140,6 +145,9 @@ class PlayerProvider with ChangeNotifier {
     // 只在有 audioHandler 时设置监听
     if (_audioHandler == null) return;
 
+    // 初始化通知栏歌词服务
+    _lyricsNotificationService.init();
+
     // 监听播放位置
     _positionSub = Stream.periodic(
       const Duration(milliseconds: 200),
@@ -149,6 +157,9 @@ class PlayerProvider with ChangeNotifier {
       if (_audioHandler!.duration != null) {
         _duration = _audioHandler!.duration!;
       }
+
+      // 实时更新通知栏歌词（根据播放位置）
+      _updateNotificationLyrics(pos);
     });
 
     // ⭐ 监听队列索引变化（关键修复：自动切歌时更新界面）
@@ -946,14 +957,21 @@ class PlayerProvider with ChangeNotifier {
       if (lyrics != null) {
         _currentLyrics = lyrics;
         _lyricsError = null;
+        _currentLyricLineIndex = -1;  // 重置歌词行索引
+        // 立即触发首次通知栏更新
+        _updateNotificationLyrics(_position.value);
       } else {
         _currentLyrics = null;
         _lyricsError = '未找到歌词';
+        // 清除通知栏歌词
+        await _lyricsNotificationService.clearLyrics();
       }
     } catch (e) {
       print('❌ 加载歌词失败: $e');
       _currentLyrics = null;
       _lyricsError = '加载歌词失败: ${e.toString()}';
+      // 清除通知栏歌词
+      await _lyricsNotificationService.clearLyrics();
     } finally {
       _isLoadingLyrics = false;
       notifyListeners();
@@ -962,13 +980,73 @@ class PlayerProvider with ChangeNotifier {
 
   void updateLyrics(ParsedLrc lyrics) {
     _currentLyrics = lyrics;
+    _currentLyricLineIndex = -1;  // 重置索引
+    _updateNotificationLyrics(_position.value);
     notifyListeners();
   }
 
   void clearLyrics() {
     _currentLyrics = null;
     _lyricsError = null;
+    _currentLyricLineIndex = -1;
+    _lyricsNotificationService.clearLyrics();
     notifyListeners();
+  }
+
+  /// 实时更新通知栏歌词（根据播放位置）
+  void _updateNotificationLyrics(Duration position) {
+    if (_currentLyrics == null || _currentLyrics!.lyrics == null) {
+      return;
+    }
+
+    final positionSec = position.inMilliseconds / 1000.0;
+    final lyrics = _currentLyrics!.lyrics!;
+
+    // 查找当前歌词行
+    int currentLineIndex = -1;
+    for (int i = 0; i < lyrics.length; i++) {
+      if (positionSec >= lyrics[i].timestamp) {
+        currentLineIndex = i;
+      } else {
+        break;
+      }
+    }
+
+    // 仅在歌词行变化时更新通知栏（避免频繁刷新）
+    if (currentLineIndex != _currentLyricLineIndex && currentLineIndex >= 0) {
+      _currentLyricLineIndex = currentLineIndex;
+
+      final currentLine = lyrics[currentLineIndex];
+      final nextLine = (currentLineIndex + 1 < lyrics.length)
+          ? lyrics[currentLineIndex + 1]
+          : null;
+
+      // 计算当前行结束时间
+      final currentLineEndMs = nextLine != null
+          ? (nextLine.timestamp * 1000).toInt()
+          : (currentLine.timestamp * 1000 + 5000).toInt();  // 默认5秒
+
+      // 将charTimestamps转换为Map格式
+      List<Map<String, dynamic>>? charTimestampsMap;
+      if (currentLine.charTimestamps != null) {
+        charTimestampsMap = currentLine.charTimestamps!.map((ct) {
+          return {
+            'char': ct.char,
+            'startMs': ct.startMs.toInt(),
+            'endMs': ct.endMs.toInt(),
+          };
+        }).toList();
+      }
+
+      // 更新通知栏
+      _lyricsNotificationService.updateLyrics(
+        currentLine: currentLine.text,
+        nextLine: nextLine?.text,
+        currentLineStartMs: (currentLine.timestamp * 1000).toInt(),
+        currentLineEndMs: currentLineEndMs,
+        charTimestamps: charTimestampsMap,
+      );
+    }
   }
 
   void updateCurrentSong(Song updatedSong) async {

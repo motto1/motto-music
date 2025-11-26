@@ -75,7 +75,13 @@ abstract class BasicAudioHandler<Q extends Playable> extends BaseAudioHandler
   final QueueWrapper<Q> currentQueue = QueueWrapper<Q>();
 
   /// 定时器：更新播放位置
-  Timer? _positionTimer;
+  Timer? _positionTimer; // UI更新定时器（200ms）
+  Timer? _notificationTimer; // 通知栏更新定时器（1000ms）
+
+  /// 通知栏位置更新回调（由子类实现）
+  void onNotificationPositionUpdate(int positionMs) {
+    // 子类可覆盖此方法用于通知栏歌词高亮
+  }
 
   BasicAudioHandler() {
     _init();
@@ -92,9 +98,15 @@ abstract class BasicAudioHandler<Q extends Playable> extends BaseAudioHandler
       currentItemDuration.value = duration;
     });
 
-    // 定时更新位置
+    // 定时更新位置（UI用，200ms高刷新率）
     _positionTimer = Timer.periodic(const Duration(milliseconds: 200), (_) {
       currentPositionMS.value = player.position.inMilliseconds;
+    });
+
+    // 定时更新通知栏（1000ms低频，节省电量）
+    _notificationTimer = Timer.periodic(const Duration(milliseconds: 1000), (_) {
+      final positionMs = player.position.inMilliseconds;
+      onNotificationPositionUpdate(positionMs);
     });
 
     // 监听播放完成
@@ -346,6 +358,7 @@ abstract class BasicAudioHandler<Q extends Playable> extends BaseAudioHandler
 
   Future<void> onDispose() async {
     _positionTimer?.cancel();
+    _notificationTimer?.cancel();
     await player.dispose();
   }
 }

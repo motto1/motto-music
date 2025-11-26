@@ -13,6 +13,7 @@ import 'package:just_audio/just_audio.dart';
 import 'dart:async';
 import '../core/basic_audio_handler.dart';
 import 'audio_source_registry.dart';
+import 'lyrics_notification_service.dart';
 
 /// TrackItem - 音频项包装类
 /// 实现 Playable 接口以兼容 BasicAudioHandler
@@ -66,6 +67,9 @@ class MottoAudioHandler extends BasicAudioHandler<TrackItem> {
   // ========== 均衡器访问器 ==========
   AndroidEqualizer get equalizer => _equalizer ??= AndroidEqualizer();
 
+  // ========== 通知栏歌词服务 ==========
+  final LyricsNotificationService _lyricsService = LyricsNotificationService();
+
   MottoAudioHandler() {
     _initAudioHandler();
 
@@ -74,6 +78,13 @@ class MottoAudioHandler extends BasicAudioHandler<TrackItem> {
       print('[AudioHandler] 🔄 播放状态变化: ${isPlaying.value}');
       _broadcastState(currentIndex.value);
     });
+  }
+
+  // ========== 覆盖通知栏位置更新回调 ==========
+  @override
+  void onNotificationPositionUpdate(int positionMs) {
+    // 调用通知栏歌词服务更新播放位置（用于逐字高亮）
+    _lyricsService.updatePosition(positionMs);
   }
 
   // ========== 初始化 ==========
