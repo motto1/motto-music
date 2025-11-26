@@ -1,13 +1,17 @@
 package com.mottomusic.player
 
+import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.text.SpannableString
 import android.text.style.ForegroundColorSpan
+import android.view.View
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import android.util.Log
@@ -27,8 +31,8 @@ class LyricsNotificationManager(private val context: Context) {
 
     companion object {
         private const val TAG = "LyricsNotification"
-        private const val NOTIFICATION_ID = 1
-        private const val CHANNEL_ID = "com.mottomusic.player.channel.audio"
+        private const val NOTIFICATION_ID = 999  // 使用独立ID，避免与audio_service冲突
+        private const val CHANNEL_ID = "com.mottomusic.player.lyrics"  // 独立通道
 
         // 更新节流间隔
         private const val UPDATE_THROTTLE_MS = 1000L // 通知更新 ≤ 1次/秒
@@ -73,6 +77,21 @@ class LyricsNotificationManager(private val context: Context) {
     fun init() {
         Log.d(TAG, "初始化通知栏歌词管理器")
         Log.d(TAG, "ROM类型检测: ${if (isRestrictedRom) "受限ROM (降级模式)" else "标准ROM"}")
+
+        // 创建通知渠道 (Android 8.0+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "歌词显示",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "实时显示歌词内容"
+                setShowBadge(false)
+                setSound(null, null)  // 无声音
+            }
+            notificationManager.createNotificationChannel(channel)
+            Log.d(TAG, "✅ NotificationChannel 已创建: $CHANNEL_ID")
+        }
     }
 
     // ========== 核心方法：更新歌词 ==========
@@ -132,7 +151,13 @@ class LyricsNotificationManager(private val context: Context) {
         // 取消待处理的更新
         pendingUpdate?.let { handler.removeCallbacks(it) }
 
-        // TODO: 更新通知为无歌词状态
+        // 取消通知
+        try {
+            notificationManager.cancel(NOTIFICATION_ID)
+            Log.d(TAG, "✅ 通知已取消")
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ 取消通知失败: ${e.message}", e)
+        }
     }
 
     // ========== 核心方法：设置开关 ==========
@@ -171,6 +196,8 @@ class LyricsNotificationManager(private val context: Context) {
     // ========== 实际通知更新逻辑 ==========
 
     private fun updateNotificationInternal() {
+        Log.d(TAG, "🔧 开始构建通知...")
+
         // 构建高亮歌词
         val highlightedCurrent = buildHighlightedLyric(
             currentLine ?: "",
@@ -180,8 +207,57 @@ class LyricsNotificationManager(private val context: Context) {
 
         Log.d(TAG, "更新通知: position=${currentPositionMs}ms, highlighted=${highlightedCurrent.length}chars")
 
-        // TODO: 实际构建和发送通知（Phase 1.3完成布局后实现）
-        // 这里暂时只记录日志
+        try {
+            Log.d(TAG, "🔧 步骤1: 创建RemoteViews")
+            // 使用简化布局
+            val remoteViews = RemoteViews(context.packageName, R.layout.notification_lyrics_simple)
+
+            Log.d(TAG, "🔧 步骤2: 设置当前句歌词 (${currentLine?.length ?: 0} chars)")
+            // 设置歌词文本（始终显示，即使为空）
+            remoteViews.setTextViewText(
+                R.id.notification_current_lyric,
+                if (currentLine.isNullOrEmpty()) "无歌词" else highlightedCurrent
+            )
+
+            Log.d(TAG, "🔧 步骤3: 设置下一句歌词 (${nextLine?.length ?: 0} chars)")
+            remoteViews.setTextViewText(
+                R.id.notification_next_lyric,
+                if (nextLine.isNullOrEmpty()) "" else nextLine
+            )
+
+            Log.d(TAG, "🔧 步骤4: 构建Notification对象")
+            // 创建点击Intent
+            val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+            val pendingIntent = PendingIntent.getActivity(
+                context,
+                0,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            // 构建通知
+            val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_media_play)
+                .setContentTitle("歌词显示")
+                .setContentText("正在播放")
+                .setCustomContentView(remoteViews)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(false)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setOnlyAlertOnce(true)
+                .setSilent(true)
+                .build()
+
+            Log.d(TAG, "🔧 步骤5: 显示通知 (ID=$NOTIFICATION_ID)")
+            // 显示通知
+            notificationManager.notify(NOTIFICATION_ID, notification)
+
+            Log.d(TAG, "✅ 通知已更新显示")
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ 更新通知失败: ${e.message}", e)
+            e.printStackTrace()
+        }
     }
 
     // ========== 逐字高亮计算 ==========

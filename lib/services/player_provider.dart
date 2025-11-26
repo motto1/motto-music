@@ -582,6 +582,7 @@ class PlayerProvider with ChangeNotifier {
       playerState?.setPlaylist(_playlist);
 
       // 自动加载歌词
+      print('[LyricsNotification] 🚀 准备调用loadLyrics()');
       loadLyrics();
     } catch (e) {
       print('❌ 播放失败: $e');
@@ -921,7 +922,10 @@ class PlayerProvider with ChangeNotifier {
   // ==================== 歌词相关方法 ====================
 
   Future<void> loadLyrics({bool forceRefresh = false}) async {
+    print('[LyricsNotification] 🎯 loadLyrics() 被调用 (song: ${_currentSong?.title})');
+
     if (_currentSong == null) {
+      print('[LyricsNotification] ⚠️ _currentSong为null，跳过加载');
       _currentLyrics = null;
       _lyricsError = null;
       notifyListeners();
@@ -995,7 +999,13 @@ class PlayerProvider with ChangeNotifier {
 
   /// 实时更新通知栏歌词（根据播放位置）
   void _updateNotificationLyrics(Duration position) {
-    if (_currentLyrics == null || _currentLyrics!.lyrics == null) {
+    // 调试：检查歌词状态
+    if (_currentLyrics == null) {
+      // print('[LyricsNotification] ⚠️ _currentLyrics为null，跳过更新');
+      return;
+    }
+    if (_currentLyrics!.lyrics == null) {
+      print('[LyricsNotification] ⚠️ _currentLyrics.lyrics为null，跳过更新');
       return;
     }
 
@@ -1037,6 +1047,9 @@ class PlayerProvider with ChangeNotifier {
           };
         }).toList();
       }
+
+      // 调试：打印歌词更新
+      print('[LyricsNotification] 📝 歌词行切换: [$currentLineIndex] ${currentLine.text}');
 
       // 更新通知栏
       _lyricsNotificationService.updateLyrics(
