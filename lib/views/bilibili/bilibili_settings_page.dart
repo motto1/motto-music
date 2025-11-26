@@ -538,15 +538,23 @@ class _DownloadSettingsSection extends StatelessWidget {
   ) async {
     final path = await downloadManager.getCurrentDownloadDirectory();
     if (!context.mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+
     try {
       final result = await OpenFilex.open(path);
+      if (!context.mounted) return;
+
       if (result.type != ResultType.done) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('无法打开目录：${result.message ?? '未知错误'}')),
+        final message =
+            result.message.isEmpty ? '未知错误' : result.message;
+        messenger.showSnackBar(
+          SnackBar(content: Text('无法打开目录：$message')),
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      if (!context.mounted) return;
+      messenger.showSnackBar(
         SnackBar(content: Text('无法打开目录: $e')),
       );
     }
