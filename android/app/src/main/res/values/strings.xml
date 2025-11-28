@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="lockscreen_default_title">Motto Music</string>
+    <string name="lockscreen_default_artist">随时享受音乐</string>
+    <string name="lockscreen_waiting_for_lyrics">歌词准备中…</string>
+    <string name="lockscreen_no_lyrics">暂无歌词</string>
+    <string name="lockscreen_service_title">锁屏歌词已开启</string>
+    <string name="lockscreen_service_text">锁屏歌词服务正在运行</string>
+    <string name="lockscreen_alert_title">锁屏歌词</string>
+    <string name="lockscreen_alert_text">点击查看锁屏歌词</string>
+    <string name="lockscreen_slide_hint">滑动解锁</string>
+</resources>

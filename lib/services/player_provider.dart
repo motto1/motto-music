@@ -63,6 +63,8 @@ class PlayerProvider with ChangeNotifier {
   bool _isLoadingLyrics = false;
   String? _lyricsError;
   int _currentLyricLineIndex = -1;  // 当前歌词行索引
+  bool _lyricsNotificationEnabled = false;
+  bool _lockScreenEnabled = false;
 
   StreamSubscription? _positionSub;
   StreamSubscription? _playbackStateSub;
@@ -86,6 +88,8 @@ class PlayerProvider with ChangeNotifier {
   ParsedLrc? get currentLyrics => _currentLyrics;
   bool get isLoadingLyrics => _isLoadingLyrics;
   String? get lyricsError => _lyricsError;
+  bool get lyricsNotificationEnabled => _lyricsNotificationEnabled;
+  bool get lockScreenEnabled => _lockScreenEnabled;
 
   bool get hasPrevious =>
       playMode == PlayMode.shuffle ? true : _currentIndex > 0;
@@ -171,6 +175,7 @@ class PlayerProvider with ChangeNotifier {
 
     // 监听播放状态变化
     _playbackStateSub = _audioHandler!.playbackState.listen((state) {
+      _lyricsNotificationService.updatePlayState(state.playing);
       notifyListeners();
 
       // 检测播放完成
@@ -189,6 +194,12 @@ class PlayerProvider with ChangeNotifier {
     _volume = playerState?.volume ?? 1.0;
     _playMode = playerState?.playMode ?? PlayMode.loop;
     _position.value = playerState?.position ?? Duration.zero;
+    _lyricsNotificationEnabled =
+        playerState?.lyricsNotificationEnabled ?? false;
+    _lockScreenEnabled =
+        playerState?.lockScreenEnabled ?? false;
+    await _lyricsNotificationService.setNotificationEnabled(_lyricsNotificationEnabled);
+    await _lyricsNotificationService.setLockScreenEnabled(_lockScreenEnabled);
     
     if (_currentSong != null && _playlist.isNotEmpty) {
       _currentIndex = _playlist.indexWhere((s) => s.id == _currentSong!.id);
@@ -197,6 +208,42 @@ class PlayerProvider with ChangeNotifier {
     }
     
     await _audioHandler?.setVolume(_volume);
+    if (_currentSong != null) {
+      _lyricsNotificationService.updateMetadata(
+        title: _currentSong!.title,
+        artist: _currentSong!.artist,
+        coverUrl: _currentSong!.albumArtPath,
+      );
+    }
+    notifyListeners();
+  }
+
+  Future<void> setLyricsNotificationEnabled(bool enabled) async {
+    if (_lyricsNotificationEnabled == enabled) return;
+    _lyricsNotificationEnabled = enabled;
+    await _lyricsNotificationService.setNotificationEnabled(enabled);
+    if (playerState != null) {
+      await playerState!.setLyricsNotificationEnabled(enabled);
+    }
+    notifyListeners();
+  }
+
+  Future<void> setLockScreenEnabled(bool enabled) async {
+    if (_lockScreenEnabled == enabled) return;
+    _lockScreenEnabled = enabled;
+    await _lyricsNotificationService.setLockScreenEnabled(enabled);
+    if (playerState != null) {
+      await playerState!.setLockScreenEnabled(enabled);
+    }
+    if (enabled) {
+      _lyricsNotificationService.updateMetadata(
+        title: _currentSong?.title,
+        artist: _currentSong?.artist,
+        coverUrl: _currentSong?.albumArtPath,
+      );
+      _currentLyricLineIndex = -1;
+      _updateNotificationLyrics(_position.value);
+    }
     notifyListeners();
   }
 
@@ -909,6 +956,11 @@ class PlayerProvider with ChangeNotifier {
       orElse: () => _playlist.first,
     );
     _currentIndex = _audioHandler!.currentQueueIndex;
+    _lyricsNotificationService.updateMetadata(
+      title: _currentSong?.title,
+      artist: _currentSong?.artist,
+      coverUrl: _currentSong?.albumArtPath,
+    );
     notifyListeners();
   }
 

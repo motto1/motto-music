@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -35,8 +36,13 @@ class LyricsNotificationManager(private val context: Context) {
         private const val CHANNEL_ID = "com.mottomusic.player.lyrics"  // 独立通道
 
         // 更新节流间隔
-        private const val UPDATE_THROTTLE_MS = 1000L // 通知更新 ≤ 1次/秒
-        private const val HIGHLIGHT_UPDATE_MS = 100L  // 字高亮更新间隔
+        private const val UPDATE_THROTTLE_MS = 1000L // 行切换更新
+        private const val HIGHLIGHT_UPDATE_MS = 120L  // 字高亮刷新
+        private const val RESTRICTED_POSITION_THROTTLE_MS = 350L
+
+        private val HIGHLIGHT_START_COLOR = 0xFFCCCCCC.toInt() // 灰色
+        private val HIGHLIGHT_END_COLOR = 0xFFFFFFFF.toInt()   // 白色
+        private val NON_HIGHLIGHT_COLOR = 0x66FFFFFF.toInt()   // 半透明白
     }
 
     // ========== 状态缓存 ==========
@@ -83,11 +89,13 @@ class LyricsNotificationManager(private val context: Context) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 "歌词显示",
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
                 description = "实时显示歌词内容"
                 setShowBadge(false)
-                setSound(null, null)  // 无声音
+                setSound(null, null)
+                enableVibration(false)
+                lockscreenVisibility = android.app.Notification.VISIBILITY_SECRET
             }
             notificationManager.createNotificationChannel(channel)
             Log.d(TAG, "✅ NotificationChannel 已创建: $CHANNEL_ID")
@@ -120,7 +128,7 @@ class LyricsNotificationManager(private val context: Context) {
             )
         }
 
-        Log.d(TAG, "更新歌词: current='$currentLine', next='$nextLine'")
+        Log.d(TAG, "更新歌词: current='$currentLine'")
 
         // 立即触发通知更新（歌词行切换）
         updateNotificationThrottled(immediate = true)
@@ -133,9 +141,13 @@ class LyricsNotificationManager(private val context: Context) {
 
         this.currentPositionMs = positionMs
 
-        // 仅在有字级时间戳时才高频更新（逐字高亮）
-        if (charTimestamps != null && !isRestrictedRom) {
-            updateNotificationThrottled(immediate = false)
+        if (charTimestamps != null) {
+            val throttle = if (isRestrictedRom) {
+                RESTRICTED_POSITION_THROTTLE_MS
+            } else {
+                HIGHLIGHT_UPDATE_MS
+            }
+            updateNotificationThrottled(immediate = false, throttleMs = throttle)
         }
     }
 
@@ -173,11 +185,11 @@ class LyricsNotificationManager(private val context: Context) {
 
     // ========== 通知更新（节流） ==========
 
-    private fun updateNotificationThrottled(immediate: Boolean) {
+    private fun updateNotificationThrottled(immediate: Boolean, throttleMs: Long = UPDATE_THROTTLE_MS) {
         val now = System.currentTimeMillis()
         val timeSinceLastUpdate = now - lastUpdateTime
 
-        if (immediate || timeSinceLastUpdate >= UPDATE_THROTTLE_MS) {
+        if (immediate || timeSinceLastUpdate >= throttleMs) {
             // 立即更新
             lastUpdateTime = now
             updateNotificationInternal()
@@ -188,7 +200,7 @@ class LyricsNotificationManager(private val context: Context) {
                 lastUpdateTime = System.currentTimeMillis()
                 updateNotificationInternal()
             }.also {
-                handler.postDelayed(it, UPDATE_THROTTLE_MS - timeSinceLastUpdate)
+                handler.postDelayed(it, throttleMs - timeSinceLastUpdate)
             }
         }
     }
@@ -197,6 +209,11 @@ class LyricsNotificationManager(private val context: Context) {
 
     private fun updateNotificationInternal() {
         Log.d(TAG, "🔧 开始构建通知...")
+
+        if ((currentLine.isNullOrBlank()) && (nextLine.isNullOrBlank())) {
+            clearLyrics()
+            return
+        }
 
         // 构建高亮歌词
         val highlightedCurrent = buildHighlightedLyric(
@@ -209,23 +226,25 @@ class LyricsNotificationManager(private val context: Context) {
 
         try {
             Log.d(TAG, "🔧 步骤1: 创建RemoteViews")
-            // 使用简化布局
             val remoteViews = RemoteViews(context.packageName, R.layout.notification_lyrics_simple)
 
-            Log.d(TAG, "🔧 步骤2: 设置当前句歌词 (${currentLine?.length ?: 0} chars)")
-            // 设置歌词文本（始终显示，即使为空）
-            remoteViews.setTextViewText(
-                R.id.notification_current_lyric,
-                if (currentLine.isNullOrEmpty()) "无歌词" else highlightedCurrent
-            )
+            val lyricText = if (currentLine.isNullOrEmpty()) {
+                ""
+            } else {
+                highlightedCurrent
+            }
 
-            Log.d(TAG, "🔧 步骤3: 设置下一句歌词 (${nextLine?.length ?: 0} chars)")
-            remoteViews.setTextViewText(
-                R.id.notification_next_lyric,
-                if (nextLine.isNullOrEmpty()) "" else nextLine
-            )
+            Log.d(TAG, "🔧 步骤2: 设置歌词文本 (${lyricText.length} chars)")
+            remoteViews.setTextViewText(R.id.notification_current_lyric, lyricText)
+            if (nextLine.isNullOrBlank()) {
+                remoteViews.setTextViewText(R.id.notification_next_lyric, "")
+                remoteViews.setViewVisibility(R.id.notification_next_lyric, View.GONE)
+            } else {
+                remoteViews.setTextViewText(R.id.notification_next_lyric, nextLine)
+                remoteViews.setViewVisibility(R.id.notification_next_lyric, View.VISIBLE)
+            }
 
-            Log.d(TAG, "🔧 步骤4: 构建Notification对象")
+            Log.d(TAG, "🔧 步骤3: 构建Notification对象")
             // 创建点击Intent
             val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
             val pendingIntent = PendingIntent.getActivity(
@@ -238,15 +257,18 @@ class LyricsNotificationManager(private val context: Context) {
             // 构建通知
             val notification = NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_media_play)
-                .setContentTitle("歌词显示")
-                .setContentText("正在播放")
+                .setContentTitle(null)
+                .setContentText(null)
                 .setCustomContentView(remoteViews)
                 .setContentIntent(pendingIntent)
-                .setAutoCancel(false)
+                .setOngoing(true)
+                .setShowWhen(false)
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setCategory(NotificationCompat.CATEGORY_SERVICE)
+                .setVisibility(NotificationCompat.VISIBILITY_SECRET)
                 .setOnlyAlertOnce(true)
                 .setSilent(true)
+                .setAutoCancel(false)
                 .build()
 
             Log.d(TAG, "🔧 步骤5: 显示通知 (ID=$NOTIFICATION_ID)")
@@ -267,10 +289,19 @@ class LyricsNotificationManager(private val context: Context) {
         timestamps: List<CharTimestamp>?,
         positionMs: Int
     ): SpannableString {
-        val spannable = SpannableString(text)
+        if (text.isEmpty()) {
+            return SpannableString("")
+        }
 
-        if (timestamps.isNullOrEmpty() || isRestrictedRom) {
-            // 无字级时间戳或受限ROM，返回普通文本
+        val spannable = SpannableString(text)
+        spannable.setSpan(
+            ForegroundColorSpan(NON_HIGHLIGHT_COLOR),
+            0,
+            text.length,
+            SpannableString.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
+
+        if (timestamps.isNullOrEmpty()) {
             return spannable
         }
 
@@ -286,16 +317,30 @@ class LyricsNotificationManager(private val context: Context) {
 
         // 应用前景色（高亮部分）
         if (highlightEnd > 0) {
-            val highlightColor = 0xFFFFFFFF.toInt() // 白色高亮
-            spannable.setSpan(
-                ForegroundColorSpan(highlightColor),
-                0,
-                min(highlightEnd, text.length),
-                SpannableString.SPAN_EXCLUSIVE_EXCLUSIVE
-            )
+            val clampedEnd = min(highlightEnd, text.length)
+            for (i in 0 until clampedEnd) {
+                val ratio = if (clampedEnd <= 1) 1f else i.toFloat() / (clampedEnd - 1).toFloat()
+                val color = blendColors(HIGHLIGHT_START_COLOR, HIGHLIGHT_END_COLOR, ratio)
+                spannable.setSpan(
+                    ForegroundColorSpan(color),
+                    i,
+                    i + 1,
+                    SpannableString.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+            }
         }
 
         return spannable
+    }
+
+    private fun blendColors(startColor: Int, endColor: Int, ratio: Float): Int {
+        val clampedRatio = ratio.coerceIn(0f, 1f)
+        val inverseRatio = 1f - clampedRatio
+        val a = (Color.alpha(startColor) * inverseRatio + Color.alpha(endColor) * clampedRatio).toInt()
+        val r = (Color.red(startColor) * inverseRatio + Color.red(endColor) * clampedRatio).toInt()
+        val g = (Color.green(startColor) * inverseRatio + Color.green(endColor) * clampedRatio).toInt()
+        val b = (Color.blue(startColor) * inverseRatio + Color.blue(endColor) * clampedRatio).toInt()
+        return Color.argb(a, r, g, b)
     }
 
     // ========== ROM兼容性检测 ==========

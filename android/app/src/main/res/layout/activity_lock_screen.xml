@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/lockscreen_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:id="@+id/lockscreen_cover_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:src="@android:color/black" />
+
+    <View
+        android:id="@+id/lockscreen_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/lockscreen_overlay_gradient" />
+
+    <LinearLayout
+        android:id="@+id/lockscreen_content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:paddingTop="32dp"
+        android:paddingBottom="24dp">
+
+        <ImageView
+            android:id="@+id/lockscreen_cover"
+            android:layout_width="320dp"
+            android:layout_height="320dp"
+            android:background="@drawable/lockscreen_cover_placeholder"
+            android:contentDescription="@null"
+            android:elevation="6dp"
+            android:scaleType="centerCrop" />
+
+        <TextView
+            android:id="@+id/lockscreen_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:maxLines="1"
+            android:textColor="@android:color/white"
+            android:textSize="26sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/lockscreen_artist"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:maxLines="1"
+            android:textColor="#CCFFFFFF"
+            android:textSize="18sp" />
+
+        <LinearLayout
+            android:id="@+id/lockscreen_progress_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:orientation="vertical">
+
+            <SeekBar
+                android:id="@+id/lockscreen_progress"
+                style="@android:style/Widget.Material.SeekBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="1000"
+                android:progressTint="@android:color/white"
+                android:progressBackgroundTint="#30FFFFFF"
+                android:thumbTint="@android:color/white" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/lockscreen_elapsed"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="00:00"
+                    android:textColor="#E0FFFFFF"
+                    android:textSize="12sp" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <TextView
+                    android:id="@+id/lockscreen_duration"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="00:00"
+                    android:textColor="#E0FFFFFF"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/lockscreen_controls"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/lockscreen_prev"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:background="@android:color/transparent"
+                android:contentDescription="@null"
+                android:padding="16dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_lock_skip_previous"
+                android:tint="@android:color/white" />
+
+            <ImageButton
+                android:id="@+id/lockscreen_play_pause"
+                android:layout_width="90dp"
+                android:layout_height="90dp"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:background="@android:color/transparent"
+                android:contentDescription="@null"
+                android:padding="20dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_lock_play"
+                android:tint="@android:color/white" />
+
+            <ImageButton
+                android:id="@+id/lockscreen_next"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:background="@android:color/transparent"
+                android:contentDescription="@null"
+                android:padding="16dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_lock_skip_next"
+                android:tint="@android:color/white" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/lockscreen_current_lyric"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:gravity="center"
+            android:textColor="@android:color/white"
+            android:textSize="16sp"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/lockscreen_next_lyric"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:textColor="#B3FFFFFF"
+            android:textSize="14sp"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/lockscreen_slide_hint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:gravity="center"
+            android:text="@string/lockscreen_slide_hint"
+            android:textAllCaps="true"
+            android:textColor="#CCFFFFFF"
+            android:textSize="13sp"
+            android:letterSpacing="0.15" />
+    </LinearLayout>
+
+</RelativeLayout>

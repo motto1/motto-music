@@ -16,7 +16,7 @@
         tools:targetApi="33"/>
 
     <application
-        android:name="${applicationName}" 
+        android:name=".MottoMusicApplication" 
         android:label="Motto Music"
         android:icon="@mipmap/ic_launcher"
         android:enableOnBackInvokedCallback="true"
@@ -43,6 +43,15 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".LockScreenActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:showWhenLocked="true"
+            android:theme="@style/LockScreenTheme"
+            android:screenOrientation="portrait" />
+
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
@@ -56,6 +65,11 @@
                 <action android:name="android.media.browse.MediaBrowserService" />
             </intent-filter>
         </service>
+
+        <service
+            android:name=".LockScreenService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
 
         <!-- MediaButton 接收器 (用于耳机和锁屏控制) -->
         <receiver

@@ -49,4 +49,7 @@ flutter {
 
 dependencies {
     implementation("androidx.media:media:1.6.0")
+    implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("androidx.preference:preference-ktx:1.2.1")
+    implementation("io.coil-kt:coil:2.5.0")
 }

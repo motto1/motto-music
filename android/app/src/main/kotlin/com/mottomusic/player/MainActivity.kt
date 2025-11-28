@@ -41,20 +41,59 @@ class MainActivity: FlutterActivity() {
                         currentLineEndMs,
                         charTimestamps
                     )
+                    LockScreenController.updateLyrics(
+                        currentLine,
+                        nextLine,
+                        currentLineStartMs,
+                        currentLineEndMs,
+                        charTimestamps
+                    )
                     result.success(null)
                 }
                 "updatePosition" -> {
                     val positionMs = call.argument<Int>("positionMs") ?: 0
                     lyricsManager.updatePosition(positionMs)
+                    LockScreenController.updatePosition(positionMs)
                     result.success(null)
                 }
                 "clearLyrics" -> {
                     lyricsManager.clearLyrics()
                     result.success(null)
                 }
-                "setEnabled" -> {
+                "clearLockScreen" -> {
+                    LockScreenController.clearLyrics()
+                    result.success(null)
+                }
+                "setNotificationEnabled" -> {
                     val enabled = call.argument<Boolean>("enabled") ?: true
                     lyricsManager.setEnabled(enabled)
+                    result.success(null)
+                }
+                "setLockScreenEnabled" -> {
+                    val enabled = call.argument<Boolean>("enabled") ?: true
+                    if (enabled) {
+                        LockScreenController.setLockScreenEnabled(true)
+                    } else {
+                        LockScreenController.setLockScreenEnabled(false)
+                    }
+                    result.success(null)
+                }
+                "setEnabled" -> { // backward compatibility
+                    val enabled = call.argument<Boolean>("enabled") ?: true
+                    lyricsManager.setEnabled(enabled)
+                    LockScreenController.setLockScreenEnabled(enabled)
+                    result.success(null)
+                }
+                "updateMetadata" -> {
+                    val title = call.argument<String>("title")
+                    val artist = call.argument<String>("artist")
+                    val coverUrl = call.argument<String>("coverUrl")
+                    LockScreenController.updateMetadata(title, artist, coverUrl)
+                    result.success(null)
+                }
+                "updatePlayState" -> {
+                    val playing = call.argument<Boolean>("playing") ?: false
+                    LockScreenController.updatePlayState(playing)
                     result.success(null)
                 }
                 "ping" -> {

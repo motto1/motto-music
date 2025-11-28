@@ -18,9 +18,11 @@ class LyricsNotificationService {
   factory LyricsNotificationService() => _instance;
   LyricsNotificationService._internal();
 
-  /// 是否启用通知栏歌词（默认开启）
-  bool _enabled = true;
-  bool get enabled => _enabled;
+  /// 是否启用通知栏歌词
+  bool _notificationEnabled = false;
+
+  /// 是否启用锁屏歌词
+  bool _lockScreenEnabled = false;
 
   /// 初始化服务
   Future<void> init() async {
@@ -52,7 +54,8 @@ class LyricsNotificationService {
     required int currentLineEndMs,
     List<Map<String, dynamic>>? charTimestamps,
   }) async {
-    if (!Platform.isAndroid || !_enabled) return;
+    if (!Platform.isAndroid) return;
+    if (!_notificationEnabled && !_lockScreenEnabled) return;
 
     try {
       await _channel.invokeMethod('updateLyrics', {
@@ -71,7 +74,8 @@ class LyricsNotificationService {
   ///
   /// [positionMs] 当前播放位置（毫秒）
   Future<void> updatePosition(int positionMs) async {
-    if (!Platform.isAndroid || !_enabled) return;
+    if (!Platform.isAndroid) return;
+    if (!_notificationEnabled && !_lockScreenEnabled) return;
 
     try {
       await _channel.invokeMethod('updatePosition', {
@@ -82,12 +86,46 @@ class LyricsNotificationService {
     }
   }
 
-  /// 清除通知栏歌词（无歌词或停止播放时调用）
-  Future<void> clearLyrics() async {
-    if (!Platform.isAndroid || !_enabled) return;
+  Future<void> updateMetadata({
+    String? title,
+    String? artist,
+    String? coverUrl,
+  }) async {
+    if (!Platform.isAndroid || !_lockScreenEnabled) return;
 
     try {
-      await _channel.invokeMethod('clearLyrics');
+      await _channel.invokeMethod('updateMetadata', {
+        'title': title,
+        'artist': artist,
+        'coverUrl': coverUrl,
+      });
+    } catch (e) {
+      print('[LyricsNotification] ❌ 更新元数据失败: $e');
+    }
+  }
+
+  Future<void> updatePlayState(bool playing) async {
+    if (!Platform.isAndroid || !_lockScreenEnabled) return;
+    try {
+      await _channel.invokeMethod('updatePlayState', {
+        'playing': playing,
+      });
+    } catch (e) {
+      print('[LyricsNotification] ❌ 更新播放状态失败: $e');
+    }
+  }
+
+  /// 清除通知栏歌词（无歌词或停止播放时调用）
+  Future<void> clearLyrics() async {
+    if (!Platform.isAndroid) return;
+
+    try {
+      if (_notificationEnabled) {
+        await _channel.invokeMethod('clearLyrics');
+      }
+      if (_lockScreenEnabled) {
+        await _channel.invokeMethod('clearLockScreen');
+      }
       print('[LyricsNotification] 🧹 歌词已清除');
     } catch (e) {
       print('[LyricsNotification] ❌ 清除歌词失败: $e');
@@ -97,13 +135,13 @@ class LyricsNotificationService {
   /// 设置通知栏歌词开关
   ///
   /// [enabled] true=启用，false=禁用
-  Future<void> setEnabled(bool enabled) async {
+  Future<void> setNotificationEnabled(bool enabled) async {
     if (!Platform.isAndroid) return;
 
-    _enabled = enabled;
+    _notificationEnabled = enabled;
 
     try {
-      await _channel.invokeMethod('setEnabled', {
+      await _channel.invokeMethod('setNotificationEnabled', {
         'enabled': enabled,
       });
       print('[LyricsNotification] ${enabled ? "✅ 已启用" : "⏸️ 已禁用"}');
@@ -114,6 +152,18 @@ class LyricsNotificationService {
       }
     } catch (e) {
       print('[LyricsNotification] ❌ 设置开关失败: $e');
+    }
+  }
+
+  Future<void> setLockScreenEnabled(bool enabled) async {
+    if (!Platform.isAndroid) return;
+    _lockScreenEnabled = enabled;
+    try {
+      await _channel.invokeMethod('setLockScreenEnabled', {
+        'enabled': enabled,
+      });
+    } catch (e) {
+      print('[LockScreen] ❌ 设置锁屏开关失败: $e');
     }
   }
 

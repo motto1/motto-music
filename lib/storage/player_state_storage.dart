@@ -24,6 +24,8 @@ class PlayerStateStorage {
   static const String _playlistKey = 'playlist';
   static const String _bilibiliCacheSizeKey = 'bilibili_cache_size_gb';
   static const String _bilibiliPlayQualityKey = 'bilibili_play_quality';
+  static const String _lyricsNotificationEnabledKey = 'lyrics_notification_enabled';
+  static const String _lockScreenEnabledKey = 'lockscreen_lyrics_enabled';
 
   // 私有成员
   bool _isPlaying = false;
@@ -36,6 +38,8 @@ class PlayerStateStorage {
   List<Song> _playlist = [];
   int _bilibiliCacheSizeGB = 5; // 默认 5GB
   int _defaultBilibiliPlayQuality = 30232; // 默认高音质 (128kbps)
+  bool _lyricsNotificationEnabled = false;
+  bool _lockScreenEnabled = false;
 
   /// 对外只读属性
   bool get isPlaying => _isPlaying;
@@ -49,6 +53,8 @@ class PlayerStateStorage {
   List<Song> get playlist => List.unmodifiable(_playlist);
   int get bilibiliCacheSizeGB => _bilibiliCacheSizeGB;
   int get defaultBilibiliPlayQuality => _defaultBilibiliPlayQuality;
+  bool get lyricsNotificationEnabled => _lyricsNotificationEnabled;
+  bool get lockScreenEnabled => _lockScreenEnabled;
 
   /// 启动时初始化，从本地读取
   static Future<PlayerStateStorage> _load() async {
@@ -80,6 +86,8 @@ class PlayerStateStorage {
     state._volume = prefs.getDouble(_volumeKey) ?? 1.0;
     state._bilibiliCacheSizeGB = prefs.getInt(_bilibiliCacheSizeKey) ?? 5;
     state._defaultBilibiliPlayQuality = prefs.getInt(_bilibiliPlayQualityKey) ?? 30232;
+    state._lyricsNotificationEnabled = prefs.getBool(_lyricsNotificationEnabledKey) ?? false;
+    state._lockScreenEnabled = prefs.getBool(_lockScreenEnabledKey) ?? false;
 
     final pageIndex = prefs.getInt(_pageKey);
     if (pageIndex != null &&
@@ -163,6 +171,16 @@ class PlayerStateStorage {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_bilibiliPlayQualityKey, _defaultBilibiliPlayQuality);
   }
+
+  Future<void> _saveLyricsNotificationEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_lyricsNotificationEnabledKey, _lyricsNotificationEnabled);
+  }
+
+  Future<void> _saveLockScreenEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_lockScreenEnabledKey, _lockScreenEnabled);
+  }
 }
 
 /// 对外操作扩展
@@ -230,5 +248,15 @@ extension PlayerStateSetters on PlayerStateStorage {
   Future<void> setDefaultBilibiliPlayQuality(int qualityId) async {
     _defaultBilibiliPlayQuality = qualityId;
     await _saveBilibiliPlayQuality();
+  }
+
+  Future<void> setLyricsNotificationEnabled(bool enabled) async {
+    _lyricsNotificationEnabled = enabled;
+    await _saveLyricsNotificationEnabled();
+  }
+
+  Future<void> setLockScreenEnabled(bool enabled) async {
+    _lockScreenEnabled = enabled;
+    await _saveLockScreenEnabled();
   }
 }

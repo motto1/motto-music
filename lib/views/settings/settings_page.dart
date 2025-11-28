@@ -396,6 +396,43 @@ class SettingsPageState extends State<SettingsPage> with ShowAwarePage {
                   MottoToast.show(context, '音效设置功能尚未实现');
                 },
               ),
+              const Divider(height: 1),
+              SwitchListTile.adaptive(
+                secondary: CircleAvatar(
+                  backgroundColor: Colors.blue.withOpacity(0.1),
+                  child: const Icon(
+                    CupertinoIcons.music_note_list,
+                    color: Colors.blue,
+                  ),
+                ),
+                value: playerProvider.lyricsNotificationEnabled,
+                onChanged: (value) {
+                  playerProvider.setLyricsNotificationEnabled(value);
+                },
+                title: const Text(
+                  '歌词通知',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
+                subtitle: const Text('在系统通知中显示歌词'),
+              ),
+              SwitchListTile.adaptive(
+                secondary: CircleAvatar(
+                  backgroundColor: Colors.purple.withOpacity(0.1),
+                  child: const Icon(
+                    CupertinoIcons.device_phone_portrait,
+                    color: Colors.purple,
+                  ),
+                ),
+                value: playerProvider.lockScreenEnabled,
+                onChanged: (value) {
+                  playerProvider.setLockScreenEnabled(value);
+                },
+                title: const Text(
+                  '锁屏播放界面',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
+                subtitle: const Text('在系统锁屏显示 Metro 风格播放界面'),
+              ),
             ],
           ),
         );
