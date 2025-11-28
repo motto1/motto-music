@@ -92,11 +92,9 @@ class MainActivity: FlutterActivity() {
                     result.success(null)
                 }
                 "updatePlayState" -> {
-                    // 深度混合方案：移除 updatePlayState，改为 tryShow
+                    // 深度混合方案：更新播放状态，供锁屏控制器判断
                     val playing = call.argument<Boolean>("playing") ?: false
-                    if (playing) {
-                        LockScreenController.tryShowLockScreen()
-                    }
+                    LockScreenController.updatePlayState(playing)
                     result.success(null)
                 }
                 "tryShow" -> {
@@ -117,6 +115,13 @@ class MainActivity: FlutterActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        // 注销广播接收器
+        try {
+            unregisterReceiver(screenOffReceiver)
+        } catch (e: Exception) {
+            // 忽略注销错误
+        }
+        
         if (::lyricsManager.isInitialized) {
             lyricsManager.dispose()
         }

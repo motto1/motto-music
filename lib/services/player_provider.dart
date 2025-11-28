@@ -176,12 +176,6 @@ class PlayerProvider with ChangeNotifier {
     // 监听播放状态变化
     _playbackStateSub = _audioHandler!.playbackState.listen((state) {
       _lyricsNotificationService.updatePlayState(state.playing);
-      
-      // 深度混合方案：播放状态变化时触发锁屏显示
-      if (state.playing && _lockScreenEnabled) {
-        _lyricsNotificationService.tryShowLockScreen();
-      }
-      
       notifyListeners();
 
       // 检测播放完成

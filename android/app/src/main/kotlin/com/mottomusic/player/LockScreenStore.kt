@@ -13,7 +13,8 @@ data class LockScreenState(
     val charTimestamps: List<Map<String, Any>>? = null,
     val currentLineStartMs: Int = 0,
     val currentLineEndMs: Int = 0,
-    val currentPositionMs: Int = 0
+    val currentPositionMs: Int = 0,
+    val isPlaying: Boolean = false
 ) {
     fun hasLyrics(): Boolean = !currentLine.isNullOrBlank() || !nextLine.isNullOrBlank()
     fun hasMetadata(): Boolean = !title.isNullOrBlank() || !artist.isNullOrBlank() || !coverUrl.isNullOrBlank()
@@ -21,12 +22,7 @@ data class LockScreenState(
 }
 
 /**
- * 锁屏状态存储（深度混合方案 - 简化版）
- * 
- * 改动：
- * - 移除观察者模式（observe/remove/notifyChanged）
- * - 移除 updatePlayState() - Activity 直接读 MediaController
- * - 改为纯状态容器，无通知机制
+ * 锁屏状态存储（深度混合方案 - 纯状态容器）
  */
 object LockScreenStore {
     @Volatile
@@ -40,6 +36,10 @@ object LockScreenStore {
 
     fun updateMetadata(title: String?, artist: String?, coverUrl: String?) {
         state = state.copy(title = title, artist = artist, coverUrl = coverUrl)
+    }
+
+    fun updatePlayState(playing: Boolean) {
+        state = state.copy(isPlaying = playing)
     }
 
     fun updateLyrics(

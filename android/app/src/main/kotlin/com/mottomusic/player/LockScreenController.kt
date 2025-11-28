@@ -42,6 +42,10 @@ object LockScreenController {
         LockScreenStore.updateMetadata(title, artist, coverUrl)
     }
 
+    fun updatePlayState(playing: Boolean) {
+        LockScreenStore.updatePlayState(playing)
+    }
+
     fun updateLyrics(
         currentLine: String?,
         nextLine: String?,
@@ -72,7 +76,10 @@ object LockScreenController {
      * 由 Flutter 层通过 MethodChannel 调用
      */
     fun tryShowLockScreen() {
-        if (!enabled) return
+        val state = LockScreenStore.currentState()
+        // 仅在启用且正在播放时显示
+        if (!state.enabled || !state.isPlaying) return
+        
         val app = application ?: return
         // 直接启动 Activity，依赖 showWhenLocked 属性自动显示
         LockScreenActivity.start(app)
