@@ -1,8 +1,8 @@
 package com.mottomusic.player
 
-import java.lang.ref.WeakReference
-import java.util.concurrent.CopyOnWriteArrayList
-
+/**
+ * 锁屏状态数据类
+ */
 data class LockScreenState(
     val enabled: Boolean = false,
     val title: String? = null,
@@ -13,52 +13,33 @@ data class LockScreenState(
     val charTimestamps: List<Map<String, Any>>? = null,
     val currentLineStartMs: Int = 0,
     val currentLineEndMs: Int = 0,
-    val currentPositionMs: Int = 0,
-    val isPlaying: Boolean = false
+    val currentPositionMs: Int = 0
 ) {
     fun hasLyrics(): Boolean = !currentLine.isNullOrBlank() || !nextLine.isNullOrBlank()
     fun hasMetadata(): Boolean = !title.isNullOrBlank() || !artist.isNullOrBlank() || !coverUrl.isNullOrBlank()
-    fun shouldShowLockScreen(): Boolean = enabled && isPlaying && (hasLyrics() || hasMetadata())
+    fun shouldShowLockScreen(): Boolean = enabled && (hasLyrics() || hasMetadata())
 }
 
-typealias LockScreenListener = (LockScreenState) -> Unit
-
+/**
+ * 锁屏状态存储（深度混合方案 - 简化版）
+ * 
+ * 改动：
+ * - 移除观察者模式（observe/remove/notifyChanged）
+ * - 移除 updatePlayState() - Activity 直接读 MediaController
+ * - 改为纯状态容器，无通知机制
+ */
 object LockScreenStore {
     @Volatile
     private var state = LockScreenState()
-    private val listeners = CopyOnWriteArrayList<WeakReference<LockScreenListener>>()
 
     fun currentState(): LockScreenState = state
 
-    fun observe(listener: LockScreenListener) {
-        cleanupListeners()
-        listeners.add(WeakReference(listener))
-        listener.invoke(state)
-    }
-
-    fun remove(listener: LockScreenListener) {
-        listeners.removeAll { it.get() == null || it.get() == listener }
-    }
-
-    private fun notifyChanged() {
-        cleanupListeners()
-        listeners.forEach { ref ->
-            ref.get()?.invoke(state)
-        }
-    }
-
-    private fun cleanupListeners() {
-        listeners.removeAll { it.get() == null }
-    }
-
     fun setEnabled(enabled: Boolean) {
         state = state.copy(enabled = enabled)
-        notifyChanged()
     }
 
     fun updateMetadata(title: String?, artist: String?, coverUrl: String?) {
         state = state.copy(title = title, artist = artist, coverUrl = coverUrl)
-        notifyChanged()
     }
 
     fun updateLyrics(
@@ -75,17 +56,10 @@ object LockScreenStore {
             currentLineEndMs = currentLineEndMs,
             charTimestamps = charTimestamps
         )
-        notifyChanged()
     }
 
     fun updatePosition(positionMs: Int) {
         state = state.copy(currentPositionMs = positionMs)
-        notifyChanged()
-    }
-
-    fun updatePlayState(isPlaying: Boolean) {
-        state = state.copy(isPlaying = isPlaying)
-        notifyChanged()
     }
 
     fun clear() {
@@ -97,6 +71,5 @@ object LockScreenStore {
             currentLineEndMs = 0,
             currentPositionMs = 0
         )
-        notifyChanged()
     }
 }

@@ -44,7 +44,6 @@ class LockScreenActivity : AppCompatActivity() {
     private lateinit var nextButton: ImageButton
     private lateinit var slideHintView: TextView
 
-    private val storeListener: LockScreenListener = { updateUi(it) }
     private var latestState: LockScreenState? = null
 
     private var mediaBrowser: MediaBrowserCompat? = null
@@ -55,6 +54,16 @@ class LockScreenActivity : AppCompatActivity() {
     private val progressUpdater = object : Runnable {
         override fun run() {
             updateProgress()
+            progressHandler.postDelayed(this, 1000L)
+        }
+    }
+    
+    // 深度混合方案：定时轮询读取状态
+    private val stateUpdateHandler = Handler(Looper.getMainLooper())
+    private val stateUpdater = object : Runnable {
+        override fun run() {
+            updateUi(LockScreenStore.currentState())
+            stateUpdateHandler.postDelayed(this, 500L)  // 每500ms更新一次
         }
     }
     private var isUserSeeking = false
@@ -103,13 +112,17 @@ class LockScreenActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        LockScreenStore.observe(storeListener)
+        // 深度混合方案：直接读取状态，无需 observe
+        updateUi(LockScreenStore.currentState())
+        // 启动定时轮询
+        stateUpdateHandler.post(stateUpdater)
         mediaBrowser?.connect()
     }
 
     override fun onStop() {
         super.onStop()
-        LockScreenStore.remove(storeListener)
+        // 停止定时轮询
+        stateUpdateHandler.removeCallbacks(stateUpdater)
         progressHandler.removeCallbacks(progressUpdater)
         mediaController?.unregisterCallback(controllerCallback)
         MediaControllerCompat.setMediaController(this, null)
@@ -129,14 +142,15 @@ class LockScreenActivity : AppCompatActivity() {
     private fun configureWindow() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        
+        // 深度混合方案：参考 Metro-dev，仅 showWhenLocked，不 turnScreenOn
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)
-            setTurnScreenOn(true)
+            // 移除 setTurnScreenOn(true) - 避免误唤醒，节省电量
         } else {
             @Suppress("DEPRECATION")
-            val flags = WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
-            window.addFlags(flags)
+            window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
+            // 移除 FLAG_TURN_SCREEN_ON
         }
         window.statusBarColor = Color.TRANSPARENT
         window.navigationBarColor = Color.BLACK

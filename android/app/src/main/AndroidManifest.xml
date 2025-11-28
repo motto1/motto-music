@@ -49,8 +49,10 @@
             android:excludeFromRecents="true"
             android:launchMode="singleTask"
             android:showWhenLocked="true"
+            android:turnScreenOn="false"
             android:theme="@style/LockScreenTheme"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait"
+            android:showForAllUsers="true" />
 
         <meta-data
             android:name="flutterEmbedding"
@@ -66,16 +68,9 @@
             </intent-filter>
         </service>
 
-        <service
-            android:name=".LockScreenService"
-            android:exported="false"
-            android:foregroundServiceType="mediaPlayback" />
-
         <!-- MediaButton 接收器 (用于耳机和锁屏控制) -->
         <receiver
             android:name="com.ryanheise.audioservice.MediaButtonReceiver"
-            android:exported="true">
-            <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.MEDIA_BUTTON" />
             </intent-filter>
         </receiver>

@@ -1,44 +1,45 @@
 package com.mottomusic.player
 
 import android.app.Application
-import android.content.Intent
-import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceManager
 
+/**
+ * 锁屏控制器（深度混合方案 - 简化版）
+ * 
+ * 改动：
+ * - 移除 LockScreenService 启动/停止逻辑
+ * - 移除 LockScreenStore 观察者监听
+ * - 仅保留 tryShowLockScreen() 作为启动入口
+ * - 配置管理简化
+ */
 object LockScreenController {
     private const val PREF_LOCKSCREEN_ENABLED = "lockscreen_lyrics_enabled"
     private var application: Application? = null
-    private val storeListener: LockScreenListener = { state ->
-        if (!state.shouldShowLockScreen()) {
-            LockScreenActivity.dismissActive()
-        }
-    }
+    private var enabled: Boolean = false
 
     fun initialize(app: Application) {
         application = app
-        LockScreenStore.observe(storeListener)
         val prefs = PreferenceManager.getDefaultSharedPreferences(app)
-        val enabled = prefs.getBoolean(PREF_LOCKSCREEN_ENABLED, false)
+        enabled = prefs.getBoolean(PREF_LOCKSCREEN_ENABLED, false)
         LockScreenStore.setEnabled(enabled)
-        if (enabled) {
-            startService()
-        }
     }
 
-    fun setLockScreenEnabled(enabled: Boolean) {
-        LockScreenStore.setEnabled(enabled)
-        saveEnabled(enabled)
-        if (enabled) {
-            startService()
-            tryShowLockScreen()
-        } else {
-            stopService()
+    fun setLockScreenEnabled(value: Boolean) {
+        enabled = value
+        LockScreenStore.setEnabled(value)
+        val app = application ?: return
+        PreferenceManager.getDefaultSharedPreferences(app)
+            .edit()
+            .putBoolean(PREF_LOCKSCREEN_ENABLED, value)
+            .apply()
+        
+        if (!value) {
+            LockScreenActivity.dismissActive()
         }
     }
 
     fun updateMetadata(title: String?, artist: String?, coverUrl: String?) {
         LockScreenStore.updateMetadata(title, artist, coverUrl)
-        tryShowLockScreen()
     }
 
     fun updateLyrics(
@@ -55,16 +56,10 @@ object LockScreenController {
             currentLineEndMs,
             charTimestamps
         )
-        tryShowLockScreen()
     }
 
     fun updatePosition(positionMs: Int) {
         LockScreenStore.updatePosition(positionMs)
-    }
-
-    fun updatePlayState(isPlaying: Boolean) {
-        LockScreenStore.updatePlayState(isPlaying)
-        tryShowLockScreen()
     }
 
     fun clearLyrics() {
@@ -72,28 +67,14 @@ object LockScreenController {
         LockScreenActivity.dismissActive()
     }
 
+    /**
+     * 尝试显示锁屏界面（深度混合方案核心方法）
+     * 由 Flutter 层通过 MethodChannel 调用
+     */
     fun tryShowLockScreen() {
+        if (!enabled) return
         val app = application ?: return
-        LockScreenService.requestEvaluate(app)
-    }
-
-    private fun saveEnabled(enabled: Boolean) {
-        val app = application ?: return
-        PreferenceManager.getDefaultSharedPreferences(app)
-            .edit()
-            .putBoolean(PREF_LOCKSCREEN_ENABLED, enabled)
-            .apply()
-    }
-
-    private fun startService() {
-        val app = application ?: return
-        val intent = Intent(app, LockScreenService::class.java)
-        ContextCompat.startForegroundService(app, intent)
-    }
-
-    private fun stopService() {
-        val app = application ?: return
-        LockScreenActivity.dismissActive()
-        app.stopService(Intent(app, LockScreenService::class.java))
+        // 直接启动 Activity，依赖 showWhenLocked 属性自动显示
+        LockScreenActivity.start(app)
     }
 }
