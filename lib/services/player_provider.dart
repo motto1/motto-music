@@ -170,23 +170,103 @@ class PlayerProvider with ChangeNotifier {
     _audioHandler!.currentIndex.addListener(() {
       debugPrint('[PlayerProvider] 🔄 队列索引变化: ${_audioHandler!.currentIndex.value}');
       _updateCurrentSongFromHandler();
+
+  bool get hasPrevious =>
+      playMode == PlayMode.shuffle ? true : _currentIndex > 0;
+  bool get hasNext => playMode == PlayMode.shuffle
+      ? true
+      : _currentIndex < _playlist.length - 1;
+
+  static final Set<VoidCallback> _songChangeListeners = <VoidCallback>{};
+
+  static void addSongChangeListener(VoidCallback listener) {
+    _songChangeListeners.add(listener);
+  }
+
+  static void removeSongChangeListener(VoidCallback listener) {
+    _songChangeListeners.remove(listener);
+  }
+
+  static void _notifySongChange() {
+    for (final listener in List<VoidCallback>.from(_songChangeListeners)) {
+      try {
+        listener();
+      } catch (e, stackTrace) {
+        debugPrint('[PlayerProvider] 通知最近播放数据时出错: $e');
+        debugPrint(stackTrace.toString());
+      }
+    }
+  }
+
+  // AudioHandler 初始化
+  Future<void> initWithAudioHandler(MottoAudioHandler? handler) async {
+    _audioHandler = handler;
+
+    // 初始化 Bilibili 相关服务
+    final cookieManager = CookieManager();
+    _cookieManager = cookieManager;
+    final apiClient = BilibiliApiClient(cookieManager);
+    _bilibiliStreamService = BilibiliStreamService(apiClient);
+    _bilibiliApiService = BilibiliApiService(apiClient);
+    _bilibiliAudioCacheService = BilibiliAudioCacheService(
+      MusicDatabase.database,
+      _bilibiliStreamService,
+    );
+
+    // 初始化自动缓存服务（方案B - 自动缓存层）
+    _bilibiliAutoCacheService = await BilibiliAutoCacheService.getInstance(
+      streamService: _bilibiliStreamService,
+      cookieManager: cookieManager,
+    );
+
+    debugPrint('[PlayerProvider] ✅ Bilibili 双层缓存服务已初始化');
+
+    _initializeListeners();
+    await _restoreState();
+  }
+
+  void _initializeListeners() {
+    // 只在有 audioHandler 时设置监听
+    if (_audioHandler == null) return;
+
+    // 初始化通知栏歌词服务
+    _lyricsNotificationService.init();
+
+    // 监听播放位置
+    _positionSub = Stream.periodic(
+      const Duration(milliseconds: 200),
+      (_) => _audioHandler!.position,
+    ).listen((pos) {
+      _position.value = pos;
+      if (_audioHandler!.duration != null) {
+        _duration = _audioHandler!.duration!;
+      }
+
+      // 实时更新通知栏歌词（根据播放位置）
+      _updateNotificationLyrics(pos);
+    });
+
+    // ⭐ 监听队列索引变化（关键修复：自动切歌时更新界面）
+    _audioHandler!.currentIndex.addListener(() {
+      debugPrint('[PlayerProvider] 🔄 队列索引变化: ${_audioHandler!.currentIndex.value}');
+      _updateCurrentSongFromHandler();
       _notifySongChange();
     });
 
     // 监听播放状态变化
     _playbackStateSub = _audioHandler!.playbackState.listen((state) {
       _lyricsNotificationService.updatePlayState(state.playing);
+      
+      // 深度混合方案：播放状态变化时触发锁屏显示
+      if (state.playing && _lockScreenEnabled) {
+        _lyricsNotificationService.tryShowLockScreen();
+      }
+      
       notifyListeners();
 
       // 检测播放完成
       if (state.processingState == AudioProcessingState.completed) {
         _onSongComplete();
-      }
-    });
-  }
-
-  Future<void> _restoreState() async {
-    playerState = await PlayerStateStorage.getInstance();
     _currentSong = playerState?.currentSong;
     _playlist = playerState?.playlist ?? [];
     _originalPlaylist = playerState?.playlist ?? [];

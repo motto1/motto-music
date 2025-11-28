@@ -115,6 +115,17 @@ class LyricsNotificationService {
     }
   }
 
+  /// 尝试显示锁屏界面（深度混合方案新增）
+  /// 由 PlayerProvider 在播放状态变化时调用
+  Future<void> tryShowLockScreen() async {
+    if (!Platform.isAndroid || !_lockScreenEnabled) return;
+    try {
+      await _channel.invokeMethod('tryShow');
+    } catch (e) {
+      print('[LyricsNotification] ❌ tryShowLockScreen失败: $e');
+    }
+  }
+
   /// 清除通知栏歌词（无歌词或停止播放时调用）
   Future<void> clearLyrics() async {
     if (!Platform.isAndroid) return;

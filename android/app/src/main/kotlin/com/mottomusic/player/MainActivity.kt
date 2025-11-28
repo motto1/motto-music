@@ -92,8 +92,16 @@ class MainActivity: FlutterActivity() {
                     result.success(null)
                 }
                 "updatePlayState" -> {
+                    // 深度混合方案：移除 updatePlayState，改为 tryShow
                     val playing = call.argument<Boolean>("playing") ?: false
-                    LockScreenController.updatePlayState(playing)
+                    if (playing) {
+                        LockScreenController.tryShowLockScreen()
+                    }
+                    result.success(null)
+                }
+                "tryShow" -> {
+                    // 深度混合方案：新增 tryShow 方法
+                    LockScreenController.tryShowLockScreen()
                     result.success(null)
                 }
                 "ping" -> {
