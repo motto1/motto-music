@@ -71,6 +71,8 @@
         <!-- MediaButton 接收器 (用于耳机和锁屏控制) -->
         <receiver
             android:name="com.ryanheise.audioservice.MediaButtonReceiver"
+            android:exported="true">
+            <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.MEDIA_BUTTON" />
             </intent-filter>
         </receiver>
