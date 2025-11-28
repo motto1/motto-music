@@ -2,6 +2,9 @@ package com.mottomusic.player
 
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.content.BroadcastReceiver
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -66,6 +69,16 @@ class LockScreenActivity : AppCompatActivity() {
             stateUpdateHandler.postDelayed(this, 500L)  // 每500ms更新一次
         }
     }
+
+    // 监听解锁广播，解锁后自动关闭
+    private val userPresentReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (Intent.ACTION_USER_PRESENT == intent?.action) {
+                finish()
+            }
+        }
+    }
+
     private var isUserSeeking = false
 
     private val controllerCallback = object : MediaControllerCompat.Callback() {
@@ -98,6 +111,10 @@ class LockScreenActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         companionRef = WeakReference(this)
+        
+        // 注册解锁广播
+        registerReceiver(userPresentReceiver, IntentFilter(Intent.ACTION_USER_PRESENT))
+        
         setContentView(R.layout.activity_lock_screen)
         configureWindow()
         bindViews()
@@ -134,6 +151,14 @@ class LockScreenActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        
+        // 注销广播
+        try {
+            unregisterReceiver(userPresentReceiver)
+        } catch (e: Exception) {
+            // ignore
+        }
+        
         if (companionRef.get() == this) {
             companionRef = WeakReference(null)
         }

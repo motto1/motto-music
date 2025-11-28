@@ -48,6 +48,7 @@
             android:exported="false"
             android:excludeFromRecents="true"
             android:launchMode="singleTask"
+            android:taskAffinity=".lockscreen"
             android:showWhenLocked="true"
             android:turnScreenOn="false"
             android:theme="@style/LockScreenTheme"

@@ -1,6 +1,9 @@
 package com.mottomusic.player
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import com.ryanheise.audioservice.AudioServicePlugin
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -9,6 +12,16 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity: FlutterActivity() {
     private val LYRICS_CHANNEL = "com.mottomusic.lyrics_notification"
     private lateinit var lyricsManager: LyricsNotificationManager
+
+    // 监听屏幕关闭广播
+    private val screenOffReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (Intent.ACTION_SCREEN_OFF == intent?.action) {
+                // 屏幕关闭时，尝试显示锁屏
+                LockScreenController.tryShowLockScreen()
+            }
+        }
+    }
 
     override fun provideFlutterEngine(context: Context): FlutterEngine {
         return AudioServicePlugin.getFlutterEngine(context)
@@ -19,6 +32,9 @@ class MainActivity: FlutterActivity() {
 
         // 初始化歌词管理器
         lyricsManager = LyricsNotificationManager(this)
+
+        // 注册屏幕关闭广播
+        registerReceiver(screenOffReceiver, IntentFilter(Intent.ACTION_SCREEN_OFF))
 
         // 注册MethodChannel
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, LYRICS_CHANNEL).setMethodCallHandler { call, result ->
@@ -52,7 +68,6 @@ class MainActivity: FlutterActivity() {
                 }
                 "updatePosition" -> {
                     val positionMs = call.argument<Int>("positionMs") ?: 0
-                    lyricsManager.updatePosition(positionMs)
                     LockScreenController.updatePosition(positionMs)
                     result.success(null)
                 }
