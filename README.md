@@ -1,6 +1,8 @@
 # Motto Music
 
-Motto Music 是一款由 Flutter 驱动的跨平台开源音乐播放器，面向“本地收藏 + 私人云 + Bilibili 音源”使用场景。项目目标是提供稳定、可定制、开箱即用的音乐体验，并保持对桌面与移动端一致的体验设计。
+Motto Music 是一款基于 Flutter 开发的 **Android 音乐播放器**，专为"本地收藏 + Bilibili 音源"使用场景设计。项目目标是提供稳定、可定制、开箱即用的音乐体验。
+
+> **注意**：本项目目前仅适配 Android 平台，暂无其他平台支持计划。
 
 ---
 
@@ -8,24 +10,24 @@ Motto Music 是一款由 Flutter 驱动的跨平台开源音乐播放器，面�
 
 | 能力 | 说明 |
 | --- | --- |
-| 🎧 多源音频 | 同时支持本地文件、Bilibili 音源、WebDAV/自建 NAS（正在扩展中） |
-| 📲 全平台体验 | Flutter 渲染 + 平台原生增强。已验证 Windows / macOS / Linux / Android / iOS |
-| 🧠 智能歌词 | 自动解析 LRC/TTML，内置歌词搜索、偏移与手动导入工具 |
-| 🖼️ 可视化播放器 | Apple Music 风格界面、动态封面、可折叠菜单与播放控制 |
-| 📂 自定义下载目录 | 安卓端默认写入 `Music/MottoMusic/Bilibili`，可在设置中长按修改，点击即可打开目录 |
-| 🔁 后台下载 & 自动缓存 | 可调并发、仅 Wi-Fi 下载、LRU 缓存管理、失败重试 |
-| 🧩 可扩展服务层 | Bilibili 登录、解析、下载、缓存、歌词、播放等以 Service 形式按需替换或复用 |
+| 🎧 双源音频 | 支持本地音乐文件和 Bilibili 音源，统一管理与播放 |
+| 🧠 智能歌词 | 自动解析 LRC/TTML 格式，内置歌词搜索、偏移调整与手动导入 |
+| 🖼️ 现代播放器 | Apple Music 风格界面、动态封面、流畅动画与直观控制 |
+| 🔒 锁屏控制 | 精美的锁屏界面，支持歌词滚动和全功能播放控制 |
+| 📂 灵活存储 | 自定义 Bilibili 下载目录，默认 `Music/MottoMusic/Bilibili` |
+| 🔁 智能下载 | 可调并发、仅 Wi-Fi 下载、LRU 缓存管理、断点续传 |
+| 🧩 模块化架构 | Service 层设计，便于扩展和维护 |
 
 ---
 
 ## 🏗️ 技术栈
 
-- **Flutter 3.3+ / Dart 3**：UI、状态与路由核心
-- **Drift + sqlite3_flutter_libs**：跨平台数据库层（Song / Download / UserSettings 等）
-- **audio_service + just_audio**：跨平台播放与通知栏控制
-- **Dio / connectivity_plus / permission_handler**：网络、权限与下载
-- **OpenFilex / FilePicker**：系统目录访问与可视化文件交互
-- **自建 Service 模块**：`bilibili`, `lyrics`, `cache`, `platform` 等
+- **Flutter 3.3+ / Dart 3**：UI 渲染、状态管理与路由
+- **Drift + sqlite3_flutter_libs**：本地数据库（歌曲、下载、设置等）
+- **audio_service + just_audio**：音频播放与通知栏/锁屏控制
+- **Dio / connectivity_plus / permission_handler**：网络请求、连接检测与权限管理
+- **cached_network_image / flutter_cache_manager**：图片和音频缓存
+- **自建 Service 模块**：`bilibili`、`lyrics`、`cache`、`player` 等模块化服务
 
 ---
 
@@ -50,13 +52,13 @@ lib/
 
 - Flutter >= 3.3（推荐使用最新 stable channel）
 - Dart >= 3.3
-- Android SDK / Xcode / Visual Studio（视目标平台而定）
+- Android SDK（API 21+）
 - Git（用于拉取/提交代码）
 
 ### 2. 克隆仓库
 
 ```bash
-git clone https://github.com/<your-account>/motto-music.git
+git clone https://github.com/motto1/motto-music.git
 cd motto-music
 flutter pub get
 ```
@@ -64,44 +66,44 @@ flutter pub get
 ### 3. 运行 / 构建
 
 ```bash
-# Android / iOS / Web / macOS / Windows / Linux
-flutter run -d <device-id>
+# 连接 Android 设备或启动模拟器后运行
+flutter run
 
-# 桌面 Release（示例）
-flutter build macos
-
-# Android 安装包
+# 构建 APK 安装包
 flutter build apk --split-per-abi
+
+# 构建 App Bundle（推荐用于发布）
+flutter build appbundle
 ```
 
-> **提示**：桌面端首次运行会在用户文档目录创建 `Motto-Music` 根目录，包含下载、缓存等子目录。
+> **提示**：首次运行会在设备的 Music 目录创建 `MottoMusic` 文件夹，用于存储 Bilibili 下载内容。
 
 ---
 
-## ⚙️ Bilibili 设置与下载目录
+## ⚙️ Bilibili 设置与下载管理
 
-1. 进入 **设置 > Bilibili 设置**。
-2. 点击“下载目录”即可直接跳转到当前目录。默认路径：
-   - Android：`/storage/emulated/0/Music/MottoMusic/Bilibili`
-   - 其他平台：`~/Documents/Motto-Music/downloads/bilibili`
-3. 长按“下载目录”可选择新的保存路径，配置会保存到 `UserSettings` 表，下载服务与缓存服务都会自动读取。
+1. 进入 **设置 > Bilibili 设置**
+2. 点击"下载目录"即可直接跳转到当前目录
+   - 默认路径：`/storage/emulated/0/Music/MottoMusic/Bilibili`
+3. 长按"下载目录"可选择新的保存路径
 4. 支持的下载特性：
-   - 最大 5 路并发（默认 3）
-   - 仅 Wi-Fi 下载 / 自动重试
-   - 断点续传、失败恢复、任务删除
+   - 可调并发数（默认 3，最大 5）
+   - 仅 Wi-Fi 下载选项
+   - 断点续传与自动重试
+   - 失败恢复与任务管理
 
 ---
 
 ## 🛣️ Roadmap
 
-- [ ] **WebDAV / 私人云完善**：支持更多网盘 / NAS 的挂载与同步策略
-- [ ] **Bilibili 账号多端联动**：多账号会话、播放历史同步、智能推荐
-- [ ] **可插拔歌词/音源 Provider**：定义统一接口以兼容第三方歌词/音源服务
-- [ ] **UI 主题编辑器**：面向桌面和移动的实时主题定制
-- [ ] **CI 构建流水线**：引入 GitHub Actions 产出多平台安装包
-- [ ] **插件生态**：开放 Service Hook，允许社区扩展下载/缓存/解析能力
+- [ ] **Bilibili 功能增强**：多账号支持、播放历史同步、智能推荐
+- [ ] **歌词体验优化**：逐字歌词支持、歌词翻译、更多歌词源
+- [ ] **播放列表管理**：智能播放列表、收藏夹分组、导入导出
+- [ ] **UI 主题定制**：自定义主题颜色、字体、布局
+- [ ] **性能优化**：启动速度优化、内存占用优化、流畅度提升
+- [ ] **播放增强**：均衡器、音效、淡入淡出、定时停止
 
-欢迎通过 Issue/Discussions 提交新的路线建议。
+欢迎通过 Issue/Discussions 提交新的功能建议。
 
 ---
 
