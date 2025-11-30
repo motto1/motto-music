@@ -26,6 +26,7 @@ import 'package:motto_music/widgets/animated_list_item.dart';
 import 'package:motto_music/views/bilibili/download_management_page.dart';
 import 'package:motto_music/views/bilibili/bilibili_settings_page.dart';
 import 'package:motto_music/services/bilibili/download_manager.dart';
+import 'package:motto_music/widgets/unified_cover_image.dart';
 
 /// Bilibili 收藏夹列表页面
 class BilibiliFavoritesPage extends StatefulWidget {
@@ -295,6 +296,7 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
         ),
       );
       
+      await _pageCache.clearFavoritesCache();
       // 刷新列表
       await _loadFavorites();
       
@@ -332,6 +334,7 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
         ),
       );
       
+      await _pageCache.clearFavoritesCache();
       // 刷新列表
       await _loadFavorites();
       
@@ -383,6 +386,7 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
           dbFav.copyWith(isAddedToLibrary: false),
         );
         
+        await _pageCache.clearFavoritesCache();
         await _loadFavorites();
         
         if (mounted) {
@@ -428,21 +432,11 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: song.albumArtPath != null
-                        ? CachedNetworkImage(
-                            imageUrl: song.albumArtPath!,
-                            width: 56,
-                            height: 56,
-                            fit: BoxFit.cover,
-                          )
-                        : Container(
-                            width: 56,
-                            height: 56,
-                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                            child: const Icon(Icons.music_note),
-                          ),
+                  UnifiedCoverImage(
+                    coverPath: song.albumArtPath,
+                    width: 56,
+                    height: 56,
+                    borderRadius: 8,
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -1408,7 +1402,11 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
         try {
           final contents = await _apiService.getFavoriteContentsWithInfo(favorite.id, 1);
           for (final item in contents.medias ?? []) {
-            final pages = await _apiService.getVideoPages(item.bvid);
+            if ((item.bvid ?? '').isEmpty) continue;
+            final pages = await _pageCache.getOrFetchVideoPages(
+              item.bvid!,
+              () => _apiService.getVideoPages(item.bvid!),
+            );
             for (final page in pages) {
               if (page.part.toLowerCase().contains(queryLower)) {
                 allSongs.add(db.Song(

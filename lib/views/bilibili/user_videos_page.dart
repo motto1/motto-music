@@ -12,6 +12,7 @@ import 'package:motto_music/utils/theme_utils.dart';
 import 'package:motto_music/widgets/show_aware_page.dart';
 import 'package:motto_music/views/bilibili/video_detail_page.dart';
 import 'package:motto_music/widgets/apple_music_card.dart';
+import 'package:motto_music/services/cache/page_cache_service.dart';
 
 /// Bilibili 用户视频页面
 /// 显示某个UP主的所有视频
@@ -33,6 +34,7 @@ class UserVideosPage extends StatefulWidget {
 
 class _UserVideosPageState extends State<UserVideosPage> with ShowAwarePage {
   late final BilibiliApiService _apiService;
+  final PageCacheService _pageCache = PageCacheService();
   
   bool _isLoading = false;
   List<BilibiliVideo>? _videos;
@@ -44,6 +46,8 @@ class _UserVideosPageState extends State<UserVideosPage> with ShowAwarePage {
   String? _loadedUserName;
   String? _loadedUserAvatar;
 
+  String _cacheKeyForPage(int page) => 'uploader_${widget.mid}_page_$page';
+
   @override
   void initState() {
     super.initState();
@@ -54,6 +58,7 @@ class _UserVideosPageState extends State<UserVideosPage> with ShowAwarePage {
     final apiClient = BilibiliApiClient(cookieManager);
     _apiService = BilibiliApiService(apiClient);
     
+    _loadCachedVideos();
     // 直接在 initState 中加载数据
     WidgetsBinding.instance.addPostFrameCallback((_) {
       debugPrint('🎯 PostFrameCallback: 开始加载数据');
@@ -62,6 +67,19 @@ class _UserVideosPageState extends State<UserVideosPage> with ShowAwarePage {
         _loadUserInfo();
       }
       _loadVideos();
+    });
+  }
+
+  Future<void> _loadCachedVideos() async {
+    final cached = await _pageCache.getCachedVideoList(_cacheKeyForPage(1));
+    if (!mounted || cached == null || cached.isEmpty) {
+      return;
+    }
+    setState(() {
+      _videos = cached;
+      _isLoading = false;
+      _currentPage = 1;
+      _hasMore = cached.length >= 30;
     });
   }
 
@@ -102,7 +120,7 @@ class _UserVideosPageState extends State<UserVideosPage> with ShowAwarePage {
     }
     
     setState(() {
-      _isLoading = true;
+      _isLoading = loadMore ? true : (_videos == null || _videos!.isEmpty);
       _errorMessage = null;
     });
 
@@ -117,6 +135,7 @@ class _UserVideosPageState extends State<UserVideosPage> with ShowAwarePage {
         page: page,
         pageSize: 30,
       );
+      await _pageCache.cacheVideoList(_cacheKeyForPage(page), videos);
       
       debugPrint('✅ API 返回成功: ${videos.length} 个视频');
       

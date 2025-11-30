@@ -6,6 +6,7 @@ import 'package:motto_music/utils/platform_utils.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:flutter/foundation.dart';
+import '../services/cache/album_art_cache_service.dart';
 part 'database.g.dart';
 
 class Songs extends Table {
@@ -694,13 +695,17 @@ class MusicDatabase extends _$MusicDatabase {
 
   // 插入歌曲
   Future<int> insertSong(SongsCompanion song) async {
-    return await into(songs).insert(song);
+    final prepared = await _prepareAlbumArt(song);
+    return await into(songs).insert(prepared);
   }
 
   // 批量插入歌曲
   Future<void> insertSongs(List<SongsCompanion> songsList) async {
+    final prepared = await Future.wait(
+      songsList.map(_prepareAlbumArt),
+    );
     await batch((batch) {
-      batch.insertAll(songs, songsList);
+      batch.insertAll(songs, prepared);
     });
   }
 
@@ -712,6 +717,24 @@ class MusicDatabase extends _$MusicDatabase {
   // 删除歌曲
   Future<int> deleteSong(int id) async {
     return await (delete(songs)..where((song) => song.id.equals(id))).go();
+  }
+
+  Future<SongsCompanion> _prepareAlbumArt(SongsCompanion song) async {
+    if (!song.source.present || song.source.value != 'bilibili') {
+      return song;
+    }
+    if (!song.albumArtPath.present ||
+        (song.albumArtPath.value?.isEmpty ?? true)) {
+      return song;
+    }
+    final localPath = await AlbumArtCacheService.instance
+        .ensureLocalPath(song.albumArtPath.value);
+    if (localPath == null ||
+        localPath.isEmpty ||
+        localPath == song.albumArtPath.value) {
+      return song;
+    }
+    return song.copyWith(albumArtPath: Value(localPath));
   }
 
   // 检查歌曲是否已存在

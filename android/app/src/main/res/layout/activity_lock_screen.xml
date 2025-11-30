@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/lockscreen_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
@@ -21,21 +22,43 @@
         android:id="@+id/lockscreen_content"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:gravity="center_horizontal"
+        android:gravity="center"
         android:orientation="vertical"
         android:paddingStart="24dp"
         android:paddingEnd="24dp"
-        android:paddingTop="32dp"
-        android:paddingBottom="24dp">
+        android:paddingTop="16dp"
+        android:paddingBottom="16dp">
 
-        <ImageView
-            android:id="@+id/lockscreen_cover"
-            android:layout_width="320dp"
-            android:layout_height="320dp"
-            android:background="@drawable/lockscreen_cover_placeholder"
-            android:contentDescription="@null"
-            android:elevation="6dp"
-            android:scaleType="centerCrop" />
+        <FrameLayout
+            android:id="@+id/lockscreen_cover_lyrics_container"
+            android:layout_width="280dp"
+            android:layout_height="280dp"
+            android:background="@drawable/rounded_cover_background"
+            android:clipToOutline="true"
+            android:elevation="8dp">
+
+            <ImageView
+                android:id="@+id/lockscreen_cover"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:contentDescription="@null"
+                android:scaleType="centerCrop"
+                android:src="@drawable/lockscreen_cover_placeholder"
+                android:clickable="true"
+                android:focusable="true" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/lockscreen_lyrics_recycler"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="gone"
+                android:alpha="0"
+                android:paddingTop="100dp"
+                android:paddingBottom="100dp"
+                android:clipToPadding="false"
+                android:clickable="true"
+                android:focusable="true" />
+        </FrameLayout>
 
         <TextView
             android:id="@+id/lockscreen_title"
@@ -69,13 +92,14 @@
 
             <SeekBar
                 android:id="@+id/lockscreen_progress"
-                style="@android:style/Widget.Material.SeekBar"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:max="1000"
-                android:progressTint="@android:color/white"
-                android:progressBackgroundTint="#30FFFFFF"
-                android:thumbTint="@android:color/white" />
+                android:progressDrawable="@drawable/lockscreen_progress_track"
+                android:thumb="@drawable/lockscreen_progress_thumb"
+                android:splitTrack="false"
+                android:paddingStart="0dp"
+                android:paddingEnd="0dp" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -149,25 +173,6 @@
                 android:src="@drawable/ic_lock_skip_next"
                 android:tint="@android:color/white" />
         </LinearLayout>
-
-        <TextView
-            android:id="@+id/lockscreen_current_lyric"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:gravity="center"
-            android:textColor="@android:color/white"
-            android:textSize="16sp"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@+id/lockscreen_next_lyric"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:textColor="#B3FFFFFF"
-            android:textSize="14sp"
-            android:visibility="gone" />
 
         <TextView
             android:id="@+id/lockscreen_slide_hint"

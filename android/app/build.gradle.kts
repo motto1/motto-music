@@ -52,4 +52,7 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("androidx.preference:preference-ktx:1.2.1")
     implementation("io.coil-kt:coil:2.5.0")
+    implementation("androidx.palette:palette-ktx:1.0.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }

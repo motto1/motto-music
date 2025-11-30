@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'dart:io';
 import '../database/database.dart';
 import '../services/player_provider.dart';
 import '../utils/theme_utils.dart';
+import '../widgets/unified_cover_image.dart';
 
 class RecentlyPlayedDetailPage extends StatefulWidget {
   const RecentlyPlayedDetailPage({super.key});
@@ -129,46 +129,11 @@ class _RecentlyPlayedDetailPageState extends State<RecentlyPlayedDetailPage> {
                             borderRadius: BorderRadius.circular(12),
                             color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                           ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: song.albumArtPath != null
-                                ? (song.source == 'bilibili'
-                                    ? Image.network(
-                                        song.albumArtPath!,
-                                        fit: BoxFit.cover,
-                                        width: double.infinity,
-                                        height: double.infinity,
-                                        errorBuilder: (context, error, stackTrace) => Center(
-                                          child: Icon(
-                                            Icons.video_library_rounded,
-                                            size: 64,
-                                            color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
-                                          ),
-                                        ),
-                                      )
-                                    : File(song.albumArtPath!).existsSync()
-                                        ? Image.file(
-                                            File(song.albumArtPath!),
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            height: double.infinity,
-                                          )
-                                        : Center(
-                                            child: Icon(
-                                              Icons.music_note_rounded,
-                                              size: 64,
-                                              color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
-                                            ),
-                                          ))
-                                : Center(
-                                    child: Icon(
-                                      song.source == 'bilibili'
-                                          ? Icons.video_library_rounded
-                                          : Icons.music_note_rounded,
-                                      size: 64,
-                                      color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
-                                    ),
-                                  ),
+                          child: UnifiedCoverImage(
+                            coverPath: song.albumArtPath,
+                            width: double.infinity,
+                            height: double.infinity,
+                            borderRadius: 12,
                           ),
                         ),
                         if (isPlaying)

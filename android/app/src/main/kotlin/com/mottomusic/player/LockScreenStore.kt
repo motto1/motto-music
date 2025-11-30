@@ -1,23 +1,34 @@
 package com.mottomusic.player
 
 /**
+ * 歌词行数据类
+ */
+data class LyricLine(
+    val text: String,
+    val startMs: Int,
+    val endMs: Int,
+    val charTimestamps: List<Map<String, Any>>?
+)
+
+/**
  * 锁屏状态数据类
  */
 data class LockScreenState(
     val enabled: Boolean = false,
     val title: String? = null,
     val artist: String? = null,
-    val coverUrl: String? = null,
     val currentLine: String? = null,
     val nextLine: String? = null,
     val charTimestamps: List<Map<String, Any>>? = null,
     val currentLineStartMs: Int = 0,
     val currentLineEndMs: Int = 0,
     val currentPositionMs: Int = 0,
-    val isPlaying: Boolean = false
+    val isPlaying: Boolean = false,
+    val allLyrics: List<LyricLine> = emptyList(),
+    val currentLineIndex: Int = -1
 ) {
-    fun hasLyrics(): Boolean = !currentLine.isNullOrBlank() || !nextLine.isNullOrBlank()
-    fun hasMetadata(): Boolean = !title.isNullOrBlank() || !artist.isNullOrBlank() || !coverUrl.isNullOrBlank()
+    fun hasLyrics(): Boolean = !currentLine.isNullOrBlank() || !nextLine.isNullOrBlank() || allLyrics.isNotEmpty()
+    fun hasMetadata(): Boolean = !title.isNullOrBlank() || !artist.isNullOrBlank()
     fun shouldShowLockScreen(): Boolean = enabled && (hasLyrics() || hasMetadata())
 }
 
@@ -34,8 +45,8 @@ object LockScreenStore {
         state = state.copy(enabled = enabled)
     }
 
-    fun updateMetadata(title: String?, artist: String?, coverUrl: String?) {
-        state = state.copy(title = title, artist = artist, coverUrl = coverUrl)
+    fun updateMetadata(title: String?, artist: String?) {
+        state = state.copy(title = title, artist = artist)
     }
 
     fun updatePlayState(playing: Boolean) {
@@ -55,6 +66,13 @@ object LockScreenStore {
             currentLineStartMs = currentLineStartMs,
             currentLineEndMs = currentLineEndMs,
             charTimestamps = charTimestamps
+        )
+    }
+
+    fun updateAllLyrics(lyrics: List<LyricLine>, currentIndex: Int) {
+        state = state.copy(
+            allLyrics = lyrics,
+            currentLineIndex = currentIndex
         )
     }
 

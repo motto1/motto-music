@@ -8,6 +8,7 @@ import 'package:motto_music/services/bilibili/api_service.dart';
 import 'package:motto_music/services/bilibili/api_client.dart';
 import 'package:motto_music/services/bilibili/cookie_manager.dart';
 import 'package:motto_music/services/player_provider.dart';
+import 'package:motto_music/services/cache/page_cache_service.dart';
 import 'package:motto_music/database/database.dart' as db;
 import 'package:motto_music/utils/theme_utils.dart';
 import 'package:motto_music/utils/bilibili_song_utils.dart';
@@ -42,6 +43,7 @@ class VideoDetailPage extends StatefulWidget {
 
 class _VideoDetailPageState extends State<VideoDetailPage> with ShowAwarePage {
   late final BilibiliApiService _apiService;
+  final PageCacheService _pageCache = PageCacheService();
   
   BilibiliVideo? _video;
   List<BilibiliVideoPage>? _pages;
@@ -57,9 +59,24 @@ class _VideoDetailPageState extends State<VideoDetailPage> with ShowAwarePage {
     final apiClient = BilibiliApiClient(cookieManager);
     _apiService = BilibiliApiService(apiClient);
     
+    _loadCachedData();
     // 页面初始化时立即加载视频详情
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadVideoDetails();
+    });
+  }
+
+  Future<void> _loadCachedData() async {
+    final cachedVideo = await _pageCache.getCachedVideoDetail(widget.bvid);
+    final cachedPages = await _pageCache.getCachedVideoPages(widget.bvid);
+    if (!mounted || cachedVideo == null) return;
+
+    setState(() {
+      _video = cachedVideo;
+      if (cachedPages != null && cachedPages.isNotEmpty) {
+        _pages = cachedPages;
+      }
+      _isLoading = false;
     });
   }
 
@@ -75,7 +92,7 @@ class _VideoDetailPageState extends State<VideoDetailPage> with ShowAwarePage {
   /// 加载视频详情
   Future<void> _loadVideoDetails() async {
     setState(() {
-      _isLoading = true;
+      _isLoading = _video == null;
       _errorMessage = null;
     });
 
@@ -89,6 +106,8 @@ class _VideoDetailPageState extends State<VideoDetailPage> with ShowAwarePage {
       // 获取分P列表
       final pages = await _apiService.getVideoPages(widget.bvid);
       debugPrint('✅ 分P列表加载成功: ${pages.length} 个分P');
+      await _pageCache.cacheVideoDetail(widget.bvid, video);
+      await _pageCache.cacheVideoPages(widget.bvid, pages);
       
       if (mounted) {
         setState(() {

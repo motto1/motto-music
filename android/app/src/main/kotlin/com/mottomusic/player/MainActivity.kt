@@ -102,8 +102,24 @@ class MainActivity: FlutterActivity() {
                 "updateMetadata" -> {
                     val title = call.argument<String>("title")
                     val artist = call.argument<String>("artist")
-                    val coverUrl = call.argument<String>("coverUrl")
-                    LockScreenController.updateMetadata(title, artist, coverUrl)
+                    LockScreenController.updateMetadata(title, artist)
+                    result.success(null)
+                }
+                "updateAllLyrics" -> {
+                    val lyricsData = call.argument<List<Map<String, Any>>>("lyrics")
+                    val currentIndex = call.argument<Int>("currentIndex") ?: -1
+                    
+                    if (lyricsData != null) {
+                        val lyrics = lyricsData.map { lyricMap ->
+                            LyricLine(
+                                text = lyricMap["text"] as? String ?: "",
+                                startMs = (lyricMap["startMs"] as? Number)?.toInt() ?: 0,
+                                endMs = (lyricMap["endMs"] as? Number)?.toInt() ?: 0,
+                                charTimestamps = lyricMap["charTimestamps"] as? List<Map<String, Any>>
+                            )
+                        }
+                        LockScreenController.updateAllLyrics(lyrics, currentIndex)
+                    }
                     result.success(null)
                 }
                 "updatePlayState" -> {

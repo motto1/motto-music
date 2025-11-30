@@ -89,16 +89,19 @@ class LyricsNotificationService {
   Future<void> updateMetadata({
     String? title,
     String? artist,
-    String? coverUrl,
   }) async {
     if (!Platform.isAndroid || !_lockScreenEnabled) return;
+
+    print('[LyricsNotification] ========== updateMetadata ==========');
+    print('[LyricsNotification] title: $title');
+    print('[LyricsNotification] artist: $artist');
 
     try {
       await _channel.invokeMethod('updateMetadata', {
         'title': title,
         'artist': artist,
-        'coverUrl': coverUrl,
       });
+      print('[LyricsNotification] ✅ 元数据已发送到原生层');
     } catch (e) {
       print('[LyricsNotification] ❌ 更新元数据失败: $e');
     }
@@ -112,6 +115,22 @@ class LyricsNotificationService {
       });
     } catch (e) {
       print('[LyricsNotification] ❌ 更新播放状态失败: $e');
+    }
+  }
+
+  /// 更新完整歌词列表（用于锁屏多行显示）
+  Future<void> updateAllLyrics({
+    required List<Map<String, dynamic>> lyrics,
+    required int currentIndex,
+  }) async {
+    if (!Platform.isAndroid || !_lockScreenEnabled) return;
+    try {
+      await _channel.invokeMethod('updateAllLyrics', {
+        'lyrics': lyrics,
+        'currentIndex': currentIndex,
+      });
+    } catch (e) {
+      print('[LyricsNotification] ❌ 更新完整歌词失败: $e');
     }
   }
 

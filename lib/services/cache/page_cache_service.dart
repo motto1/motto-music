@@ -107,6 +107,47 @@ class PageCacheService {
     );
   }
 
+  /// 缓存视频分P列表
+  Future<void> cacheVideoPages(String bvid, List<BilibiliVideoPage> pages) async {
+    await _cache.set(
+      'videos',
+      'pages_$bvid',
+      pages,
+      ttl: const Duration(days: 1),
+      serializer: (data) => (data as List<BilibiliVideoPage>)
+          .map((e) => e.toJson())
+          .toList(),
+    );
+  }
+
+  /// 获取缓存的视频分P列表
+  Future<List<BilibiliVideoPage>?> getCachedVideoPages(String bvid) async {
+    return await _cache.get<List<BilibiliVideoPage>>(
+      'videos',
+      'pages_$bvid',
+      deserializer: (data) => (data as List)
+          .map((e) => BilibiliVideoPage.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  /// 获取缓存的分P列表，若未命中则通过 [loader] 获取并自动缓存
+  Future<List<BilibiliVideoPage>> getOrFetchVideoPages(
+    String bvid,
+    Future<List<BilibiliVideoPage>> Function() loader,
+  ) async {
+    final cached = await getCachedVideoPages(bvid);
+    if (cached != null && cached.isNotEmpty) {
+      return cached;
+    }
+
+    final pages = await loader();
+    if (pages.isNotEmpty) {
+      await cacheVideoPages(bvid, pages);
+    }
+    return pages;
+  }
+
   // ==================== 用户信息缓存 ====================
 
   /// 缓存用户信息

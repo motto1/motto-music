@@ -14,6 +14,7 @@ import 'package:motto_music/services/player_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:motto_music/widgets/apple_music_card.dart';
+import 'package:motto_music/services/cache/page_cache_service.dart';
 
 /// 全局搜索结果页
 /// 
@@ -34,6 +35,7 @@ class GlobalSearchResultPage extends StatefulWidget {
 class _GlobalSearchResultPageState extends State<GlobalSearchResultPage> {
   late final BilibiliApiService _apiService;
   late final ScrollController _scrollController;
+  final PageCacheService _pageCache = PageCacheService();
   
   List<BilibiliVideo> _videos = [];
   bool _isLoading = false;
@@ -41,6 +43,8 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage> {
   String? _errorMessage;
   int _currentPage = 1;
   bool _hasMore = true;
+  String get _normalizedQuery => widget.query.trim().toLowerCase();
+  String _cacheKeyForPage(int page) => '${_normalizedQuery}_page_$page';
 
   @override
   void initState() {
@@ -53,7 +57,20 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage> {
     _scrollController = ScrollController();
     _scrollController.addListener(_onScroll);
     
+    _loadCachedResults();
     _loadSearchResults();
+  }
+
+  Future<void> _loadCachedResults() async {
+    final cached = await _pageCache.getCachedSearchResults(_cacheKeyForPage(1));
+    if (!mounted || cached == null || cached.isEmpty) {
+      return;
+    }
+    setState(() {
+      _videos = cached;
+      _isLoading = false;
+      _hasMore = cached.length >= 20;
+    });
   }
 
   @override
@@ -76,13 +93,14 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage> {
   /// 加载搜索结果（首页）
   Future<void> _loadSearchResults() async {
     setState(() {
-      _isLoading = true;
+      _isLoading = _videos.isEmpty;
       _errorMessage = null;
       _currentPage = 1;
     });
 
     try {
       final videos = await _apiService.searchVideos(widget.query, _currentPage);
+      await _pageCache.cacheSearchResults(_cacheKeyForPage(1), videos);
       
       if (mounted) {
         setState(() {
@@ -112,6 +130,7 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage> {
     try {
       final nextPage = _currentPage + 1;
       final videos = await _apiService.searchVideos(widget.query, nextPage);
+      await _pageCache.cacheSearchResults(_cacheKeyForPage(nextPage), videos);
       
       if (mounted) {
         setState(() {

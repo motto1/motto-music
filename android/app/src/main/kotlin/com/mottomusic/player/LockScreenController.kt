@@ -38,8 +38,12 @@ object LockScreenController {
         }
     }
 
-    fun updateMetadata(title: String?, artist: String?, coverUrl: String?) {
-        LockScreenStore.updateMetadata(title, artist, coverUrl)
+    fun updateMetadata(title: String?, artist: String?) {
+        android.util.Log.d("LockScreenController", "========== updateMetadata ==========")
+        android.util.Log.d("LockScreenController", "title: $title")
+        android.util.Log.d("LockScreenController", "artist: $artist")
+
+        LockScreenStore.updateMetadata(title, artist)
     }
 
     fun updatePlayState(playing: Boolean) {
@@ -64,6 +68,10 @@ object LockScreenController {
 
     fun updatePosition(positionMs: Int) {
         LockScreenStore.updatePosition(positionMs)
+    }
+
+    fun updateAllLyrics(lyrics: List<LyricLine>, currentIndex: Int) {
+        LockScreenStore.updateAllLyrics(lyrics, currentIndex)
     }
 
     fun clearLyrics() {

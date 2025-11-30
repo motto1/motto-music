@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:motto_music/utils/theme_utils.dart';
 import 'package:provider/provider.dart';
-import 'dart:io';
 import '../database/database.dart';
 import '../services/player_provider.dart';
 import '../widgets/show_aware_page.dart';
 import '../widgets/themed_background.dart';
+import '../widgets/unified_cover_image.dart';
 import '../utils/platform_utils.dart';
 import '../contants/app_contants.dart';
 import '../router/router.dart';
@@ -291,40 +291,11 @@ class HomeViewState extends State<HomeView> with ShowAwarePage {
                             borderRadius: BorderRadius.circular(12),
                             color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                           ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: song.albumArtPath != null
-                                ? (song.source == 'bilibili'
-                                    ? Image.network(
-                                        song.albumArtPath!,
-                                        fit: BoxFit.cover,
-                                        width: 160,
-                                        height: 160,
-                                        errorBuilder: (context, error, stackTrace) => Icon(
-                                          Icons.video_library_rounded,
-                                          size: 64,
-                                          color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
-                                        ),
-                                      )
-                                    : File(song.albumArtPath!).existsSync()
-                                        ? Image.file(
-                                            File(song.albumArtPath!),
-                                            fit: BoxFit.cover,
-                                            width: 160,
-                                            height: 160,
-                                          )
-                                        : Icon(
-                                            Icons.music_note_rounded,
-                                            size: 64,
-                                            color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
-                                          ))
-                                : Icon(
-                                    song.source == 'bilibili' 
-                                        ? Icons.video_library_rounded 
-                                        : Icons.music_note_rounded,
-                                    size: 64,
-                                    color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
-                                  ),
+                          child: UnifiedCoverImage(
+                            coverPath: song.albumArtPath,
+                            width: 160,
+                            height: 160,
+                            borderRadius: 12,
                           ),
                         ),
                         if (isPlaying)

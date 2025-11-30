@@ -15,6 +15,7 @@ import 'package:motto_music/widgets/scrolling_text.dart';
 import 'package:motto_music/widgets/karaoke_lyrics_view.dart';
 import 'package:motto_music/widgets/player_buttons.dart';
 import 'package:motto_music/widgets/audio_quality_section.dart';
+import 'package:motto_music/widgets/unified_cover_image.dart';
 import 'package:motto_music/models/bilibili/audio_quality.dart';
 import 'package:motto_music/services/bilibili/download_manager.dart';
 import 'package:motto_music/services/bilibili/stream_service.dart';
@@ -3768,38 +3769,24 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
     }
   }
   
-  /// 构建歌曲封面（完全模仿播放器的 _buildAlbumArt 方法）
+  /// 构建歌曲封面（使用统一封面组件）
+  ///
+  /// 统一使用 UnifiedCoverImage 组件，确保：
+  /// - 网络图片自动缓存
+  /// - 本地文件异步检查
+  /// - 统一的占位符和错误处理
   Widget _buildSongCover(Song song, BuildContext context) {
-    // 优先使用 albumArtPath（兼容本地文件和网络URL）
-    if (song.albumArtPath != null && song.albumArtPath!.isNotEmpty) {
-      final albumArtPath = song.albumArtPath!;
-      
-      // 🔧 Bilibili 封面：URL 格式（http:// 或 https://）
-      if (albumArtPath.startsWith('http://') || albumArtPath.startsWith('https://')) {
-        return Image.network(
-          albumArtPath,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return _buildPlaceholderCover(context);
-          },
-        );
-      }
-      
-      // 🔧 本地封面：文件路径
-      final file = File(albumArtPath);
-      if (file.existsSync()) {
-        return Image.file(
-          file,
-          fit: BoxFit.cover,
-        );
-      }
-    }
-    
-    // 无封面时显示占位图标
-    return _buildPlaceholderCover(context);
+    return UnifiedCoverImage(
+      coverPath: song.albumArtPath,
+      width: 56,
+      height: 56,
+      borderRadius: 0, // 外层已有 ClipRRect，这里不需要圆角
+      fit: BoxFit.cover,
+    );
   }
-  
-  /// 构建占位封面
+
+  /// 构建占位封面（已废弃，由 UnifiedCoverImage 内部处理）
+  @Deprecated('Use UnifiedCoverImage instead')
   Widget _buildPlaceholderCover(BuildContext context) {
     return Container(
       color: Theme.of(context).colorScheme.surfaceVariant,

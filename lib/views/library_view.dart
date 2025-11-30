@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui';
-import 'dart:io';
 import '../database/database.dart';
 import '../services/player_provider.dart';
 import '../widgets/show_aware_page.dart';
@@ -12,6 +10,7 @@ import '../widgets/music_import_dialog.dart';
 import '../widgets/apple_music_card.dart';
 import '../widgets/apple_music_song_tile.dart';
 import '../widgets/animated_list_item.dart';
+import '../widgets/unified_cover_image.dart';
 import '../main.dart';
 
 /// 本地音乐库页面
@@ -440,12 +439,7 @@ class LibraryViewState extends State<LibraryView> with ShowAwarePage {
                   AppleMusicSongTile(
                     title: song.title,
                     artist: song.artist ?? '未知艺术家',
-                    coverUrl: song.source == 'bilibili'
-                        ? song.albumArtPath
-                        : (song.albumArtPath != null && File(song.albumArtPath!).existsSync()
-                            ? song.albumArtPath
-                            : null),
-                    isLocalFile: song.source != 'bilibili' && song.albumArtPath != null,
+                    coverUrl: song.albumArtPath,
                     duration: song.duration != null
                         ? formatDuration(song.duration!)
                         : null,
@@ -524,29 +518,11 @@ class LibraryViewState extends State<LibraryView> with ShowAwarePage {
                     padding: const EdgeInsets.all(16),
                     child: Row(
                       children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: song.albumArtPath != null &&
-                                 (song.source == 'bilibili' || File(song.albumArtPath!).existsSync())
-                              ? (song.source == 'bilibili'
-                                  ? CachedNetworkImage(
-                                      imageUrl: song.albumArtPath!,
-                                      width: 56,
-                                      height: 56,
-                                      fit: BoxFit.cover,
-                                    )
-                                  : Image.file(
-                                      File(song.albumArtPath!),
-                                      width: 56,
-                                      height: 56,
-                                      fit: BoxFit.cover,
-                                    ))
-                              : Container(
-                                  width: 56,
-                                  height: 56,
-                                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                                  child: const Icon(Icons.music_note),
-                                ),
+                        UnifiedCoverImage(
+                          coverPath: song.albumArtPath,
+                          width: 56,
+                          height: 56,
+                          borderRadius: 8,
                         ),
                         const SizedBox(width: 16),
                         Expanded(

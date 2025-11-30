@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'dart:io';
+import 'unified_cover_image.dart';
 
 /// Apple Music 风格的歌曲列表项
 class AppleMusicSongTile extends StatefulWidget {
@@ -9,7 +8,6 @@ class AppleMusicSongTile extends StatefulWidget {
   final String? coverUrl;
   final String? duration;
   final bool isPlaying;
-  final bool isLocalFile; // 是否为本地文件
   final bool isFavorite; // 是否已喜欢
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
@@ -23,7 +21,6 @@ class AppleMusicSongTile extends StatefulWidget {
     this.coverUrl,
     this.duration,
     this.isPlaying = false,
-    this.isLocalFile = false,
     this.isFavorite = false,
     this.onTap,
     this.onLongPress,
@@ -151,83 +148,33 @@ class _AppleMusicSongTileState extends State<AppleMusicSongTile> {
   }
 
   Widget _buildCover(BuildContext context, bool isDark) {
-    return Container(
-      width: 56,
-      height: 56,
-      decoration: BoxDecoration(
-        color: isDark
-            ? const Color(0xFF3A3A3C)
-            : const Color(0xFFF2F2F7),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Stack(
-        children: [
-          if (widget.coverUrl != null)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: widget.isLocalFile
-                  // 本地文件使用 Image.file
-                  ? Image.file(
-                      File(widget.coverUrl!),
-                      width: 56,
-                      height: 56,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Icon(
-                        Icons.music_note,
-                        size: 24,
-                        color: isDark
-                            ? Colors.white.withOpacity(0.3)
-                            : Colors.black.withOpacity(0.3),
-                      ),
-                    )
-                  // 网络图片使用 CachedNetworkImage
-                  : CachedNetworkImage(
-                      imageUrl: widget.coverUrl!,
-                      width: 56,
-                      height: 56,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(
-                        color: isDark
-                            ? const Color(0xFF3A3A3C)
-                            : const Color(0xFFF2F2F7),
-                      ),
-                      errorWidget: (context, url, error) => Icon(
-                        Icons.music_note,
-                        size: 24,
-                        color: isDark
-                            ? Colors.white.withOpacity(0.3)
-                            : Colors.black.withOpacity(0.3),
-                      ),
-                    ),
-            )
-          else
-            Center(
-              child: Icon(
-                Icons.music_note,
-                size: 24,
-                color: isDark
-                    ? Colors.white.withOpacity(0.3)
-                    : Colors.black.withOpacity(0.3),
-              ),
-            ),
+    return Stack(
+      children: [
+        // 使用统一封面组件
+        UnifiedCoverImage(
+          coverPath: widget.coverUrl,
+          width: 56,
+          height: 56,
+          borderRadius: 6,
+          isDark: isDark,
+        ),
 
-          // 播放指示器
-          if (widget.isPlaying)
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFF3B30).withOpacity(0.2), // Apple 红色半透明
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Icon(
-                  Icons.play_arrow,
-                  color: Color(0xFFFF3B30), // Apple 红色
-                  size: 24,
-                ),
+        // 播放指示器
+        if (widget.isPlaying)
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF3B30).withOpacity(0.2), // Apple 红色半透明
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Icon(
+                Icons.play_arrow,
+                color: Color(0xFFFF3B30), // Apple 红色
+                size: 24,
               ),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 }

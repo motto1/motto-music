@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:motto_music/models/bilibili/collection.dart';
 import 'package:motto_music/database/database.dart' as db;
 import 'package:motto_music/services/bilibili/api_service.dart';
@@ -13,6 +14,7 @@ import 'package:motto_music/main.dart';
 import 'dart:ui';
 import 'package:motto_music/widgets/apple_music_card.dart';
 import 'package:drift/drift.dart' as drift;
+import 'package:motto_music/services/cache/page_cache_service.dart';
 
 /// 合集详情页面（参考视频详情页设计）
 class CollectionDetailPage extends StatefulWidget {
@@ -33,6 +35,7 @@ class CollectionDetailPage extends StatefulWidget {
 
 class _CollectionDetailPageState extends State<CollectionDetailPage> with ShowAwarePage {
   late final BilibiliApiService _apiService;
+  final PageCacheService _pageCache = PageCacheService();
 
   bool _isLoading = false;
   List<BilibiliCollectionItem>? _videos;
@@ -143,7 +146,15 @@ class _CollectionDetailPageState extends State<CollectionDetailPage> with ShowAw
       
       // 否则获取视频的分P列表
       try {
-        final pages = await _apiService.getVideoPages(video.bvid);
+        final bvid = video.bvid;
+        if (bvid.isEmpty) {
+          result.add(video);
+          continue;
+        }
+        final pages = await _pageCache.getOrFetchVideoPages(
+          bvid,
+          () => _apiService.getVideoPages(bvid),
+        );
         if (pages.isNotEmpty) {
           final firstPage = pages[0];
           result.add(video.copyWith(
@@ -636,10 +647,18 @@ class _CollectionDetailPageState extends State<CollectionDetailPage> with ShowAw
       child: coverUrl != null
           ? ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                coverUrl,
+              child: CachedNetworkImage(
+                imageUrl: coverUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Icon(
+                placeholder: (context, url) => Container(
+                  color: isDark
+                      ? const Color(0xFF3A3A3C)
+                      : const Color(0xFFF2F2F7),
+                  child: const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+                errorWidget: (context, url, error) => Icon(
                   Icons.folder_outlined,
                   size: 32,
                   color: isDark

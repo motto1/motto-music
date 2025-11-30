@@ -11,6 +11,8 @@ import 'bilibili/api_service.dart';
 import 'bilibili/cookie_manager.dart';
 import 'bilibili/audio_cache_service.dart';
 import 'cache/bilibili_auto_cache_service.dart';
+import 'cache/page_cache_service.dart';
+import 'cache/album_art_cache_service.dart';
 import '../models/bilibili/audio_quality.dart';
 import 'package:drift/drift.dart';
 import 'lyrics/lyric_service.dart';
@@ -25,7 +27,6 @@ import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
-import 'audio_source_registry.dart';
 
 /// 播放器状态管理
 /// 
@@ -56,7 +57,10 @@ class PlayerProvider with ChangeNotifier {
   int _currentIndex = -1;
 
   final math.Random _random = math.Random();
+  final PageCacheService _pageCache = PageCacheService();
+  final Set<String> _autoCacheInProgress = {};
   Directory? _notificationArtCacheDir;
+  Directory? _coverCacheDir;
 
   // 歌词相关状态
   ParsedLrc? _currentLyrics;
@@ -141,8 +145,93 @@ class PlayerProvider with ChangeNotifier {
 
     debugPrint('[PlayerProvider] ✅ Bilibili 双层缓存服务已初始化');
 
+    // 设置懒加载解析回调
+    if (_audioHandler != null) {
+      _audioHandler!.onLazyResolve = _resolveLazyMediaItem;
+      debugPrint('[PlayerProvider] ✅ 懒加载解析回调已设置');
+    }
+
     _initializeListeners();
     await _restoreState();
+    _migrateAlbumArtCache();
+  }
+
+  /// 懒加载解析回调：根据 MediaItem 中的信息解析音频源
+  Future<(String?, Map<String, String>?, bool)?> _resolveLazyMediaItem(
+    MediaItem item,
+  ) async {
+    debugPrint('[PlayerProvider] 🔄 懒加载解析: ${item.title}');
+
+    try {
+      // 从 extras 中获取歌曲信息
+      final songId = item.extras?['songId'] as int? ?? -1;
+      final source = item.extras?['source'] as String? ?? 'local';
+      final filePath = item.extras?['filePath'] as String? ?? '';
+      final bvid = item.extras?['bvid'] as String? ?? '';
+      final cid = item.extras?['cid'] as int? ?? 0;
+      final pageNumber = item.extras?['pageNumber'] as int?;
+      final bilibiliVideoId = item.extras?['bilibiliVideoId'] as int?;
+
+      // 本地文件：直接返回文件路径
+      if (source != 'bilibili' && filePath.isNotEmpty) {
+        debugPrint('[PlayerProvider] ✅ 懒加载解析完成（本地文件）: $filePath');
+        return (filePath, null, true);
+      }
+
+      // Bilibili 音频：需要解析流 URL
+      if (source == 'bilibili' && bvid.isNotEmpty) {
+        // 尝试从播放列表中找到对应的 Song 对象
+        Song? song;
+        final now = DateTime.now();
+        final fallbackSong = Song(
+          id: songId > 0 ? songId : -1,
+          title: item.title,
+          artist: item.artist,
+          filePath: '',
+          source: 'bilibili',
+          bvid: bvid,
+          cid: cid > 0 ? cid : null,
+          pageNumber: pageNumber,
+          bilibiliVideoId: bilibiliVideoId,
+          dateAdded: now,
+          isFavorite: false,
+          lastPlayedTime: now,
+          playedCount: 0,
+        );
+
+        if (songId > 0) {
+          song = _playlist.firstWhere(
+            (s) => s.id == songId,
+            orElse: () => _playlist.firstWhere(
+              (s) => s.bvid == bvid && (s.cid == cid || cid == 0),
+              orElse: () => fallbackSong,
+            ),
+          );
+        } else {
+          song = _playlist.firstWhere(
+            (s) => s.bvid == bvid && (s.cid == cid || cid == 0),
+            orElse: () => fallbackSong,
+          );
+        }
+
+        // 解析音频源
+        final resolved = await _resolveAudioSource(song, startCache: true);
+        if (resolved.path != null) {
+          final pathPreview = resolved.path!.length > 50
+              ? '${resolved.path!.substring(0, 50)}...'
+              : resolved.path!;
+          debugPrint('[PlayerProvider] ✅ 懒加载解析完成（Bilibili）: $pathPreview');
+          return (resolved.path, resolved.headers, resolved.type == 'file');
+        }
+      }
+
+      debugPrint('[PlayerProvider] ❌ 懒加载解析失败: 无法获取音频源');
+      return null;
+    } catch (e, stack) {
+      debugPrint('[PlayerProvider] ❌ 懒加载解析异常: $e');
+      debugPrint(stack.toString());
+      return null;
+    }
   }
 
   void _initializeListeners() {
@@ -171,6 +260,7 @@ class PlayerProvider with ChangeNotifier {
       debugPrint('[PlayerProvider] 🔄 队列索引变化: ${_audioHandler!.currentIndex.value}');
       _updateCurrentSongFromHandler();
       _notifySongChange();
+      _cacheCurrentSongIfNeeded();
     });
 
     // 监听播放状态变化
@@ -212,7 +302,6 @@ class PlayerProvider with ChangeNotifier {
       _lyricsNotificationService.updateMetadata(
         title: _currentSong!.title,
         artist: _currentSong!.artist,
-        coverUrl: _currentSong!.albumArtPath,
       );
     }
     notifyListeners();
@@ -239,7 +328,6 @@ class PlayerProvider with ChangeNotifier {
       _lyricsNotificationService.updateMetadata(
         title: _currentSong?.title,
         artist: _currentSong?.artist,
-        coverUrl: _currentSong?.albumArtPath,
       );
       _currentLyricLineIndex = -1;
       _updateNotificationLyrics(_position.value);
@@ -248,6 +336,9 @@ class PlayerProvider with ChangeNotifier {
   }
 
   /// 设置播放列表到 AudioHandler
+  ///
+  /// 采用懒加载策略：只为当前要播放的歌曲解析音频源，
+  /// 其他歌曲使用轻量级元数据，在实际播放时再解析。
   Future<void> _setPlaylistToHandler(
     List<Song> songs, {
     int initialIndex = 0,
@@ -256,36 +347,73 @@ class PlayerProvider with ChangeNotifier {
       debugPrint('[播放调试] ❌ AudioHandler 为 null，无法设置播放列表');
       return;
     }
-    
-    debugPrint('[播放调试] 🔄 开始转换 ${songs.length} 首歌曲为 MediaItem...');
-    final mediaItems = await Future.wait(
-      songs.map((song) => _convertSongToMediaItem(song)).toList(),
-    );
-    
-    debugPrint('[播放调试] ✅ MediaItem 转换完成，设置到 AudioHandler');
+
+    debugPrint('[播放调试] 🔄 懒加载模式：转换 ${songs.length} 首歌曲为 MediaItem...');
+    final mediaItems = <MediaItem>[];
+
+    // 只为当前歌曲完整解析，其他歌曲使用轻量级元数据
+    for (var i = 0; i < songs.length; i++) {
+      final song = songs[i];
+      final isInitial = i == initialIndex;
+
+      if (isInitial) {
+        // 当前要播放的歌曲：完整解析音频源
+        mediaItems.add(await _convertSongToMediaItem(
+          song,
+          startCache: true,
+        ));
+      } else {
+        // 其他歌曲：只设置元数据，标记需要延迟解析
+        mediaItems.add(_convertSongToMediaItemLazy(song));
+      }
+    }
+
+    debugPrint('[播放调试] ✅ MediaItem 转换完成（仅解析当前歌曲），设置到 AudioHandler');
     await _audioHandler!.setPlaylist(mediaItems, initialIndex: initialIndex);
     debugPrint('[播放调试] ✅ 播放列表已设置到 AudioHandler');
   }
 
-  /// 将 Song 转换为 MediaItem
-  Future<MediaItem> _convertSongToMediaItem(Song song) async {
-    // 构建封面 URI
+  /// 轻量级转换：只设置元数据，不解析音频源
+  ///
+  /// 用于播放列表中非当前播放的歌曲，避免批量 API 请求
+  ///
+  /// 懒加载策略：
+  /// - 元数据：立即设置（标题、艺术家、封面URI）
+  /// - 音频源：延迟解析（标记 needsResolve=true）
+  /// - 封面处理：
+  ///   * 网络URL → Uri.parse() 直接使用
+  ///   * 本地文件 → Uri.file() 转换为 file:// URI
+  ///   * 空路径 → artUri = null（显示默认图标）
+  ///
+  /// 播放时机：
+  /// - 当用户切换到该歌曲时，AudioHandler 会触发 onLazyResolve
+  /// - 此时才调用 _convertSongToMediaItem 完整解析音频源
+  MediaItem _convertSongToMediaItemLazy(Song song) {
+    // 构建封面 URI（支持网络 URL 和本地文件）
     Uri? artUri;
     if (song.albumArtPath != null && song.albumArtPath!.isNotEmpty) {
-      artUri = await _buildNotificationArtUri(song.albumArtPath!);
+      final path = song.albumArtPath!;
+      if (path.startsWith('http://') || path.startsWith('https://')) {
+        // 网络 URL：直接使用
+        artUri = Uri.parse(path);
+      } else {
+        // 本地文件：使用 file:// URI
+        // MediaMetadata 会自动处理 file:// 协议
+        artUri = Uri.file(path);
+      }
     }
 
-    final resolvedSource = await _resolveAudioSource(song);
-    final sourceType = resolvedSource.type;
-    final headers = resolvedSource.headers;
-
+    // 标记需要延迟解析
     final extras = <String, dynamic>{
-      'sourceType': sourceType,
-      if (resolvedSource.path != null) 'sourcePath': resolvedSource.path,
-      if (headers != null) 'headers': headers,
+      'sourceType': 'lazy', // 标记为懒加载
+      'needsResolve': true, // 需要在播放时解析
       'songId': song.id,
       'bvid': song.bvid ?? '',
       'cid': song.cid ?? 0,
+      'source': song.source,
+      'filePath': song.filePath,
+      'pageNumber': song.pageNumber,
+      'bilibiliVideoId': song.bilibiliVideoId,
     };
 
     return MediaItem(
@@ -294,6 +422,46 @@ class PlayerProvider with ChangeNotifier {
       artist: song.artist ?? '未知艺术家',
       album: song.album ?? '',
       duration: Duration(seconds: song.duration ?? 0),
+      artUri: artUri,
+      extras: extras,
+    );
+  }
+
+  /// 将 Song 转换为 MediaItem
+  Future<MediaItem> _convertSongToMediaItem(
+    Song song, {
+    bool startCache = false,
+  }) async {
+    final resolvedSong = await _ensureLocalAlbumArt(song);
+    // 构建封面 URI
+    Uri? artUri;
+    if (resolvedSong.albumArtPath != null &&
+        resolvedSong.albumArtPath!.isNotEmpty) {
+      artUri = await _buildNotificationArtUri(resolvedSong.albumArtPath!);
+    }
+
+    final resolvedSource = await _resolveAudioSource(
+      resolvedSong,
+      startCache: startCache,
+    );
+    final sourceType = resolvedSource.type;
+    final headers = resolvedSource.headers;
+
+    final extras = <String, dynamic>{
+      'sourceType': sourceType,
+      if (resolvedSource.path != null) 'sourcePath': resolvedSource.path,
+      if (headers != null) 'headers': headers,
+      'songId': resolvedSong.id,
+      'bvid': resolvedSong.bvid ?? '',
+      'cid': resolvedSong.cid ?? 0,
+    };
+
+    return MediaItem(
+      id: resolvedSong.id.toString(),
+      title: resolvedSong.title,
+      artist: resolvedSong.artist ?? '未知艺术家',
+      album: resolvedSong.album ?? '',
+      duration: Duration(seconds: resolvedSong.duration ?? 0),
       artUri: artUri,
       extras: extras,
     );
@@ -373,9 +541,30 @@ class PlayerProvider with ChangeNotifier {
         final client = HttpClient();
         try {
           final request = await client.getUrl(uri);
+
+          // ⭐ 关键修复：为Bilibili CDN添加必要的请求头
+          if (uri.host.contains('hdslb.com') || uri.host.contains('bilibili.com')) {
+            debugPrint('[PlayerProvider] 🔧 检测到Bilibili CDN，添加请求头');
+            request.headers.set('Referer', 'https://www.bilibili.com');
+            request.headers.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+            request.headers.set('Accept', 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8');
+
+            // 如果有Cookie，也添加上
+            final cookie = await _cookieManager.getCookieString();
+            if (cookie.isNotEmpty) {
+              request.headers.set('Cookie', cookie);
+            }
+          }
+
           final response = await request.close();
+          debugPrint('[PlayerProvider] 封面请求响应: ${response.statusCode} - $rawPath');
+
           if (response.statusCode == HttpStatus.ok) {
-            return await consolidateHttpClientResponseBytes(response);
+            final bytes = await consolidateHttpClientResponseBytes(response);
+            debugPrint('[PlayerProvider] ✅ 封面加载成功: ${bytes.length} bytes');
+            return bytes;
+          } else {
+            debugPrint('[PlayerProvider] ❌ 封面请求失败: HTTP ${response.statusCode}');
           }
         } finally {
           client.close(force: true);
@@ -388,7 +577,7 @@ class PlayerProvider with ChangeNotifier {
         return await file.readAsBytes();
       }
     } catch (e, stackTrace) {
-      debugPrint('[PlayerProvider] 加载封面失败: $e');
+      debugPrint('[PlayerProvider] ❌ 加载封面失败: $e');
       debugPrint(stackTrace.toString());
     }
     return null;
@@ -410,9 +599,15 @@ class PlayerProvider with ChangeNotifier {
     return null;
   }
 
-  Future<_ResolvedAudioSource> _resolveAudioSource(Song song) async {
+  Future<_ResolvedAudioSource> _resolveAudioSource(
+    Song song, {
+    bool startCache = false,
+  }) async {
     if (song.source == 'bilibili') {
-      final biliSource = await _resolveBilibiliAudioSource(song);
+      final biliSource = await _resolveBilibiliAudioSource(
+        song,
+        startCache: startCache,
+      );
       if (biliSource != null) {
         return biliSource;
       }
@@ -427,7 +622,10 @@ class PlayerProvider with ChangeNotifier {
     return _ResolvedAudioSource.file(song.filePath);
   }
 
-  Future<_ResolvedAudioSource?> _resolveBilibiliAudioSource(Song song) async {
+  Future<_ResolvedAudioSource?> _resolveBilibiliAudioSource(
+    Song song, {
+    bool startCache = false,
+  }) async {
     final bvid = song.bvid;
     if (bvid == null || bvid.isEmpty) {
       return null;
@@ -453,6 +651,9 @@ class PlayerProvider with ChangeNotifier {
         bvid: bvid,
         cid: cid,
         quality: playQuality,
+      ).timeout(
+        const Duration(seconds: 3),
+        onTimeout: () => null,
       );
       if (downloadedPath != null && downloadedPath.isNotEmpty) {
         debugPrint('[播放调试] ✅ 使用手动下载: $downloadedPath');
@@ -464,58 +665,188 @@ class PlayerProvider with ChangeNotifier {
         bvid: bvid,
         cid: cid,
         quality: playQuality,
+      ).timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => null,
       );
       if (cachedFile != null) {
         debugPrint('[播放调试] ✅ 自动缓存命中: ${cachedFile.path}');
         return _ResolvedAudioSource.file(cachedFile.path);
       }
 
-      // ========== 默认: 创建 LockCachingAudioSource，边播边写 ==========
-      debugPrint('[播放调试] ⚡ LockCachingAudioSource 开始流式缓存');
-      final lockCachingSource =
-          await _bilibiliAutoCacheService.createLockCachingAudioSource(
+      // ========== 优先级3: 直接流式播放 + 后台缓存 ==========
+      final streamInfo = await _bilibiliStreamService.getAudioStream(
         bvid: bvid,
         cid: cid,
         quality: playQuality,
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw TimeoutException('获取音频流超时'),
       );
-      final sourceId = _buildLockCacheId(song, playQuality);
-      AudioSourceRegistry.register(sourceId, lockCachingSource);
-      return _ResolvedAudioSource.lockCaching(sourceId);
-    } catch (e) {
-      debugPrint('[播放调试] ❌ LockCachingAudioSource 初始化失败: $e');
-      // ========== 回退方案: 直接流式播放 ==========
-      try {
-        final streamInfo = await _bilibiliStreamService.getAudioStream(
-          bvid: bvid,
-          cid: cid,
-          quality: playQuality,
-        );
 
-        final cookie = await _cookieManager.getCookieString();
-        final headers = <String, String>{
-          'Referer': 'https://www.bilibili.com',
-          'User-Agent':
-              'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0',
-          if (cookie.isNotEmpty) 'Cookie': cookie,
-        };
+      final cookie = await _cookieManager.getCookieString();
+      final headers = <String, String>{
+        'Referer': 'https://www.bilibili.com',
+        'User-Agent':
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0',
+        if (cookie.isNotEmpty) 'Cookie': cookie,
+      };
 
-        debugPrint('[播放调试] ⚡ 使用流式播放: ${streamInfo.url.substring(0, 50)}...');
-        return _ResolvedAudioSource.url(
-          streamInfo.url,
-          headers: headers,
-        );
-      } catch (streamError) {
-        debugPrint('[播放调试] ❌ 获取流 URL 失败: $streamError');
-        return null;
+      debugPrint('[播放调试] ✅ 直连流 URL: ${streamInfo.url.substring(0, 50)}...');
+
+      // 播放的同时在后台写入锁缓存，避免初始化时并发下载
+      if (startCache) {
+        _startBackgroundCaching(bvid, cid, playQuality);
       }
+
+      return _ResolvedAudioSource.url(
+        streamInfo.url,
+        headers: headers,
+      );
+    } catch (e, stackTrace) {
+      debugPrint('[播放调试] ❌ 解析音频源失败: $e');
+      debugPrint('[播放调试] 堆栈: $stackTrace');
+      return null;
     }
   }
 
-  String _buildLockCacheId(
-    Song song,
+  /// 播放当前曲目后，异步创建 LockCachingAudioSource 写入缓存，避免一次性并发下载
+  void _startBackgroundCaching(
+    String bvid,
+    int cid,
     BilibiliAudioQuality quality,
-  ) =>
-      'lockcache_${song.id}_${quality.id}_${DateTime.now().microsecondsSinceEpoch}';
+  ) {
+    final key = '$bvid-$cid-${quality.id}';
+    if (_autoCacheInProgress.contains(key)) return;
+    _autoCacheInProgress.add(key);
+    Future.microtask(() async {
+      try {
+        debugPrint('[后台缓存] 🔄 准备缓存 $bvid/$cid');
+        await _bilibiliAutoCacheService.createLockCachingAudioSource(
+          bvid: bvid,
+          cid: cid,
+          quality: quality,
+        );
+        debugPrint('[后台缓存] ✅ 缓存完成');
+      } catch (e) {
+        debugPrint('[后台缓存] ⚠️ 缓存失败: $e');
+      } finally {
+        _autoCacheInProgress.remove(key);
+      }
+    });
+  }
+
+  Future<List<bili_models.BilibiliVideoPage>> _getVideoPagesWithCache(
+    String bvid,
+  ) async {
+    final cached = await _pageCache.getCachedVideoPages(bvid);
+    if (cached != null && cached.isNotEmpty) {
+      return cached;
+    }
+    final fetched = await _bilibiliApiService.getVideoPages(bvid);
+    if (fetched.isNotEmpty) {
+      await _pageCache.cacheVideoPages(bvid, fetched);
+    }
+    return fetched;
+  }
+
+  Future<Song> _ensureLocalAlbumArt(
+    Song song, {
+    bool updateState = true,
+  }) async {
+    final artPath = song.albumArtPath;
+    if (artPath == null || artPath.isEmpty) {
+      return song;
+    }
+
+    final cookie =
+        artPath.contains('bilibili') ? await _cookieManager.getCookieString() : null;
+    final localPath = await AlbumArtCacheService.instance
+        .ensureLocalPath(artPath, cookie: cookie);
+    if (localPath == null ||
+        localPath.isEmpty ||
+        localPath == artPath) {
+      return song;
+    }
+
+    final updatedSong = song.copyWith(albumArtPath: Value(localPath));
+    if (updateState) {
+      await _applyAlbumArtUpdate(song, updatedSong);
+    } else if (song.id > 0) {
+      await MusicDatabase.database.updateSong(updatedSong);
+    }
+    return updatedSong;
+  }
+
+  Future<void> _applyAlbumArtUpdate(Song original, Song updated) async {
+    _playlist = _replaceSongInList(_playlist, updated);
+    _originalPlaylist = _replaceSongInList(_originalPlaylist, updated);
+    _shuffledPlaylist = _replaceSongInList(_shuffledPlaylist, updated);
+
+    if (_currentSong?.id == updated.id) {
+      _currentSong = updated;
+    }
+
+    if (original.id > 0 &&
+        original.albumArtPath != updated.albumArtPath) {
+      await MusicDatabase.database.updateSong(updated);
+    }
+    notifyListeners();
+  }
+
+  Future<void> _migrateAlbumArtCache({int batchSize = 50}) async {
+    try {
+      final db = MusicDatabase.database;
+      while (true) {
+        final songs = await (db.select(db.songs)
+              ..where(
+                (tbl) =>
+                    tbl.source.equals('bilibili') &
+                    tbl.albumArtPath.isNotNull() &
+                    (tbl.albumArtPath.like('http://%') |
+                        tbl.albumArtPath.like('https://%')),
+              )
+              ..limit(batchSize))
+            .get();
+
+        if (songs.isEmpty) break;
+
+        debugPrint('[PlayerProvider] 🎨 封面缓存迁移: ${songs.length} 首');
+        for (final song in songs) {
+          await _ensureLocalAlbumArt(song, updateState: false);
+        }
+
+        if (songs.length < batchSize) break;
+      }
+    } catch (e, stackTrace) {
+      debugPrint('[PlayerProvider] ⚠️ 封面迁移失败: $e');
+      debugPrint(stackTrace.toString());
+    }
+  }
+
+  List<Song> _replaceSongInList(List<Song> list, Song updated) {
+    return list
+        .map((song) => song.id == updated.id ? updated : song)
+        .toList();
+  }
+
+  Future<void> _cacheCurrentSongIfNeeded() async {
+    final song = _currentSong;
+    if (song == null) return;
+    await _ensureLocalAlbumArt(song);
+
+    final updatedSong = _currentSong;
+    if (updatedSong == null || updatedSong.source != 'bilibili') return;
+
+    final bvid = updatedSong.bvid;
+    final cid = updatedSong.cid;
+    if (bvid == null || bvid.isEmpty || cid == null || cid <= 0) return;
+
+    final storage = await PlayerStateStorage.getInstance();
+    final playQuality =
+        BilibiliAudioQuality.fromId(storage.defaultBilibiliPlayQuality);
+    _startBackgroundCaching(bvid, cid, playQuality);
+  }
 
   Future<int?> _resolveBilibiliCid(Song song, String bvid) async {
     if (song.cid != null && song.cid! > 0) {
@@ -531,7 +862,7 @@ class PlayerProvider with ChangeNotifier {
     }
 
     try {
-      final pages = await _bilibiliApiService.getVideoPages(bvid);
+      final pages = await _getVideoPagesWithCache(bvid);
       if (pages.isEmpty) {
         return null;
       }
@@ -959,7 +1290,6 @@ class PlayerProvider with ChangeNotifier {
     _lyricsNotificationService.updateMetadata(
       title: _currentSong?.title,
       artist: _currentSong?.artist,
-      coverUrl: _currentSong?.albumArtPath,
     );
     notifyListeners();
   }
@@ -1014,6 +1344,35 @@ class PlayerProvider with ChangeNotifier {
         _currentLyrics = lyrics;
         _lyricsError = null;
         _currentLyricLineIndex = -1;  // 重置歌词行索引
+        
+        // 发送完整歌词列表到锁屏界面
+        if (_lockScreenEnabled && lyrics.lyrics != null) {
+          final allLyricsData = lyrics.lyrics!.map((line) {
+            List<Map<String, dynamic>>? charTimestampsMap;
+            if (line.charTimestamps != null) {
+              charTimestampsMap = line.charTimestamps!.map((ct) {
+                return {
+                  'char': ct.char,
+                  'startMs': ct.startMs.toInt(),
+                  'endMs': ct.endMs.toInt(),
+                };
+              }).toList();
+            }
+            
+            return {
+              'text': line.text,
+              'startMs': (line.timestamp * 1000).toInt(),
+              'endMs': (line.timestamp * 1000 + 5000).toInt(), // 默认5秒
+              'charTimestamps': charTimestampsMap,
+            };
+          }).toList();
+          
+          await _lyricsNotificationService.updateAllLyrics(
+            lyrics: allLyricsData,
+            currentIndex: -1,
+          );
+        }
+        
         // 立即触发首次通知栏更新
         _updateNotificationLyrics(_position.value);
       } else {
@@ -1111,6 +1470,34 @@ class PlayerProvider with ChangeNotifier {
         currentLineEndMs: currentLineEndMs,
         charTimestamps: charTimestampsMap,
       );
+      
+      // 更新锁屏界面的当前行索引
+      if (_lockScreenEnabled && _currentLyrics?.lyrics != null) {
+        final allLyricsData = _currentLyrics!.lyrics!.map((line) {
+          List<Map<String, dynamic>>? charTimestampsMap;
+          if (line.charTimestamps != null) {
+            charTimestampsMap = line.charTimestamps!.map((ct) {
+              return {
+                'char': ct.char,
+                'startMs': ct.startMs.toInt(),
+                'endMs': ct.endMs.toInt(),
+              };
+            }).toList();
+          }
+          
+          return {
+            'text': line.text,
+            'startMs': (line.timestamp * 1000).toInt(),
+            'endMs': (line.timestamp * 1000 + 5000).toInt(),
+            'charTimestamps': charTimestampsMap,
+          };
+        }).toList();
+        
+        _lyricsNotificationService.updateAllLyrics(
+          lyrics: allLyricsData,
+          currentIndex: currentLineIndex,
+        );
+      }
     }
   }
 

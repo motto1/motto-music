@@ -24,6 +24,7 @@ class TrackItem extends Playable {
   final String? audioUrl; // URL 或文件路径
   final bool isFile; // 是否为本地文件
   final AudioVideoSource? audioSource; // LockCachingAudioSource
+  final bool needsResolve; // 是否需要延迟解析（懒加载标记）
 
   TrackItem({
     required this.id,
@@ -31,14 +32,27 @@ class TrackItem extends Playable {
     required this.audioUrl,
     this.isFile = true,
     this.audioSource,
+    this.needsResolve = false,
   });
 
   /// 从 MediaItem 创建 TrackItem
   static TrackItem fromMediaItem(MediaItem item) {
     final sourceType = item.extras?['sourceType'] as String? ?? 'file';
     final sourcePath = item.extras?['sourcePath'] as String?;
+    final needsResolve = item.extras?['needsResolve'] as bool? ?? false;
     AudioVideoSource? customAudioSource;
     String? resolvedPath = sourcePath ?? item.id;
+
+    // 懒加载项目：不设置 audioUrl，等待播放时解析
+    if (sourceType == 'lazy' || needsResolve) {
+      return TrackItem(
+        id: item.id,
+        mediaItem: item,
+        audioUrl: null,
+        isFile: false,
+        needsResolve: true,
+      );
+    }
 
     if (sourceType == 'lock_caching' && sourcePath != null) {
       customAudioSource = AudioSourceRegistry.take(sourcePath);
@@ -51,9 +65,14 @@ class TrackItem extends Playable {
       audioUrl: resolvedPath,
       isFile: sourceType == 'file',
       audioSource: customAudioSource,
+      needsResolve: false,
     );
   }
 }
+
+/// 懒加载解析回调类型
+/// 返回解析后的音频源信息：(url, headers, isFile)
+typedef LazyResolveCallback = Future<(String? url, Map<String, String>? headers, bool isFile)?> Function(MediaItem item);
 
 /// Motto AudioHandler - 完全移植 namida 架构
 class MottoAudioHandler extends BasicAudioHandler<TrackItem> {
@@ -63,6 +82,9 @@ class MottoAudioHandler extends BasicAudioHandler<TrackItem> {
   // ========== namida 防抖机制（完全移植）==========
   DateTime? _lastPauseAt;
   bool _suppressNextPlay = false;
+
+  // ========== 懒加载解析回调 ==========
+  LazyResolveCallback? onLazyResolve;
 
   // ========== 均衡器访问器 ==========
   AndroidEqualizer get equalizer => _equalizer ??= AndroidEqualizer();
@@ -186,8 +208,35 @@ class MottoAudioHandler extends BasicAudioHandler<TrackItem> {
     print('[AudioHandler] 🎵 播放: ${item.mediaItem.title} (索引: $index)');
 
     try {
-      // ⭐ 从 MediaItem.extras 提取 HTTP headers（修复 Bilibili 403 问题）
-      final headers = item.mediaItem.extras?['headers'] as Map<String, String>?;
+      String? audioUrl = item.audioUrl;
+      Map<String, String>? headers = item.mediaItem.extras?['headers'] as Map<String, String>?;
+      bool isFile = item.isFile;
+
+      // ⭐ 懒加载处理：如果需要解析，调用回调获取音频源
+      if (item.needsResolve) {
+        print('[AudioHandler] 🔄 懒加载项目，开始解析音频源...');
+
+        if (onLazyResolve != null) {
+          final resolved = await onLazyResolve!(item.mediaItem);
+          if (resolved != null) {
+            audioUrl = resolved.$1;
+            headers = resolved.$2;
+            isFile = resolved.$3;
+            final urlPreview = audioUrl != null && audioUrl.length > 50
+                ? '${audioUrl.substring(0, 50)}...'
+                : audioUrl ?? 'null';
+            print('[AudioHandler] ✅ 懒加载解析完成: $urlPreview');
+          } else {
+            print('[AudioHandler] ❌ 懒加载解析失败，跳过此曲目');
+            skipItem();
+            return;
+          }
+        } else {
+          print('[AudioHandler] ⚠️ 未设置懒加载回调，跳过此曲目');
+          skipItem();
+          return;
+        }
+      }
 
       if (headers != null) {
         print('[AudioHandler] 🔑 提取到 headers: ${headers.keys.join(", ")}');
@@ -195,10 +244,10 @@ class MottoAudioHandler extends BasicAudioHandler<TrackItem> {
 
       // 设置音频源（使用 URL 字符串）
       final duration = await setSource(
-        item.audioUrl,
+        audioUrl,
         item: item,
         index: index,
-        isFile: item.isFile,
+        isFile: isFile,
         headers: headers,
         audioSource: item.audioSource,
       );

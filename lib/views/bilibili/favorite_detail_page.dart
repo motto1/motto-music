@@ -22,6 +22,7 @@ import 'package:drift/drift.dart' as drift;
 import 'dart:ui';
 import 'package:motto_music/widgets/apple_music_song_tile.dart';
 import 'package:motto_music/widgets/audio_quality_section.dart';
+import 'package:motto_music/widgets/unified_cover_image.dart';
 
 /// 收藏夹详情页面
 class FavoriteDetailPage extends StatefulWidget {
@@ -295,7 +296,15 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
     for (final video in videos) {
       // 获取视频的分P列表
       try {
-        final pages = await _apiService.getVideoPages(video.bvid);
+        if ((video.bvid ?? '').isEmpty) {
+          expanded.add(video);
+          continue;
+        }
+
+        final pages = await _pageCache.getOrFetchVideoPages(
+          video.bvid!,
+          () => _apiService.getVideoPages(video.bvid!),
+        );
         
         if (pages.length > 1) {
           // 多P视频：为每个分P创建独立条目
@@ -1029,21 +1038,11 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
                     padding: const EdgeInsets.all(16),
                     child: Row(
                       children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: currentSong.albumArtPath != null
-                              ? CachedNetworkImage(
-                                  imageUrl: currentSong.albumArtPath!,
-                                  width: 56,
-                                  height: 56,
-                                  fit: BoxFit.cover,
-                                )
-                              : Container(
-                                  width: 56,
-                                  height: 56,
-                                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                                  child: const Icon(Icons.music_note),
-                                ),
+                        UnifiedCoverImage(
+                          coverPath: currentSong.albumArtPath,
+                          width: 56,
+                          height: 56,
+                          borderRadius: 8,
                         ),
                         const SizedBox(width: 16),
                         Expanded(
