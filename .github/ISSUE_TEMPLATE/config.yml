@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 💬 讨论区
+    url: https://github.com/motto1/motto-music/discussions
+    about: 提问、分享想法或与社区讨论
+  - name: 📖 文档
+    url: https://github.com/motto1/motto-music#readme
+    about: 查看项目文档和使用指南
+  - name: 🔒 安全漏洞
+    url: https://github.com/motto1/motto-music/security/advisories
+    about: 私密地报告安全漏洞
