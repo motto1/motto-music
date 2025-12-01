@@ -53,20 +53,20 @@ jobs:
       # 如果缓存未命中，从 GitHub Release 下载 Gradle
       - name: Download Gradle from Release (if not cached)
         if: steps.gradle-cache.outputs.cache-hit != 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "📥 Cache miss - downloading Gradle from GitHub Release..."
           
-          # 从 Release 下载 Gradle（速度快且可靠）
-          GRADLE_URL="https://github.com/motto1/motto-music/releases/download/gradle-deps/gradle-8.12-all.zip"
+          # 使用 gh CLI 下载（支持私有仓库）
+          gh release download gradle-deps -p "gradle-8.12-all.zip" -D /tmp
           
-          echo "🔗 Downloading from: $GRADLE_URL"
-          
-          # 下载到临时文件
-          if ! wget -q --show-progress --timeout=120 -O /tmp/gradle.zip "$GRADLE_URL"; then
+          if [ ! -f "/tmp/gradle-8.12-all.zip" ]; then
             echo "❌ Failed to download Gradle from Release"
-            echo "💡 Please ensure gradle-8.12-all.zip is uploaded to Release with tag 'gradle-deps'"
             exit 1
           fi
+          
+          mv /tmp/gradle-8.12-all.zip /tmp/gradle.zip
           
           # 验证 zip 文件
           echo "🔍 Verifying downloaded file..."
