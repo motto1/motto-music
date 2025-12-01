@@ -85,11 +85,6 @@ jobs:
         run: |
           chmod +x ./gradlew
 
-          # 复制 init.gradle 到全局位置
-          mkdir -p ~/.gradle
-          cp init.gradle ~/.gradle/init.gradle
-          echo "📝 Copied init.gradle to ~/.gradle/init.gradle"
-
           # 修改 distributionUrl 指向本地文件
           if [ -f "/tmp/gradle-8.12-all.zip" ]; then
             echo "📝 Modifying gradle-wrapper.properties to use local file..."
@@ -97,7 +92,7 @@ jobs:
           fi
 
           echo "🚀 Initializing Gradle wrapper..."
-          if ./gradlew --version --no-daemon; then
+          if ./gradlew --version --no-daemon --warning-mode all; then
             echo "✅ Gradle wrapper initialized successfully"
           else
             echo "❌ Gradle initialization failed"

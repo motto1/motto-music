@@ -1,4 +1,13 @@
 pluginManagement {
+    repositories {
+        maven { url = uri("https://maven.aliyun.com/repository/google") }
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
+        maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+
     val flutterSdkPath = run {
         val properties = java.util.Properties()
         file("local.properties").inputStream().use { properties.load(it) }
