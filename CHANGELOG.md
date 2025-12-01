@@ -8,47 +8,55 @@
 ## [Unreleased]
 
 ### 计划中
-- WebDAV / 私人云完善
-- Bilibili 账号多端联动
-- 可插拔歌词/音源 Provider
-- UI 主题编辑器
+- UI 风格统一：统一多个页面的风格一致性，修复 BUG
+- 歌词体验优化：歌词翻译多行显示、更多歌词源、可视化偏移调节
+- 模块化配置：支持备份配置、导入导出
+- Bilibili 接入：点赞、三连、收藏夹控制
+- 性能优化：启动速度优化、内存占用优化、流畅度提升
+- 播放增强：均衡器、音效、淡入淡出、定时停止
 
-## [0.2.6] - 2025-11-30
+## [0.1.0-beta] - 2025-12-01
 
-### 新增
-- 完整的开源项目文档（CONTRIBUTING.md、CODE_OF_CONDUCT.md、SECURITY.md）
-- GitHub Issue 和 PR 模板
-
-### 改进
-- 优化 README.md 结构和内容
-- 完善项目描述和技术栈说明
-
-## [0.2.5] - 之前版本
+### 说明
+本版本为项目的首个 **Beta 公开版本**，重新定位版本号为 `0.1.0`，标志着项目进入测试阶段。
 
 ### 核心功能
-- ✅ 多源音频支持（本地文件 + Bilibili 音源）
-- ✅ 跨平台支持（Windows / macOS / Linux / Android / iOS）
-- ✅ 智能歌词系统（自动解析 LRC/TTML，内置搜索和偏移工具）
+- ✅ Bilibili 音源支持（登录、收藏夹、下载管理、音质选择）
+- ✅ 本地音乐文件支持（自动元数据读取）
+- ✅ 智能歌词系统（LRC/TTML 解析，网易云 API 搜索，偏移调整）
 - ✅ Apple Music 风格播放器界面
-- ✅ 自定义下载目录配置
-- ✅ 后台下载与自动缓存
-- ✅ Bilibili 登录、收藏夹、下载管理
+- ✅ 锁屏界面与歌词滚动支持
 - ✅ 通知栏播放控制（audio_service + just_audio）
-- ✅ 锁屏界面优化
+- ✅ 自定义下载目录与缓存管理
+- ✅ 后台下载（可调并发、断点续传、LRU 缓存）
 
-### 技术架构
-- Flutter 3.3+ / Dart 3
-- Drift 数据库层
-- audio_service + just_audio 播放引擎
+### 技术栈
+- Flutter 3.3+ / Dart 3（仅支持 Android 平台）
+- Drift + sqlite3_flutter_libs（本地数据库）
+- audio_service + just_audio（音频播放引擎）
+- Bilibili API 集成
 - 模块化 Service 架构
+
+### 项目信息
+- 完整的开源文档（README、CONTRIBUTING、CODE_OF_CONDUCT、SECURITY）
+- GitHub Issue 和 PR 模板
+- Apache License 2.0 开源许可
+
+### 致谢
+本项目借鉴了以下优秀开源项目的经验和代码：
+- [namida](https://github.com/namidaco/namida)
+- [BBPlayer](https://github.com/bbplayer-app/BBPlayer)
+- [LZF-Music](https://github.com/GerryDush/LZF-Music)
+- [Metro](https://github.com/MuntashirAkon/Metro)
+
+感谢 linuxdo 社区的优秀服务商和公益站的支持。
 
 ---
 
 ## 版本说明
 
 - **[Unreleased]**：开发中的功能
-- **[0.2.6]**：当前最新版本
-- **[0.2.5]**：核心功能版本
+- **[0.1.0-beta]**：当前 Beta 测试版本
 
 ### 类型定义
 
@@ -59,6 +67,5 @@
 - **移除**：已移除的功能
 - **安全**：安全相关的修复
 
-[Unreleased]: https://github.com/motto1/motto-music/compare/v0.2.6...HEAD
-[0.2.6]: https://github.com/motto1/motto-music/releases/tag/v0.2.6
-[0.2.5]: https://github.com/motto1/motto-music/releases/tag/v0.2.5
+[Unreleased]: https://github.com/motto1/motto-music/compare/v0.1.0-beta...HEAD
+[0.1.0-beta]: https://github.com/motto1/motto-music/releases/tag/v0.1.0-beta
