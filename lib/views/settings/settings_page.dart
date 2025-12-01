@@ -698,17 +698,12 @@ END OF TERMS AND CONDITIONS
               '📖 项目主页',
               'https://github.com/motto1/motto-music',
             ),
-            const SizedBox(height: 16),
-            const Divider(),
-            const SizedBox(height: 16),
-            const Text(
-              '也可以通过以下方式联系开发者：',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+            const SizedBox(height: 8),
+            _buildLinkRow(
+              context,
+              '👤 开发者',
+              'https://github.com/motto1',
             ),
-            const SizedBox(height: 8),
-            _buildCopyRow(context, 'QQ', '2478719169'),
-            const SizedBox(height: 8),
-            _buildCopyRow(context, '微信', 'lyeaxm'),
           ],
         ),
         actions: [
@@ -721,26 +716,6 @@ END OF TERMS AND CONDITIONS
     );
   }
 
-  Widget _buildCopyRow(BuildContext context, String label, String content) {
-    return Row(
-      children: [
-        Text('$label: ', style: const TextStyle(fontWeight: FontWeight.bold)),
-        GestureDetector(
-          onTap: () {
-            Clipboard.setData(ClipboardData(text: content));
-            MottoToast.show(context, '$label 已复制到剪贴板');
-          },
-          child: Text(
-            content,
-            style: const TextStyle(
-              color: Colors.blue,
-              decoration: TextDecoration.underline,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _buildLinkRow(BuildContext context, String label, String url) {
     return Row(

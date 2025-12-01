@@ -115,15 +115,12 @@ flutter build appbundle
 
 ## 📸 应用截图
 
-> 截图展示即将上传
-
-<!-- 
 <p align="center">
-<img src="screenshots/home.jpg" width=270>
-<img src="screenshots/player.jpg" width=270>
-<img src="screenshots/lockscreen.jpg" width=270>
+<img src="screenshots/home.jpg" width=200>
+<img src="screenshots/player.jpg" width=200>
+<img src="screenshots/lyrics.jpg" width=200>
+<img src="screenshots/favorites.jpg" width=200>
 </p>
--->
 
 ---
 
