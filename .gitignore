@@ -51,3 +51,15 @@ android/nul
 
 # AI 工具配置
 .claude/
+CLAUDE.md
+
+# 开发文档（不公开）
+GRADLE_RELEASE_UPLOAD.md
+*.ps1
+check_release.ps1
+upload-gradle-*.ps1
+process_image.py
+android/verify_icons.ps1
+
+# Gradle 缓存
+gradle-*.zip
