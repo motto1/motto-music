@@ -91,6 +91,10 @@ jobs:
           gem install fastlane -N
           fastlane --version
 
+      - name: Setup Gradle
+        working-directory: android
+        run: chmod +x ./gradlew
+
       - name: Build with Fastlane
         working-directory: android
         run: |
