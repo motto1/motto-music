@@ -50,65 +50,54 @@ jobs:
           restore-keys: |
             gradle-${{ runner.os }}-
 
-      # 如果缓存未命中，手动下载 Gradle
-      - name: Download Gradle (if not cached)
+      # 如果缓存未命中，从 GitHub Release 下载 Gradle
+      - name: Download Gradle from Release (if not cached)
         if: steps.gradle-cache.outputs.cache-hit != 'true'
         run: |
-          echo "Cache miss - downloading Gradle..."
-
-          # 计算 wrapper 目录 hash（与 Gradle wrapper 使用相同算法）
-          DIST_URL="https://services.gradle.org/distributions/gradle-8.12-all.zip"
-          HASH=$(echo -n "$DIST_URL" | md5sum | cut -c1-32)
-          # Gradle 使用 base36 编码，这里简化处理
-          WRAPPER_DIR="$HOME/.gradle/wrapper/dists/gradle-8.12-all"
-
-          mkdir -p "$WRAPPER_DIR"
-
-          # 尝试多个下载源
-          URLS=(
-            "https://services.gradle.org/distributions/gradle-8.12-all.zip"
-            "https://downloads.gradle.org/distributions/gradle-8.12-all.zip"
-          )
-
-          DOWNLOADED=false
-          for URL in "${URLS[@]}"; do
-            echo "Trying: $URL"
-            if wget -q --timeout=60 --tries=3 -O /tmp/gradle.zip "$URL"; then
-              DOWNLOADED=true
-              echo "Downloaded from: $URL"
-              break
-            fi
-          done
-
-          if [ "$DOWNLOADED" = false ]; then
-            echo "All download attempts failed"
+          echo "📥 Cache miss - downloading Gradle from GitHub Release..."
+          
+          # 从 Release 下载 Gradle（速度快且可靠）
+          GRADLE_URL="https://github.com/motto1/motto-music/releases/download/gradle-deps/gradle-8.12-all.zip"
+          
+          echo "🔗 Downloading from: $GRADLE_URL"
+          
+          # 下载到临时文件
+          if ! wget -q --show-progress --timeout=120 -O /tmp/gradle.zip "$GRADLE_URL"; then
+            echo "❌ Failed to download Gradle from Release"
+            echo "💡 Please ensure gradle-8.12-all.zip is uploaded to Release with tag 'gradle-deps'"
             exit 1
           fi
-
+          
           # 验证 zip 文件
+          echo "🔍 Verifying downloaded file..."
           if ! unzip -t /tmp/gradle.zip > /dev/null 2>&1; then
-            echo "Downloaded file is not a valid zip"
+            echo "❌ Downloaded file is not a valid zip"
             exit 1
           fi
-
-          # 解压到临时目录
-          TEMP_DIR=$(mktemp -d)
-          unzip -q /tmp/gradle.zip -d "$TEMP_DIR"
-
-          # 移动到 wrapper 期望的位置（使用固定目录名简化）
+          
+          # 准备 wrapper 目录
+          WRAPPER_DIR="$HOME/.gradle/wrapper/dists/gradle-8.12-all"
           CACHE_DIR="$WRAPPER_DIR/cached"
           mkdir -p "$CACHE_DIR"
+          
+          # 解压到临时目录
+          echo "📦 Extracting Gradle..."
+          TEMP_DIR=$(mktemp -d)
+          unzip -q /tmp/gradle.zip -d "$TEMP_DIR"
+          
+          # 移动到 wrapper 期望的位置
           mv "$TEMP_DIR"/gradle-*/* "$CACHE_DIR/" 2>/dev/null || mv "$TEMP_DIR"/gradle-* "$CACHE_DIR/gradle-8.12"
-
-          # 复制 zip 文件并创建标记
+          
+          # 复制 zip 文件并创建 .ok 标记（wrapper 需要）
           cp /tmp/gradle.zip "$CACHE_DIR/gradle-8.12-all.zip"
           touch "$CACHE_DIR/gradle-8.12-all.zip.ok"
-
-          # 清理
+          
+          # 清理临时文件
           rm -rf "$TEMP_DIR" /tmp/gradle.zip
+          
+          echo "✅ Gradle installed to: $CACHE_DIR"
+          ls -lh "$CACHE_DIR" | head -10
 
-          echo "Gradle installed to: $CACHE_DIR"
-          ls -la "$CACHE_DIR"
 
       # 配置 Gradle wrapper 使用缓存的版本
       - name: Configure Gradle wrapper
@@ -135,43 +124,19 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
-      # 初始化 Gradle Wrapper，让它先完成下载和设置
+      # 初始化 Gradle Wrapper
       - name: Initialize Gradle Wrapper
         working-directory: android
         run: |
           chmod +x ./gradlew
           
-          echo "📝 Original Gradle distribution URL:"
-          cat gradle/wrapper/gradle-wrapper.properties | grep distributionUrl
-          
-          # 直接使用腾讯云镜像源（GitHub Actions 环境中官方源可能被限制）
-          echo "🔄 Switching to Tencent Cloud mirror..."
-          sed -i 's|https://services.gradle.org/distributions|https://mirrors.cloud.tencent.com/gradle|g' gradle/wrapper/gradle-wrapper.properties
-          
-          echo "✅ Updated Gradle distribution URL:"
-          cat gradle/wrapper/gradle-wrapper.properties | grep distributionUrl
-          
-          # 初始化 Gradle（最多重试 3 次）
-          MAX_RETRIES=3
-          RETRY_COUNT=0
-          
-          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-            echo "🚀 Attempt $((RETRY_COUNT + 1)) of $MAX_RETRIES..."
-            
-            if ./gradlew --version --no-daemon; then
-              echo "✅ Gradle wrapper initialized successfully"
-              break
-            else
-              RETRY_COUNT=$((RETRY_COUNT + 1))
-              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
-                echo "⚠️ Failed, retrying in 5 seconds..."
-                sleep 5
-              else
-                echo "❌ Failed after $MAX_RETRIES attempts"
-                exit 1
-              fi
-            fi
-          done
+          echo "🚀 Initializing Gradle wrapper..."
+          if ./gradlew --version --no-daemon; then
+            echo "✅ Gradle wrapper initialized successfully"
+          else
+            echo "❌ Gradle initialization failed"
+            exit 1
+          fi
 
       - name: Build APK
         run: flutter build apk --split-per-abi --release
