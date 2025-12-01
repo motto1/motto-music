@@ -16,11 +16,21 @@ permissions:
 
 jobs:
   build-android:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      # 清除可能导致网络问题的代理设置
+      - name: Clear proxy settings
+        run: |
+          unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY no_proxy NO_PROXY
+          echo "http_proxy=$http_proxy"
+          echo "https_proxy=$https_proxy"
+          # 测试网络连接
+          curl -I https://services.gradle.org/ || echo "Direct connection failed"
+          curl -I https://google.com/ || echo "Google connection failed"
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -47,10 +57,15 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      # 清除 Java 代理设置后构建
       - name: Build APK
         run: flutter build apk --split-per-abi --release
         env:
-          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m -Dorg.gradle.daemon=false"
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m -Dorg.gradle.daemon=false -Djava.net.useSystemProxies=false -Dhttp.proxyHost= -Dhttps.proxyHost="
+          http_proxy: ""
+          https_proxy: ""
+          HTTP_PROXY: ""
+          HTTPS_PROXY: ""
 
       - name: Build App Bundle
         run: flutter build appbundle --release
