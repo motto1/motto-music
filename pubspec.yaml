@@ -66,6 +66,13 @@ dev_dependencies:
   drift_dev: ^2.14.1
   build_runner: ^2.4.8
   json_serializable: ^6.7.1      # JSON 序列化代码生成
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: "ic_launcher"
+  ios: true
+  image_path: "rounded_cover.png"
+  min_sdk_android: 21 # android min sdk min:16, default 21
 
 flutter:
   uses-material-design: true
