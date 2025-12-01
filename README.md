@@ -19,9 +19,9 @@
 </p>
 
 <p align="center">
-  <strong>基于 Flutter 开发的 Android 音乐播放器</strong>
+  <strong>基于 Flutter 开发的音乐播放器</strong>
   <br>
-  专为"本地收藏 + Bilibili 音源"使用场景设计
+  专为"Bilibili 音源"使用场景设计
 </p>
 
 <p align="center">
