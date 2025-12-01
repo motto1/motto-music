@@ -37,12 +37,18 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      # 从 GitHub Releases 下载 Gradle（绕过 services.gradle.org 连接问题）
-      - name: Download Gradle from GitHub
+      # 从 Gradle 官方 CDN 下载（绕过 services.gradle.org 连接问题）
+      - name: Download Gradle distribution
         run: |
-          curl -L -o /tmp/gradle-8.12-all.zip \
-            "https://github.com/gradle/gradle/releases/download/v8.12.0/gradle-8.12-all.zip"
-          ls -la /tmp/gradle-8.12-all.zip
+          # 尝试多个镜像源
+          GRADLE_URL="https://downloads.gradle-dn.com/distributions/gradle-8.12-all.zip"
+
+          echo "Downloading from: $GRADLE_URL"
+          curl -fSL --retry 3 --retry-delay 5 -o /tmp/gradle-8.12-all.zip "$GRADLE_URL"
+
+          # 验证是否为有效 zip 文件
+          file /tmp/gradle-8.12-all.zip
+          unzip -t /tmp/gradle-8.12-all.zip | head -5
 
       # 修改 wrapper 配置使用本地文件
       - name: Configure Gradle wrapper
