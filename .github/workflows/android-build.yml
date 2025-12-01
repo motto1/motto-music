@@ -36,20 +36,28 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
-        with:
-          build-root-directory: android
-          cache-read-only: false
+
+      # 从 GitHub Releases 下载 Gradle（绕过 services.gradle.org 连接问题）
+      - name: Download Gradle from GitHub
+        run: |
+          curl -L -o /tmp/gradle-8.12-all.zip \
+            "https://github.com/gradle/gradle/releases/download/v8.12.0/gradle-8.12-all.zip"
+          ls -la /tmp/gradle-8.12-all.zip
+
+      # 修改 wrapper 配置使用本地文件
+      - name: Configure Gradle wrapper
+        run: |
+          sed -i 's|distributionUrl=.*|distributionUrl=file\\:///tmp/gradle-8.12-all.zip|' \
+            android/gradle/wrapper/gradle-wrapper.properties
+          cat android/gradle/wrapper/gradle-wrapper.properties
 
       - name: Get dependencies
         run: flutter pub get
 
-      - name: Clean Flutter
-        run: flutter clean
-
       - name: Build APK
         run: flutter build apk --split-per-abi --release
         env:
-          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m -Dorg.gradle.daemon=false -Dorg.gradle.wrapper.downloadRetries=5"
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m -Dorg.gradle.daemon=false"
 
       - name: Build App Bundle
         run: flutter build appbundle --release
