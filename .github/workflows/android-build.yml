@@ -66,60 +66,15 @@ jobs:
             exit 1
           fi
           
-          mv /tmp/gradle-8.12-all.zip /tmp/gradle.zip
-          
           # 验证 zip 文件
-          echo "🔍 Verifying downloaded file..."
-          if ! unzip -t /tmp/gradle.zip > /dev/null 2>&1; then
+          if ! unzip -t /tmp/gradle-8.12-all.zip > /dev/null 2>&1; then
             echo "❌ Downloaded file is not a valid zip"
             exit 1
           fi
           
-          # 准备 wrapper 目录
-          WRAPPER_DIR="$HOME/.gradle/wrapper/dists/gradle-8.12-all"
-          CACHE_DIR="$WRAPPER_DIR/cached"
-          mkdir -p "$CACHE_DIR"
-          
-          # 解压到临时目录
-          echo "📦 Extracting Gradle..."
-          TEMP_DIR=$(mktemp -d)
-          unzip -q /tmp/gradle.zip -d "$TEMP_DIR"
-          
-          # 移动到 wrapper 期望的位置
-          mv "$TEMP_DIR"/gradle-*/* "$CACHE_DIR/" 2>/dev/null || mv "$TEMP_DIR"/gradle-* "$CACHE_DIR/gradle-8.12"
-          
-          # 复制 zip 文件并创建 .ok 标记（wrapper 需要）
-          cp /tmp/gradle.zip "$CACHE_DIR/gradle-8.12-all.zip"
-          touch "$CACHE_DIR/gradle-8.12-all.zip.ok"
-          
-          # 清理临时文件
-          rm -rf "$TEMP_DIR" /tmp/gradle.zip
-          
-          echo "✅ Gradle installed to: $CACHE_DIR"
-          ls -lh "$CACHE_DIR" | head -10
+          echo "✅ Gradle downloaded to /tmp/gradle-8.12-all.zip"
 
 
-      # 配置 Gradle wrapper 使用缓存的版本
-      - name: Configure Gradle wrapper
-        run: |
-          WRAPPER_DIR="$HOME/.gradle/wrapper/dists/gradle-8.12-all"
-
-          # 检查是否有缓存的 Gradle
-          if [ -d "$WRAPPER_DIR" ]; then
-            # 找到实际的 Gradle 目录
-            GRADLE_DIR=$(find "$WRAPPER_DIR" -maxdepth 2 -name "gradle-8.12" -type d 2>/dev/null | head -1)
-            if [ -z "$GRADLE_DIR" ]; then
-              GRADLE_DIR=$(find "$WRAPPER_DIR" -maxdepth 2 -type d -name "bin" 2>/dev/null | head -1 | xargs dirname)
-            fi
-
-            if [ -n "$GRADLE_DIR" ] && [ -d "$GRADLE_DIR" ]; then
-              echo "Found Gradle at: $GRADLE_DIR"
-              echo "GRADLE_HOME=$GRADLE_DIR" >> $GITHUB_ENV
-            fi
-          fi
-
-          # 显示 wrapper 配置
-          cat android/gradle/wrapper/gradle-wrapper.properties
 
       - name: Get dependencies
         run: flutter pub get
@@ -130,9 +85,16 @@ jobs:
         run: |
           chmod +x ./gradlew
           
+          # 关键步骤：修改 distributionUrl 指向本地文件！
+          # 这样 Wrapper 就绝对不会尝试联网下载了
+          if [ -f "/tmp/gradle-8.12-all.zip" ]; then
+            echo "📝 Modifying gradle-wrapper.properties to use local file..."
+            sed -i 's|distributionUrl=.*|distributionUrl=file:///tmp/gradle-8.12-all.zip|g' gradle/wrapper/gradle-wrapper.properties
+          fi
+          
           echo "🚀 Initializing Gradle wrapper..."
           if ./gradlew --version --no-daemon; then
-            echo "✅ Gradle wrapper initialized successfully"
+            echo "✅ Gradle wrapper initialized successfully using local file"
           else
             echo "❌ Gradle initialization failed"
             exit 1
