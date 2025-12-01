@@ -35,9 +35,9 @@ jobs:
           cache: true
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.12'
+          cache-read-only: false
 
       - name: Get dependencies
         run: flutter pub get
@@ -45,44 +45,17 @@ jobs:
       - name: Clean Flutter
         run: flutter clean
 
-      # 临时修改为使用官方仓库（GitHub Actions 在国外，访问更快）
-      - name: Configure Gradle for GitHub Actions
+      # 预下载 Gradle wrapper（确保网络问题在这里暴露，而非 Flutter 构建时）
+      - name: Pre-download Gradle wrapper
+        working-directory: android
         run: |
-          cat > android/build.gradle.kts << 'EOF'
-          allprojects {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
+          chmod +x gradlew
+          ./gradlew --version
 
-          val newBuildDir: Directory = rootProject.layout.buildDirectory.dir("../../build").get()
-          rootProject.layout.buildDirectory.value(newBuildDir)
-
-          subprojects {
-              val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
-              project.layout.buildDirectory.value(newSubprojectBuildDir)
-          }
-          subprojects {
-              project.evaluationDependsOn(":app")
-          }
-
-          tasks.register<Delete>("clean") {
-              delete(rootProject.layout.buildDirectory)
-          }
-          EOF
-
-      # 使用 setup-gradle 预下载的 Gradle
-      - name: Configure Gradle path
-        run: |
-          echo "GRADLE_USER_HOME=$HOME/.gradle" >> $GITHUB_ENV
-          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> $GITHUB_ENV
-          
       - name: Build APK
         run: flutter build apk --split-per-abi --release
         env:
           GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m -Dorg.gradle.daemon=false"
-          GRADLE_VERSION: "8.12"
 
       - name: Build App Bundle
         run: flutter build appbundle --release
