@@ -34,15 +34,10 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Cache Gradle
-        uses: actions/cache@v3
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
         with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+          gradle-version: '8.12'
 
       - name: Get dependencies
         run: flutter pub get
