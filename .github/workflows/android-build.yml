@@ -92,7 +92,7 @@ jobs:
           fi
 
           echo "🚀 Initializing Gradle wrapper..."
-          if ./gradlew --version --no-daemon; then
+          if ./gradlew --version --no-daemon --init-script init.gradle; then
             echo "✅ Gradle wrapper initialized successfully"
           else
             echo "❌ Gradle initialization failed"
@@ -100,9 +100,10 @@ jobs:
           fi
 
       - name: Build APK
-        run: flutter build apk --split-per-abi --release
+        working-directory: android
+        run: ../flutter build apk --split-per-abi --release
         env:
-          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m"
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m -Dorg.gradle.project.android.aapt2FromMavenOverride=../android/init.gradle"
 
       - name: Build App Bundle
         run: flutter build appbundle --release
