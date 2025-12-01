@@ -1,4 +1,5 @@
 <p align="center">
+  <img src="rounded_cover.png" width="120" alt="Motto Music Logo">
   <h1 align="center">Motto Music</h1>
 </p>
 
