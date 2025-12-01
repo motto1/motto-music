@@ -93,7 +93,16 @@ jobs:
 
       - name: Setup Gradle
         working-directory: android
-        run: chmod +x ./gradlew
+        run: |
+          chmod +x ./gradlew
+
+          # 修改 distributionUrl 指向本地文件
+          if [ -f "/tmp/gradle-8.12-all.zip" ]; then
+            sed -i 's|distributionUrl=.*|distributionUrl=file:///tmp/gradle-8.12-all.zip|g' gradle/wrapper/gradle-wrapper.properties
+          fi
+
+          # 初始化 Gradle
+          ./gradlew --version --no-daemon
 
       - name: Build with Fastlane
         working-directory: android
