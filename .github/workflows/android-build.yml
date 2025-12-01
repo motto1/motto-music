@@ -85,12 +85,7 @@ jobs:
         run: |
           chmod +x ./gradlew
           
-          # 1. 配置全局 init.gradle 以确保镜像源生效
-          mkdir -p ~/.gradle
-          cp init.gradle ~/.gradle/init.gradle
-          echo "📝 Copied init.gradle to ~/.gradle/init.gradle"
-          
-          # 2. 关键步骤：修改 distributionUrl 指向本地文件！
+          # 关键步骤：修改 distributionUrl 指向本地文件！
           # 这样 Wrapper 就绝对不会尝试联网下载了
           if [ -f "/tmp/gradle-8.12-all.zip" ]; then
             echo "📝 Modifying gradle-wrapper.properties to use local file..."
