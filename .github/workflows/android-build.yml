@@ -85,6 +85,11 @@ jobs:
         run: |
           chmod +x ./gradlew
 
+          # 复制 init.gradle 到全局位置
+          mkdir -p ~/.gradle
+          cp init.gradle ~/.gradle/init.gradle
+          echo "📝 Copied init.gradle to ~/.gradle/init.gradle"
+
           # 修改 distributionUrl 指向本地文件
           if [ -f "/tmp/gradle-8.12-all.zip" ]; then
             echo "📝 Modifying gradle-wrapper.properties to use local file..."
@@ -92,7 +97,7 @@ jobs:
           fi
 
           echo "🚀 Initializing Gradle wrapper..."
-          if ./gradlew --version --no-daemon --init-script init.gradle; then
+          if ./gradlew --version --no-daemon; then
             echo "✅ Gradle wrapper initialized successfully"
           else
             echo "❌ Gradle initialization failed"
@@ -100,10 +105,9 @@ jobs:
           fi
 
       - name: Build APK
-        working-directory: android
-        run: ../flutter build apk --split-per-abi --release
+        run: flutter build apk --split-per-abi --release
         env:
-          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m -Dorg.gradle.project.android.aapt2FromMavenOverride=../android/init.gradle"
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m"
 
       - name: Build App Bundle
         run: flutter build appbundle --release
