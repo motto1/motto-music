@@ -37,6 +37,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
+          build-root-directory: android
           cache-read-only: false
 
       - name: Get dependencies
@@ -45,17 +46,10 @@ jobs:
       - name: Clean Flutter
         run: flutter clean
 
-      # 预下载 Gradle wrapper（确保网络问题在这里暴露，而非 Flutter 构建时）
-      - name: Pre-download Gradle wrapper
-        working-directory: android
-        run: |
-          chmod +x gradlew
-          ./gradlew --version
-
       - name: Build APK
         run: flutter build apk --split-per-abi --release
         env:
-          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m -Dorg.gradle.daemon=false"
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m -Dorg.gradle.daemon=false -Dorg.gradle.wrapper.downloadRetries=5"
 
       - name: Build App Bundle
         run: flutter build appbundle --release
