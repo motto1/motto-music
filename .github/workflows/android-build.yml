@@ -72,15 +72,17 @@ jobs:
           }
           EOF
 
-      - name: Build APK (with retry)
-        uses: nick-fields/retry@v2
-        with:
-          timeout_minutes: 20
-          max_attempts: 3
-          retry_on: error
-          command: flutter build apk --split-per-abi --release
+      # 使用 setup-gradle 预下载的 Gradle
+      - name: Configure Gradle path
+        run: |
+          echo "GRADLE_USER_HOME=$HOME/.gradle" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> $GITHUB_ENV
+          
+      - name: Build APK
+        run: flutter build apk --split-per-abi --release
         env:
-          GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4096m"
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m -Dorg.gradle.daemon=false"
+          GRADLE_VERSION: "8.12"
 
       - name: Build App Bundle
         run: flutter build appbundle --release
