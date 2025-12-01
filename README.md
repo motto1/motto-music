@@ -43,12 +43,12 @@
 
 | 能力 | 说明 |
 | --- | --- |
-| 🎧 双源音频 | 支持本地音乐文件和 Bilibili 音源，统一管理与播放 |
-| 🧠 智能歌词 | 自动解析 LRC/TTML 格式，内置歌词搜索、偏移调整与手动导入 |
-| 🖼️ 现代播放器 | Apple Music 风格界面、动态封面、流畅动画与直观控制 |
-| 🔒 锁屏控制 | 精美的锁屏界面，支持歌词滚动和全功能播放控制 |
-| 📂 灵活存储 | 自定义 Bilibili 下载目录，默认 `Music/MottoMusic/Bilibili` |
-| 🔁 智能下载 | 可调并发、仅 Wi-Fi 下载、LRU 缓存管理、断点续传 |
+| 🎧 音频 | 支持本地音乐文件和 Bilibili 音源，统一管理与播放 |
+| 🧠 歌词 | 自动解析 LRC/TTML 格式，内置歌词搜索(网易云API)、偏移调整与手动导入 |
+| 🖼️ 播放器 | 模仿AM风格界面、动态封面、流畅动画与直观控制 |
+| 🔒 锁屏控制 | 简介锁屏界面，支持歌词滚动和全功能播放控制 |
+| 📂 存储 | 自定义 Bilibili 下载目录 |
+| 🔁 智能下载 | 可调并发、自动缓存、音频质量选择、LRU 缓存管理、断点续传 |
 | 🧩 模块化架构 | Service 层设计，便于扩展和维护 |
 
 ---
@@ -113,20 +113,6 @@ flutter build appbundle
 
 ---
 
-## ⚙️ Bilibili 设置与下载管理
-
-1. 进入 **设置 > Bilibili 设置**
-2. 点击"下载目录"即可直接跳转到当前目录
-   - 默认路径：`/storage/emulated/0/Music/MottoMusic/Bilibili`
-3. 长按"下载目录"可选择新的保存路径
-4. 支持的下载特性：
-   - 可调并发数（默认 3，最大 5）
-   - 仅 Wi-Fi 下载选项
-   - 断点续传与自动重试
-   - 失败恢复与任务管理
-
----
-
 ## 📸 应用截图
 
 > 截图展示即将上传
@@ -143,10 +129,10 @@ flutter build appbundle
 
 ## 🛣️ Roadmap
 
-- [ ] **Bilibili 功能增强**：多账号支持、播放历史同步、智能推荐
-- [ ] **歌词体验优化**：逐字歌词支持、歌词翻译、更多歌词源
-- [ ] **播放列表管理**：智能播放列表、收藏夹分组、导入导出
-- [ ] **UI 主题定制**：自定义主题颜色、字体、布局
+- [ ] **UI风格统一**：统一多个页面的风格一致性，修复BUG
+- [ ] **歌词体验优化**：歌词翻译多行显示、更多歌词源、可视化偏移调节
+- [ ] **模块化配置**：支持备份配置、导入导出
+- [ ] **Bilibili接入**：点赞、三连、收藏夹控制
 - [ ] **性能优化**：启动速度优化、内存占用优化、流畅度提升
 - [ ] **播放增强**：均衡器、音效、淡入淡出、定时停止
 
@@ -164,7 +150,7 @@ flutter build appbundle
    - 包含必要的截图 / 日志 / 复现步骤
    - 未引入敏感信息、未提交编译产物
 
-我们欢迎任何形式的贡献，包括 Bug 反馈、新特性提案和 UI 设计建议。
+欢迎任何形式的贡献，包括 Bug 反馈、新特性提案和 UI 设计建议。
 
 
 ---
@@ -178,9 +164,10 @@ flutter build appbundle
 ## 🙏 致谢
 
 - [Flutter](https://flutter.dev/) / [Dart](https://dart.dev/) 官方团队与社区
-- [audio_service](https://pub.dev/packages/audio_service)、[just_audio](https://pub.dev/packages/just_audio)、[drift](https://pub.dev/packages/drift) 等优秀开源项目
-- 所有贡献者与早期测试用户的反馈与支持
-
+- [namida](https://github.com/namidaco/namida)、[BBPlayer](https://github.com/bbplayer-app/BBPlayer)、[LZF-Music](https://github.com/GerryDush/LZF-Music) 等优秀开源项目。此项目大量借鉴了前辈的代码和路径。
+- 本项目完全由vibecoding开发，代码细节可能经不起推敲
+- 感谢linuxdo社区的优秀服务商和公益组
+- 
 ---
 
 ## 💖 支持项目
@@ -191,7 +178,6 @@ flutter build appbundle
 - 🐛 [反馈 Bug](https://github.com/motto1/motto-music/issues)  
 - 💡 [提出建议](https://github.com/motto1/motto-music/discussions)
 - 🔀 [提交 PR](https://github.com/motto1/motto-music/pulls)
-- 📢 分享给更多音乐爱好者
 
 ---
 
