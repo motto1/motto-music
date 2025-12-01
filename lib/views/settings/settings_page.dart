@@ -522,33 +522,72 @@ class SettingsPageState extends State<SettingsPage> with ShowAwarePage {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('关于应用'),
+        title: const Text('关于 Motto Music'),
         content: SizedBox(
           width: 400,
-          child: const Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('音乐播放器'),
-              SizedBox(height: 8),
-              Text('版本: 0.0.1'),
-              SizedBox(height: 8),
-              Text('基于 Flutter 开发'),
-              Text('开源软件，采用 Apache 2.0 许可证'),
-              SizedBox(height: 12),
-              Text('软件优点：', style: TextStyle(fontWeight: FontWeight.bold)),
-              SizedBox(height: 6),
-              Text(
-                '1. 简洁、好看，拥有类似 Apple Music 的歌词页面，支持多种格式（mp3, m4a, wav, flac, aac）无损格式。',
-              ),
-              SizedBox(height: 6),
-              Text('2. 能从音乐文件中读取 LRC 歌词。未来将支持歌词编辑、MV 导入与播放、WebDav 协议等功能，'),
-              SizedBox(height: 6),
-              Text('3. 提供本地和私有云音乐解决方案。'),
-            ],
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Motto Music',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                const Text('版本: 0.1.0-beta'),
+                const SizedBox(height: 4),
+                const Text('基于 Flutter 开发的 Android 音乐播放器'),
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 8),
+                const Text(
+                  '✨ 核心特性',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                const Text('• Bilibili 音源聚合与下载管理'),
+                const Text('• 本地音乐文件播放'),
+                const Text('• 智能歌词系统（网易云 API）'),
+                const Text('• Apple Music 风格播放器'),
+                const Text('• 精美锁屏界面与歌词滚动'),
+                const SizedBox(height: 12),
+                const Text(
+                  '📝 开源信息',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                const Text('许可证: Apache License 2.0'),
+                const Text('仓库: github.com/motto1/motto-music'),
+                const SizedBox(height: 12),
+                const Text(
+                  '💖 致谢',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  '本项目借鉴了 namida、BBPlayer、LZF-Music、Metro 等优秀开源项目的经验。',
+                  style: TextStyle(fontSize: 12),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  '完全由 vibe coding 驱动开发。',
+                  style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+                ),
+              ],
+            ),
           ),
         ),
         actions: [
+          TextButton(
+            onPressed: () async {
+              final uri = Uri.parse('https://github.com/motto1/motto-music');
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            },
+            child: const Text('访问 GitHub'),
+          ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('确定'),
@@ -632,16 +671,44 @@ END OF TERMS AND CONDITIONS
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('反馈和建议'),
+        title: const Text('反馈与联系'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const Text(
+              '欢迎通过以下方式与我们联系：',
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            _buildLinkRow(
+              context,
+              '🐛 反馈 Bug',
+              'https://github.com/motto1/motto-music/issues',
+            ),
+            const SizedBox(height: 8),
+            _buildLinkRow(
+              context,
+              '💡 功能建议',
+              'https://github.com/motto1/motto-music/discussions',
+            ),
+            const SizedBox(height: 8),
+            _buildLinkRow(
+              context,
+              '📖 项目主页',
+              'https://github.com/motto1/motto-music',
+            ),
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 16),
+            const Text(
+              '也可以通过以下方式联系开发者：',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 8),
             _buildCopyRow(context, 'QQ', '2478719169'),
             const SizedBox(height: 8),
             _buildCopyRow(context, '微信', 'lyeaxm'),
-            const SizedBox(height: 8),
-            _buildLinkRow(context, 'GitHub', 'https://github.com/GerryDush'),
           ],
         ),
         actions: [
