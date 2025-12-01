@@ -141,12 +141,22 @@ jobs:
         run: |
           chmod +x ./gradlew
           
-          # 尝试运行 gradlew，如果失败则使用镜像源
+          echo "📝 Original Gradle distribution URL:"
+          cat gradle/wrapper/gradle-wrapper.properties | grep distributionUrl
+          
+          # 直接使用腾讯云镜像源（GitHub Actions 环境中官方源可能被限制）
+          echo "🔄 Switching to Tencent Cloud mirror..."
+          sed -i 's|https://services.gradle.org/distributions|https://mirrors.cloud.tencent.com/gradle|g' gradle/wrapper/gradle-wrapper.properties
+          
+          echo "✅ Updated Gradle distribution URL:"
+          cat gradle/wrapper/gradle-wrapper.properties | grep distributionUrl
+          
+          # 初始化 Gradle（最多重试 3 次）
           MAX_RETRIES=3
           RETRY_COUNT=0
           
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-            echo "Attempt $((RETRY_COUNT + 1)) of $MAX_RETRIES..."
+            echo "🚀 Attempt $((RETRY_COUNT + 1)) of $MAX_RETRIES..."
             
             if ./gradlew --version --no-daemon; then
               echo "✅ Gradle wrapper initialized successfully"
@@ -157,18 +167,8 @@ jobs:
                 echo "⚠️ Failed, retrying in 5 seconds..."
                 sleep 5
               else
-                echo "❌ Failed with official source, trying mirror..."
-                # 使用国内镜像源（腾讯云）
-                sed -i 's|https://services.gradle.org/distributions|https://mirrors.cloud.tencent.com/gradle|g' gradle/wrapper/gradle-wrapper.properties
-                
-                # 再次尝试
-                if ./gradlew --version --no-daemon; then
-                  echo "✅ Gradle initialized with mirror source"
-                  break
-                else
-                  echo "❌ Failed even with mirror"
-                  exit 1
-                fi
+                echo "❌ Failed after $MAX_RETRIES attempts"
+                exit 1
               fi
             fi
           done
