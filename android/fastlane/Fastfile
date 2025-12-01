@@ -1,0 +1,24 @@
+default_platform(:android)
+
+platform :android do
+  desc "Build Release APK"
+  lane :build_apk do
+    gradle(
+      task: "assemble",
+      flavor: "Release",
+      build_type: "Release",
+      properties: {
+        "android.injected.build.model.only.versioned" => "false",
+      }
+    )
+  end
+
+  desc "Build Release AAB"
+  lane :build_aab do
+    gradle(
+      task: "bundle",
+      flavor: "Release",
+      build_type: "Release"
+    )
+  end
+end

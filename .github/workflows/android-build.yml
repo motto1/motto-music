@@ -80,32 +80,22 @@ jobs:
         run: flutter pub get
 
       # 初始化 Gradle Wrapper
-      - name: Initialize Gradle Wrapper
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+
+      - name: Install Fastlane
+        run: |
+          gem install fastlane -N
+          fastlane --version
+
+      - name: Build with Fastlane
         working-directory: android
         run: |
-          chmod +x ./gradlew
-
-          # 修改 distributionUrl 指向本地文件
-          if [ -f "/tmp/gradle-8.12-all.zip" ]; then
-            echo "📝 Modifying gradle-wrapper.properties to use local file..."
-            sed -i 's|distributionUrl=.*|distributionUrl=file:///tmp/gradle-8.12-all.zip|g' gradle/wrapper/gradle-wrapper.properties
-          fi
-
-          echo "🚀 Initializing Gradle wrapper..."
-          if ./gradlew --version --no-daemon --warning-mode all; then
-            echo "✅ Gradle wrapper initialized successfully"
-          else
-            echo "❌ Gradle initialization failed"
-            exit 1
-          fi
-
-      - name: Build APK
-        run: flutter build apk --split-per-abi --release
-        env:
-          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m"
-
-      - name: Build App Bundle
-        run: flutter build appbundle --release
+          fastlane build_apk
+          fastlane build_aab
 
       - name: Get version
         id: version
