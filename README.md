@@ -164,10 +164,9 @@ flutter build appbundle
 ## 🙏 致谢
 
 - [Flutter](https://flutter.dev/) / [Dart](https://dart.dev/) 官方团队与社区
-- [namida](https://github.com/namidaco/namida)、[BBPlayer](https://github.com/bbplayer-app/BBPlayer)、[LZF-Music](https://github.com/GerryDush/LZF-Music) 等优秀开源项目。此项目大量借鉴了前辈的代码和路径。
+- [namida](https://github.com/namidaco/namida)、[BBPlayer](https://github.com/bbplayer-app/BBPlayer)、[LZF-Music](https://github.com/GerryDush/LZF-Music) 等优秀开源项目。此项目大量借鉴了前辈的代码和路径
 - 本项目完全由vibecoding开发，代码细节可能经不起推敲
-- 感谢linuxdo社区的优秀服务商和公益组
-- 
+- 感谢linuxdo社区的优秀服务商和公益站
 ---
 
 ## 💖 支持项目
@@ -182,7 +181,7 @@ flutter build appbundle
 ---
 
 <p align="center">
-  Made with ❤️ for music lovers
+  由个人兴趣开发，为社区贡献自己的力量
   <br>
   <sub>基于 Flutter 构建 | 专注 Android 平台</sub>
 </p>
