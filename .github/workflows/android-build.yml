@@ -135,6 +135,44 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      # 初始化 Gradle Wrapper，让它先完成下载和设置
+      - name: Initialize Gradle Wrapper
+        working-directory: android
+        run: |
+          chmod +x ./gradlew
+          
+          # 尝试运行 gradlew，如果失败则使用镜像源
+          MAX_RETRIES=3
+          RETRY_COUNT=0
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            echo "Attempt $((RETRY_COUNT + 1)) of $MAX_RETRIES..."
+            
+            if ./gradlew --version --no-daemon; then
+              echo "✅ Gradle wrapper initialized successfully"
+              break
+            else
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                echo "⚠️ Failed, retrying in 5 seconds..."
+                sleep 5
+              else
+                echo "❌ Failed with official source, trying mirror..."
+                # 使用国内镜像源（腾讯云）
+                sed -i 's|https://services.gradle.org/distributions|https://mirrors.cloud.tencent.com/gradle|g' gradle/wrapper/gradle-wrapper.properties
+                
+                # 再次尝试
+                if ./gradlew --version --no-daemon; then
+                  echo "✅ Gradle initialized with mirror source"
+                  break
+                else
+                  echo "❌ Failed even with mirror"
+                  exit 1
+                fi
+              fi
+            fi
+          done
+
       - name: Build APK
         run: flutter build apk --split-per-abi --release
         env:
