@@ -9,10 +9,14 @@ on:
   pull_request:
     branches:
       - main
-  workflow_dispatch:  # 允许手动触发
+  workflow_dispatch:
 
 permissions:
   contents: write
+
+env:
+  GRADLE_VERSION: "8.12"
+  GRADLE_DIST_URL: "https://services.gradle.org/distributions/gradle-8.12-all.zip"
 
 jobs:
   build-android:
@@ -22,20 +26,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 清除可能导致网络问题的代理设置
-      - name: Clear proxy settings
-        run: |
-          unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY no_proxy NO_PROXY
-          echo "http_proxy=$http_proxy"
-          echo "https_proxy=$https_proxy"
-          # 测试网络连接
-          curl -I https://services.gradle.org/ || echo "Direct connection failed"
-          curl -I https://google.com/ || echo "Google connection failed"
-
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: '17'
 
       - name: Setup Flutter
@@ -44,28 +38,107 @@ jobs:
           channel: 'stable'
           cache: true
 
-      # 缓存 Gradle wrapper 发行版
-      - name: Cache Gradle wrapper
+      # 缓存完整的 Gradle 目录（包括 wrapper 和依赖）
+      - name: Cache Gradle
         uses: actions/cache@v4
+        id: gradle-cache
         with:
-          path: ~/.gradle/wrapper/dists
-          key: gradle-wrapper-${{ hashFiles('android/gradle/wrapper/gradle-wrapper.properties') }}
+          path: |
+            ~/.gradle/wrapper
+            ~/.gradle/caches
+          key: gradle-${{ runner.os }}-${{ hashFiles('android/gradle/wrapper/gradle-wrapper.properties', 'android/**/*.gradle*') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+      # 如果缓存未命中，手动下载 Gradle
+      - name: Download Gradle (if not cached)
+        if: steps.gradle-cache.outputs.cache-hit != 'true'
+        run: |
+          echo "Cache miss - downloading Gradle..."
+
+          # 计算 wrapper 目录 hash（与 Gradle wrapper 使用相同算法）
+          DIST_URL="https://services.gradle.org/distributions/gradle-8.12-all.zip"
+          HASH=$(echo -n "$DIST_URL" | md5sum | cut -c1-32)
+          # Gradle 使用 base36 编码，这里简化处理
+          WRAPPER_DIR="$HOME/.gradle/wrapper/dists/gradle-8.12-all"
+
+          mkdir -p "$WRAPPER_DIR"
+
+          # 尝试多个下载源
+          URLS=(
+            "https://services.gradle.org/distributions/gradle-8.12-all.zip"
+            "https://downloads.gradle.org/distributions/gradle-8.12-all.zip"
+          )
+
+          DOWNLOADED=false
+          for URL in "${URLS[@]}"; do
+            echo "Trying: $URL"
+            if wget -q --timeout=60 --tries=3 -O /tmp/gradle.zip "$URL"; then
+              DOWNLOADED=true
+              echo "Downloaded from: $URL"
+              break
+            fi
+          done
+
+          if [ "$DOWNLOADED" = false ]; then
+            echo "All download attempts failed"
+            exit 1
+          fi
+
+          # 验证 zip 文件
+          if ! unzip -t /tmp/gradle.zip > /dev/null 2>&1; then
+            echo "Downloaded file is not a valid zip"
+            exit 1
+          fi
+
+          # 解压到临时目录
+          TEMP_DIR=$(mktemp -d)
+          unzip -q /tmp/gradle.zip -d "$TEMP_DIR"
+
+          # 移动到 wrapper 期望的位置（使用固定目录名简化）
+          CACHE_DIR="$WRAPPER_DIR/cached"
+          mkdir -p "$CACHE_DIR"
+          mv "$TEMP_DIR"/gradle-*/* "$CACHE_DIR/" 2>/dev/null || mv "$TEMP_DIR"/gradle-* "$CACHE_DIR/gradle-8.12"
+
+          # 复制 zip 文件并创建标记
+          cp /tmp/gradle.zip "$CACHE_DIR/gradle-8.12-all.zip"
+          touch "$CACHE_DIR/gradle-8.12-all.zip.ok"
+
+          # 清理
+          rm -rf "$TEMP_DIR" /tmp/gradle.zip
+
+          echo "Gradle installed to: $CACHE_DIR"
+          ls -la "$CACHE_DIR"
+
+      # 配置 Gradle wrapper 使用缓存的版本
+      - name: Configure Gradle wrapper
+        run: |
+          WRAPPER_DIR="$HOME/.gradle/wrapper/dists/gradle-8.12-all"
+
+          # 检查是否有缓存的 Gradle
+          if [ -d "$WRAPPER_DIR" ]; then
+            # 找到实际的 Gradle 目录
+            GRADLE_DIR=$(find "$WRAPPER_DIR" -maxdepth 2 -name "gradle-8.12" -type d 2>/dev/null | head -1)
+            if [ -z "$GRADLE_DIR" ]; then
+              GRADLE_DIR=$(find "$WRAPPER_DIR" -maxdepth 2 -type d -name "bin" 2>/dev/null | head -1 | xargs dirname)
+            fi
+
+            if [ -n "$GRADLE_DIR" ] && [ -d "$GRADLE_DIR" ]; then
+              echo "Found Gradle at: $GRADLE_DIR"
+              echo "GRADLE_HOME=$GRADLE_DIR" >> $GITHUB_ENV
+            fi
+          fi
+
+          # 显示 wrapper 配置
+          cat android/gradle/wrapper/gradle-wrapper.properties
 
       - name: Get dependencies
         run: flutter pub get
 
-      # 清除 Java 代理设置后构建
       - name: Build APK
         run: flutter build apk --split-per-abi --release
         env:
-          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m -Dorg.gradle.daemon=false -Djava.net.useSystemProxies=false -Dhttp.proxyHost= -Dhttps.proxyHost="
-          http_proxy: ""
-          https_proxy: ""
-          HTTP_PROXY: ""
-          HTTPS_PROXY: ""
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m"
 
       - name: Build App Bundle
         run: flutter build appbundle --release
@@ -81,18 +154,16 @@ jobs:
         run: |
           VERSION=${{ steps.version.outputs.version }}
           mkdir -p artifacts
-          
-          # 重命名 APK 文件
+
           cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk \
              artifacts/MottoMusic-${VERSION}-armeabi-v7a.apk
-          
+
           cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
              artifacts/MottoMusic-${VERSION}-arm64-v8a.apk
-          
+
           cp build/app/outputs/flutter-apk/app-x86_64-release.apk \
              artifacts/MottoMusic-${VERSION}-x86_64.apk
-          
-          # 复制 AAB
+
           cp build/app/outputs/bundle/release/app-release.aab \
              artifacts/MottoMusic-${VERSION}.aab
 
@@ -110,7 +181,6 @@ jobs:
           path: artifacts/*.aab
           retention-days: 30
 
-      # 只在推送 tag 时创建 Release
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v1
@@ -120,20 +190,12 @@ jobs:
             artifacts/*.aab
           body: |
             ## Motto Music ${{ steps.version.outputs.version }}
-            
+
             ### 📦 Android 安装包
-            
+
             - **arm64-v8a**: 适用于大多数现代 Android 设备 (推荐)
             - **armeabi-v7a**: 适用于较旧的 32 位 Android 设备
             - **x86_64**: 适用于 x86 架构设备（模拟器等）
             - **AAB**: Google Play Store 发布包
-            
-            ### 📝 更新日志
-            
-            查看 [CHANGELOG.md](https://github.com/motto1/motto-music/blob/main/CHANGELOG.md) 了解详细更新内容。
-            
-            ### 🐛 问题反馈
-            
-            如遇到问题，请访问 [Issues](https://github.com/motto1/motto-music/issues) 反馈。
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
