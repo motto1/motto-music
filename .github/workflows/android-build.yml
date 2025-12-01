@@ -37,23 +37,27 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      # 从 Gradle 官方 CDN 下载（绕过 services.gradle.org 连接问题）
-      - name: Download Gradle distribution
+      # 使用 GitHub API 下载 Gradle（GitHub 内部网络）
+      - name: Download Gradle via GitHub API
         run: |
-          # 尝试多个镜像源
-          GRADLE_URL="https://downloads.gradle-dn.com/distributions/gradle-8.12-all.zip"
+          # 从 Gradle GitHub 仓库的 releases 下载
+          gh release download v8.12.0 \
+            --repo gradle/gradle \
+            --pattern "gradle-8.12-bin.zip" \
+            --dir /tmp \
+            --clobber
 
-          echo "Downloading from: $GRADLE_URL"
-          curl -fSL --retry 3 --retry-delay 5 -o /tmp/gradle-8.12-all.zip "$GRADLE_URL"
-
-          # 验证是否为有效 zip 文件
-          file /tmp/gradle-8.12-all.zip
-          unzip -t /tmp/gradle-8.12-all.zip | head -5
+          # 验证下载
+          ls -la /tmp/gradle-8.12-bin.zip
+          unzip -t /tmp/gradle-8.12-bin.zip | head -3
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       # 修改 wrapper 配置使用本地文件
       - name: Configure Gradle wrapper
         run: |
-          sed -i 's|distributionUrl=.*|distributionUrl=file\\:///tmp/gradle-8.12-all.zip|' \
+          # 使用 bin 版本代替 all 版本
+          sed -i 's|distributionUrl=.*|distributionUrl=file\\:///tmp/gradle-8.12-bin.zip|' \
             android/gradle/wrapper/gradle-wrapper.properties
           cat android/gradle/wrapper/gradle-wrapper.properties
 
