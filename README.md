@@ -1,8 +1,40 @@
-# Motto Music
+<p align="center">
+  <h1 align="center">Motto Music</h1>
+</p>
 
-Motto Music 是一款基于 Flutter 开发的 **Android 音乐播放器**，专为"本地收藏 + Bilibili 音源"使用场景设计。项目目标是提供稳定、可定制、开箱即用的音乐体验。
+<p align="center">
+  <a href="https://github.com/motto1/motto-music/releases/latest">
+    <img alt="GitHub release" src="https://img.shields.io/github/v/release/motto1/motto-music">
+  </a>
+  <a href="https://github.com/motto1/motto-music/releases/latest">
+    <img alt="GitHub downloads" src="https://img.shields.io/github/downloads/motto1/motto-music/total">
+  </a>
+  <a href="https://github.com/motto1/motto-music/blob/main/LICENSE">
+    <img alt="License" src="https://img.shields.io/github/license/motto1/motto-music">
+  </a>
+  <a href="https://github.com/motto1/motto-music/stargazers">
+    <img alt="GitHub stars" src="https://img.shields.io/github/stars/motto1/motto-music">
+  </a>
+</p>
+
+<p align="center">
+  <strong>基于 Flutter 开发的 Android 音乐播放器</strong>
+  <br>
+  专为"本地收藏 + Bilibili 音源"使用场景设计
+</p>
+
+<p align="center">
+  <a href="https://github.com/motto1/motto-music/releases/latest">📥 下载最新版本</a>
+  ·
+  <a href="https://github.com/motto1/motto-music/issues">🐛 反馈问题</a>
+  ·
+  <a href="https://github.com/motto1/motto-music/discussions">💬 讨论交流</a>
+</p>
+
+---
 
 > **注意**：本项目目前仅适配 Android 平台，暂无其他平台支持计划。
+
 
 ---
 
@@ -94,6 +126,20 @@ flutter build appbundle
 
 ---
 
+## 📸 应用截图
+
+> 截图展示即将上传
+
+<!-- 
+<p align="center">
+<img src="screenshots/home.jpg" width=270>
+<img src="screenshots/player.jpg" width=270>
+<img src="screenshots/lockscreen.jpg" width=270>
+</p>
+-->
+
+---
+
 ## 🛣️ Roadmap
 
 - [ ] **Bilibili 功能增强**：多账号支持、播放历史同步、智能推荐
@@ -119,9 +165,10 @@ flutter build appbundle
 
 我们欢迎任何形式的贡献，包括 Bug 反馈、新特性提案和 UI 设计建议。
 
+
 ---
 
-## 📄 许可证
+## 📄 开源许可
 
 本项目基于 **Apache License 2.0** 开源。详见 [LICENSE](LICENSE)。
 
@@ -129,10 +176,26 @@ flutter build appbundle
 
 ## 🙏 致谢
 
-- Flutter / Dart 官方团队与社区
-- audio_service、just_audio、drift 等优秀开源项目
-- 社区贡献者与早期内测用户提供的反馈
+- [Flutter](https://flutter.dev/) / [Dart](https://dart.dev/) 官方团队与社区
+- [audio_service](https://pub.dev/packages/audio_service)、[just_audio](https://pub.dev/packages/just_audio)、[drift](https://pub.dev/packages/drift) 等优秀开源项目
+- 所有贡献者与早期测试用户的反馈与支持
 
 ---
 
-> 准备好让 Motto Music 成为你的私人音乐枢纽了吗？Fork 项目、Star 支持、分享给更多音频爱好者吧！
+## 💖 支持项目
+
+如果你喜欢这个项目，欢迎：
+
+- ⭐ 给项目一个 Star
+- 🐛 [反馈 Bug](https://github.com/motto1/motto-music/issues)  
+- 💡 [提出建议](https://github.com/motto1/motto-music/discussions)
+- 🔀 [提交 PR](https://github.com/motto1/motto-music/pulls)
+- 📢 分享给更多音乐爱好者
+
+---
+
+<p align="center">
+  Made with ❤️ for music lovers
+  <br>
+  <sub>基于 Flutter 构建 | 专注 Android 平台</sub>
+</p>
