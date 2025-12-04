@@ -11,8 +11,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 import '../../widgets/motto_toast.dart';
 import '../../router/router.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:motto_music/widgets/frosted_container.dart';
+import 'dart:ui';
 import 'package:motto_music/widgets/themed_background.dart';
 import '../../widgets/page_header.dart';
 import '../../widgets/frosted_page_header.dart';
@@ -43,38 +43,40 @@ class SettingsPageState extends State<SettingsPage> with ShowAwarePage {
       },
       child: Consumer<AppThemeProvider>(
         builder: (context, themeProvider, child) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+
           return Scaffold(
-            backgroundColor: Theme.of(context).brightness == Brightness.dark 
-                ? ThemeUtils.backgroundColor(context)
-                : const Color(0xFFF2F2F7),
-            body: CustomScrollView(
-              physics: const ClampingScrollPhysics(),
-              slivers: [
-                SliverToBoxAdapter(
-                  child: FrostedPageHeader(
-                    title: '系统设置',
-                    showBackButton: false,
+            backgroundColor: isDark ? ThemeUtils.backgroundColor(context) : const Color(0xFFF2F2F7),
+            body: NotificationListener<OverscrollIndicatorNotification>(
+              onNotification: (notification) {
+                notification.disallowIndicator();
+                return true;
+              },
+              child: CustomScrollView(
+                physics: const ClampingScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: FrostedPageHeader(
+                      title: '系统设置',
+                      showBackButton: false,
+                    ),
                   ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-                  sliver: SliverList(
-                    delegate: SliverChildListDelegate([
-                      _buildSectionHeader('外观设置'),
-                      _buildThemeSettingCard(),
-                      const SizedBox(height: 18),
-                      _buildSectionHeader('存储设置'),
-                      _buildStorageSettingCard(),
-                      const SizedBox(height: 18),
-                      _buildSectionHeader('播放设置'),
-                      _buildPlaybackSettingCard(),
-                      const SizedBox(height: 18),
-                      _buildSectionHeader('其他设置'),
-                      _buildOtherSettingsCard(),
-                    ]),
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 24, 16, 150),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate([
+                        _buildThemeSection(themeProvider, isDark),
+                        const SizedBox(height: 32),
+                        _buildStorageSection(isDark),
+                        const SizedBox(height: 32),
+                        _buildPlaybackSection(isDark),
+                        const SizedBox(height: 32),
+                        _buildOtherSection(isDark),
+                      ]),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         },
@@ -82,529 +84,710 @@ class SettingsPageState extends State<SettingsPage> with ShowAwarePage {
     );
   }
 
-  // 构建分组标题
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: Row(
-        children: [
-          Text(
-            title,
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+  // 构建外观设置分组
+  Widget _buildThemeSection(AppThemeProvider themeProvider, bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 分组标题
+        Padding(
+          padding: const EdgeInsets.only(left: 16, bottom: 8),
+          child: Text(
+            '外观设置',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+              color: Colors.red,
+            ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
 
-  // 主题设置卡片
-  Widget _buildThemeSettingCard() {
-    return Consumer<AppThemeProvider>(
-      builder: (context, themeProvider, child) {
-        return _buildSettingCard(
+        // 卡片
+        Container(
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
+            borderRadius: BorderRadius.circular(10),
+          ),
           child: Column(
             children: [
-              // 主题模式
               ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Theme.of(
-                    context,
-                  ).primaryColor.withOpacity(0.1),
-                  child: Icon(
-                    themeProvider.getThemeIcon(),
-                    color: Theme.of(context).colorScheme.primary,
+                title: const Text('主题模式', style: TextStyle(fontWeight: FontWeight.w400)),
+                subtitle: Text(
+                  themeProvider.getThemeName(),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? Colors.white.withOpacity(0.5) : Colors.grey[600],
                   ),
                 ),
-                title: const Text(
-                  '主题模式',
-                  style: TextStyle(fontWeight: FontWeight.w500),
-                ),
-                subtitle: Text(themeProvider.getThemeName()),
-                trailing: const Icon(CupertinoIcons.chevron_right),
+                trailing: Icon(CupertinoIcons.chevron_right, size: 18, color: Colors.grey[400]),
                 onTap: () => _showThemeDialog(themeProvider),
               ),
-              // 主题色选择
-              ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Theme.of(
-                    context,
-                  ).primaryColor.withOpacity(0.1),
-                  child: Icon(
-                    CupertinoIcons.paintbrush_fill,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                title: Text(
-                  '主题色&背景透明度(高斯模糊)',
-                  style: TextStyle(fontWeight: FontWeight.w500),
-                ),
-                subtitle: Text(
-                  '通过调色盘调整主题色和背景透明度',
-                ), // 可以显示色名或者 HEX，如 themeProvider.seedColor.toString()
-                trailing: const Icon(CupertinoIcons.chevron_right),
-                onTap: () async {
-                  // 弹出颜色选择对话框
-                  await showDialog<Color>(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('选择主题色'),
-                      content: SingleChildScrollView(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // 颜色选择器
-                            ColorPicker(
-                              hexInputBar: true,
-                              paletteType: PaletteType.rgbWithBlue,
-                              displayThumbColor: true,
-                              portraitOnly: true,
-                              enableAlpha: true,
-                              labelTypes: [],
-                              colorPickerWidth: 300,
-                              onHistoryChanged: (color) {},
-                              colorHistory: [
-                                Color(0xFF016B5B),
-                                Colors.red,
-                                Colors.green,
-                                Colors.blue,
-                                Colors.orange,
-                                Colors.purple,
-                                Colors.pink,
-                                Colors.amber,
-                              ],
-                              pickerColor: themeProvider.seedColor,
-                              onColorChanged: (color) {
-                                themeProvider.setSeedColor(color);
-                              },
-                            ),
-
-                            const SizedBox(height: 20),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text(
-                                  "透明区域",
-                                  style: TextStyle(fontWeight: FontWeight.w500),
-                                ),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Radio<String>(
-                                      value: "window",
-                                      groupValue: themeProvider.opacityTarget,
-                                      onChanged: (value) {
-                                        if (value != null) {
-                                          themeProvider.setOpacityTarget(value);
-                                        }
-                                      },
-                                    ),
-                                    const Text("窗口"),
-                                    SizedBox(width: 12),
-                                    Radio<String>(
-                                      value: "sidebar",
-                                      groupValue: themeProvider.opacityTarget,
-                                      onChanged: (value) {
-                                        if (value != null) {
-                                          themeProvider.setOpacityTarget(value);
-                                        }
-                                      },
-                                    ),
-                                    const Text("仅侧边栏"),
-                                    SizedBox(width: 12),
-                                    Radio<String>(
-                                      value: "body",
-                                      groupValue: themeProvider.opacityTarget,
-                                      onChanged: (value) {
-                                        if (value != null) {
-                                          themeProvider.setOpacityTarget(value);
-                                        }
-                                      },
-                                    ),
-                                    const Text("仅主体"),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
             ],
           ),
-        );
-      },
+        ),
+      ],
     );
   }
 
-  Widget _buildStorageSettingCard() {
-    return Consumer<AppThemeProvider>(
-      builder: (context, themeProvider, child) {
-        return _buildSettingCard(
-          child: Column(
-            children: [
-              ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Theme.of(
-                    context,
-                  ).primaryColor.withOpacity(0.1),
-                  child: Icon(
-                    CupertinoIcons.folder,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                title: const Text(
-                  '存储设置',
-                  style: TextStyle(fontWeight: FontWeight.w500),
-                ),
-                subtitle: const Text('添加存储本地/WebDav/More...'),
-                trailing: const Icon(CupertinoIcons.chevron_right),
-                onTap: () {
-                  NestedNavigationHelper.push(context, "/settings/storage");
-                },
-              ),
-            ],
+  // 构建存储设置分组
+  Widget _buildStorageSection(bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 16, bottom: 8),
+          child: Text(
+            '存储设置',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+              color: Colors.red,
+            ),
           ),
-        );
-      },
+        ),
+
+        Container(
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: ListTile(
+            title: const Text('存储管理', style: TextStyle(fontWeight: FontWeight.w400)),
+            subtitle: Text(
+              '本地存储、WebDAV等',
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? Colors.white.withOpacity(0.5) : Colors.grey[600],
+              ),
+            ),
+            trailing: Icon(CupertinoIcons.chevron_right, size: 18, color: Colors.grey[400]),
+            onTap: () {
+              NestedNavigationHelper.push(context, "/settings/storage");
+            },
+          ),
+        ),
+      ],
     );
   }
 
-  // 播放设置卡片
-  Widget _buildPlaybackSettingCard() {
+  // 构建播放设置分组
+  Widget _buildPlaybackSection(bool isDark) {
     return Consumer<PlayerProvider>(
       builder: (context, playerProvider, child) {
-        return _buildSettingCard(
-          child: Column(
-            children: [
-              // 音量设置 - 简洁横向滑块
-              Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Row(
-                  children: [
-                    // 音量图标
-                    Icon(
-                      playerProvider.volume == 0
-                          ? CupertinoIcons.volume_mute
-                          : CupertinoIcons.volume_up,
-                      color: Colors.green,
-                      size: 24,
-                    ),
-                    const SizedBox(width: 16),
-                    // 圆角容器滑块
-                    Expanded(
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          return GestureDetector(
-                            onTapDown: (details) {
-                              final percentage = details.localPosition.dx / constraints.maxWidth;
-                              playerProvider.setVolume((percentage * 1.5).clamp(0.0, 1.5));
-                            },
-                            onHorizontalDragUpdate: (details) {
-                              final percentage = details.localPosition.dx / constraints.maxWidth;
-                              playerProvider.setVolume((percentage * 1.5).clamp(0.0, 1.5));
-                            },
-                            child: Container(
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.white.withOpacity(0.05)
-                                    : Colors.grey.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: Colors.grey.withOpacity(0.2),
-                                  width: 1,
-                                ),
-                              ),
-                              child: Stack(
-                                children: [
-                                  // 填充部分（类似水位）
-                                  FractionallySizedBox(
-                                    widthFactor: (playerProvider.volume / 1.5).clamp(0.0, 1.0),
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: [Colors.green.shade300, Colors.green.shade600],
-                                        ),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                    ),
-                                  ),
-                                  // 百分比文字
-                                  Center(
-                                    child: Text(
-                                      '${(playerProvider.volume * 100).toInt()}%',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: playerProvider.volume > 0.3
-                                            ? Colors.white
-                                            : (Theme.of(context).brightness == Brightness.dark
-                                                ? Colors.white70
-                                                : Colors.black54),
-                                        shadows: playerProvider.volume > 0.3
-                                            ? [
-                                                Shadow(
-                                                  color: Colors.black.withOpacity(0.3),
-                                                  blurRadius: 2,
-                                                ),
-                                              ]
-                                            : null,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    // 音量数值
-                    SizedBox(
-                      width: 44,
-                      child: Text(
-                        '${(playerProvider.volume * 100).toInt()}%',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.green,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 16, bottom: 8),
+              child: Text(
+                '播放设置',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w400,
+                  color: Colors.red,
+                ),
+              ),
+            ),
+
+            Container(
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Column(
+                children: [
+                  // 音量控制
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: Row(
+                      children: [
+                        Icon(
+                          playerProvider.volume == 0
+                              ? CupertinoIcons.volume_off
+                              : CupertinoIcons.volume_up,
+                          color: Colors.grey[600],
+                          size: 20,
                         ),
+                        Expanded(
+                          child: Slider(
+                            value: playerProvider.volume,
+                            min: 0,
+                            max: 1.5,
+                            activeColor: Colors.red,
+                            onChanged: (value) {
+                              playerProvider.setVolume(value);
+                            },
+                          ),
+                        ),
+                        SizedBox(
+                          width: 45,
+                          child: Text(
+                            '${(playerProvider.volume * 100).toInt()}%',
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: isDark ? Colors.white.withOpacity(0.7) : Colors.grey[700],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Divider(height: 1, indent: 16, endIndent: 0),
+
+                  ListTile(
+                    title: const Text('音效设置', style: TextStyle(fontWeight: FontWeight.w400)),
+                    subtitle: Text(
+                      '均衡器和音效',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? Colors.white.withOpacity(0.5) : Colors.grey[600],
                       ),
                     ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              // 音效设置
-              ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Colors.orange.withOpacity(0.1),
-                  child: const Icon(CupertinoIcons.waveform, color: Colors.orange),
-                ),
-                title: const Text(
-                  '音效设置',
-                  style: TextStyle(fontWeight: FontWeight.w500),
-                ),
-                subtitle: const Text('均衡器和音效'),
-                trailing: const Icon(CupertinoIcons.chevron_right),
-                onTap: () {
-                  MottoToast.show(context, '音效设置功能尚未实现');
-                },
-              ),
-              const Divider(height: 1),
-              SwitchListTile.adaptive(
-                secondary: CircleAvatar(
-                  backgroundColor: Colors.blue.withOpacity(0.1),
-                  child: const Icon(
-                    CupertinoIcons.music_note_list,
-                    color: Colors.blue,
+                    trailing: Icon(CupertinoIcons.chevron_right, size: 18, color: Colors.grey[400]),
+                    onTap: () {
+                      MottoToast.show(context, '音效设置功能尚未实现');
+                    },
                   ),
-                ),
-                value: playerProvider.lyricsNotificationEnabled,
-                onChanged: (value) {
-                  playerProvider.setLyricsNotificationEnabled(value);
-                },
-                title: const Text(
-                  '歌词通知',
-                  style: TextStyle(fontWeight: FontWeight.w500),
-                ),
-                subtitle: const Text('在系统通知中显示歌词'),
-              ),
-              SwitchListTile.adaptive(
-                secondary: CircleAvatar(
-                  backgroundColor: Colors.purple.withOpacity(0.1),
-                  child: const Icon(
-                    CupertinoIcons.device_phone_portrait,
-                    color: Colors.purple,
+                  Divider(height: 1, indent: 16, endIndent: 0),
+
+                  SwitchListTile.adaptive(
+                    title: const Text('歌词通知', style: TextStyle(fontWeight: FontWeight.w400)),
+                    subtitle: Text(
+                      '在系统通知中显示歌词',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? Colors.white.withOpacity(0.5) : Colors.grey[600],
+                      ),
+                    ),
+                    value: playerProvider.lyricsNotificationEnabled,
+                    activeColor: Colors.red,
+                    onChanged: (value) {
+                      playerProvider.setLyricsNotificationEnabled(value);
+                    },
                   ),
-                ),
-                value: playerProvider.lockScreenEnabled,
-                onChanged: (value) {
-                  playerProvider.setLockScreenEnabled(value);
-                },
-                title: const Text(
-                  '锁屏播放界面',
-                  style: TextStyle(fontWeight: FontWeight.w500),
-                ),
-                subtitle: const Text('在系统锁屏显示 Metro 风格播放界面'),
+                  Divider(height: 1, indent: 16, endIndent: 0),
+
+                  SwitchListTile.adaptive(
+                    title: const Text('锁屏播放界面', style: TextStyle(fontWeight: FontWeight.w400)),
+                    subtitle: Text(
+                      '在系统锁屏显示播放界面',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? Colors.white.withOpacity(0.5) : Colors.grey[600],
+                      ),
+                    ),
+                    value: playerProvider.lockScreenEnabled,
+                    activeColor: Colors.red,
+                    onChanged: (value) {
+                      playerProvider.setLockScreenEnabled(value);
+                    },
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );
   }
 
-  // 其他设置卡片
-  Widget _buildOtherSettingsCard() {
-    return _buildSettingCard(
-      child: Column(
-        children: [
-          ListTile(
-            leading: CircleAvatar(
-              backgroundColor: Colors.red.withOpacity(0.1),
-              child: const Icon(CupertinoIcons.chat_bubble, color: Colors.red),
+  // 构建其他设置分组
+  Widget _buildOtherSection(bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 16, bottom: 8),
+          child: Text(
+            '其他设置',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+              color: Colors.red,
             ),
-            title: const Text(
-              '反馈建议及联系方式',
-              style: TextStyle(fontWeight: FontWeight.w500),
-            ),
-            subtitle: const Text('发送反馈和建议'),
-            trailing: const Icon(CupertinoIcons.chevron_right),
-            onTap: () {
-              _feedbackAndImproveDialog();
-            },
           ),
+        ),
 
-          ListTile(
-            leading: CircleAvatar(
-              backgroundColor: Colors.blue.withOpacity(0.1),
-              child: const Icon(CupertinoIcons.doc_plaintext, color: Colors.blue),
-            ),
-            title: const Text(
-              '许可证 Apache 2.0',
-              style: TextStyle(fontWeight: FontWeight.w500),
-            ),
-            subtitle: const Text('查看软件许可证信息'),
-            trailing: const Icon(CupertinoIcons.chevron_right),
-            onTap: () {
-              _showLicenseDialog();
-            },
+        Container(
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
+            borderRadius: BorderRadius.circular(10),
           ),
-          ListTile(
-            leading: CircleAvatar(
-              backgroundColor: Colors.purple.withOpacity(0.1),
-              child: const Icon(CupertinoIcons.info_circle_fill, color: Colors.purple),
-            ),
-            title: const Text(
-              '关于应用',
-              style: TextStyle(fontWeight: FontWeight.w500),
-            ),
-            subtitle: const Text('版本信息和开发者'),
-            trailing: const Icon(CupertinoIcons.chevron_right),
-            onTap: () {
-              _showAboutDialog();
-            },
+          child: Column(
+            children: [
+              ListTile(
+                title: const Text('反馈建议', style: TextStyle(fontWeight: FontWeight.w400)),
+                subtitle: Text(
+                  '发送反馈和建议',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? Colors.white.withOpacity(0.5) : Colors.grey[600],
+                  ),
+                ),
+                trailing: Icon(CupertinoIcons.chevron_right, size: 18, color: Colors.grey[400]),
+                onTap: () => _feedbackAndImproveDialog(),
+              ),
+              Divider(height: 1, indent: 16, endIndent: 0),
+
+              ListTile(
+                title: const Text('开源许可', style: TextStyle(fontWeight: FontWeight.w400)),
+                subtitle: Text(
+                  'Apache License 2.0',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? Colors.white.withOpacity(0.5) : Colors.grey[600],
+                  ),
+                ),
+                trailing: Icon(CupertinoIcons.chevron_right, size: 18, color: Colors.grey[400]),
+                onTap: () => _showLicenseDialog(),
+              ),
+              Divider(height: 1, indent: 16, endIndent: 0),
+
+              ListTile(
+                title: const Text('关于应用', style: TextStyle(fontWeight: FontWeight.w400)),
+                subtitle: Text(
+                  '版本 0.1.0-beta',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? Colors.white.withOpacity(0.5) : Colors.grey[600],
+                  ),
+                ),
+                trailing: Icon(CupertinoIcons.chevron_right, size: 18, color: Colors.grey[400]),
+                onTap: () => _showAboutDialog(),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  // 通用设置卡片构建器
-  Widget _buildSettingCard({required Widget child}) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Material(
-      color: Colors.grey.withOpacity(isDark ? 0.1 : 0.15),
-
-      borderRadius: BorderRadius.circular(12),
-      clipBehavior: Clip.antiAlias, // 裁剪水波纹
-      child: child,
-    );
-  }
 
   // 显示主题选择对话框
   void _showThemeDialog(AppThemeProvider themeProvider) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
-      builder: (context) => ThemeSelectionDialog(themeProvider: themeProvider),
+      barrierColor: Colors.transparent,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.only(left: 24, right: 24, top: 24, bottom: 120),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+            child: Container(
+              width: 400,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isDark
+                      ? [Colors.white.withOpacity(0.15), Colors.white.withOpacity(0.05)]
+                      : [Colors.white.withOpacity(0.9), Colors.white.withOpacity(0.7)],
+                ),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.25)
+                      : Colors.white.withOpacity(0.8),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
+                    blurRadius: 20,
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 标题
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                    child: Text(
+                      '选择主题',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                  ),
+                  // 内容
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildThemeOption(
+                          context,
+                          themeProvider,
+                          ThemeMode.light,
+                          '亮色模式',
+                          CupertinoIcons.sun_max,
+                          '始终使用亮色主题',
+                        ),
+                        const SizedBox(height: 12),
+                        _buildThemeOption(
+                          context,
+                          themeProvider,
+                          ThemeMode.dark,
+                          '深色模式',
+                          CupertinoIcons.moon,
+                          '始终使用深色主题',
+                        ),
+                        const SizedBox(height: 12),
+                        _buildThemeOption(
+                          context,
+                          themeProvider,
+                          ThemeMode.system,
+                          '跟随系统',
+                          CupertinoIcons.device_phone_portrait,
+                          '跟随系统设置自动切换',
+                        ),
+                      ],
+                    ),
+                  ),
+                  // 按钮
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('确定'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildThemeOption(
+    BuildContext context,
+    AppThemeProvider themeProvider,
+    ThemeMode mode,
+    String title,
+    IconData icon,
+    String subtitle,
+  ) {
+    final isSelected = themeProvider.themeMode == mode;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return InkWell(
+      onTap: () {
+        themeProvider.setThemeMode(mode);
+        Navigator.of(context).pop();
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? (isDark ? Colors.red.withOpacity(0.15) : Colors.red.withOpacity(0.08))
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? Colors.red : Colors.grey.withOpacity(0.3),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? Colors.red : Colors.grey,
+              size: 24,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                      color: isSelected ? Colors.red : null,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              Icon(
+                CupertinoIcons.checkmark_circle_fill,
+                color: Colors.red,
+                size: 24,
+              ),
+          ],
+        ),
+      ),
     );
   }
 
   // 显示关于对话框
   void _showAboutDialog() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('关于 Motto Music'),
-        content: SizedBox(
-          width: 400,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Motto Music',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      barrierColor: Colors.transparent,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.only(left: 24, right: 24, top: 24, bottom: 120),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+            child: Container(
+              width: 450,
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.8,
+              ),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isDark
+                      ? [Colors.white.withOpacity(0.15), Colors.white.withOpacity(0.05)]
+                      : [Colors.white.withOpacity(0.9), Colors.white.withOpacity(0.7)],
                 ),
-                const SizedBox(height: 8),
-                const Text('版本: 0.1.0-beta'),
-                const SizedBox(height: 4),
-                const Text('基于 Flutter 开发的 Android 音乐播放器'),
-                const SizedBox(height: 16),
-                const Divider(),
-                const SizedBox(height: 8),
-                const Text(
-                  '✨ 核心特性',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.25)
+                      : Colors.white.withOpacity(0.8),
+                  width: 1.5,
                 ),
-                const SizedBox(height: 8),
-                const Text('• Bilibili 音源聚合与下载管理'),
-                const Text('• 本地音乐文件播放'),
-                const Text('• 智能歌词系统（网易云 API）'),
-                const Text('• Apple Music 风格播放器'),
-                const Text('• 精美锁屏界面与歌词滚动'),
-                const SizedBox(height: 12),
-                const Text(
-                  '📝 开源信息',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                const Text('许可证: Apache License 2.0'),
-                const Text('仓库: github.com/motto1/motto-music'),
-                const SizedBox(height: 12),
-                const Text(
-                  '💖 致谢',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  '本项目借鉴了 namida、BBPlayer、LZF-Music、Metro 等优秀开源项目的经验。',
-                  style: TextStyle(fontSize: 12),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  '完全由 vibe coding 驱动开发。',
-                  style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
-                ),
-              ],
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
+                    blurRadius: 20,
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 标题
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                    child: Text(
+                      '关于 Motto Music',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                  ),
+                  // 内容
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // 应用信息卡片
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: const [
+                                Text(
+                                  'Motto Music',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 8),
+                                Text(
+                                  '版本: 0.1.0-beta',
+                                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  '基于 Flutter 开发的 Android 音乐播放器',
+                                  style: TextStyle(fontSize: 14),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          // 核心特性
+                          const Text(
+                            '✨ 核心特性',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ...['Bilibili 音源聚合与下载管理', '本地音乐文件播放', '智能歌词系统（网易云 API）', 'Apple Music 风格播放器', '精美锁屏界面与歌词滚动'].map(
+                            (feature) => Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('• ', style: TextStyle(fontSize: 14)),
+                                  Expanded(child: Text(feature, style: const TextStyle(fontSize: 14))),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          // 开源信息
+                          const Text('📝 开源信息', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 12),
+                          const Text('许可证: Apache License 2.0', style: TextStyle(fontSize: 14)),
+                          const SizedBox(height: 4),
+                          const Text('仓库: github.com/motto1/motto-music', style: TextStyle(fontSize: 14)),
+                          const SizedBox(height: 20),
+                          // 致谢
+                          const Text('💖 致谢', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 12),
+                          const Text(
+                            '本项目借鉴了 namida、BBPlayer、LZF-Music、Metro 等优秀开源项目的经验。',
+                            style: TextStyle(fontSize: 13, height: 1.5),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            '完全由 vibe coding 驱动开发。',
+                            style: TextStyle(fontSize: 13, fontStyle: FontStyle.italic, color: Colors.grey),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // 按钮
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('关闭'),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            final uri = Uri.parse('https://github.com/motto1/motto-music');
+                            if (await canLaunchUrl(uri)) {
+                              await launchUrl(uri, mode: LaunchMode.externalApplication);
+                            }
+                          },
+                          icon: const Icon(Icons.open_in_new, size: 18),
+                          label: const Text('访问 GitHub'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              final uri = Uri.parse('https://github.com/motto1/motto-music');
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-              }
-            },
-            child: const Text('访问 GitHub'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('确定'),
-          ),
-        ],
       ),
     );
   }
 
   // 许可证弹窗示例
   void _showLicenseDialog() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('软件许可证 Apache 2.0'),
-        content: SingleChildScrollView(
-          child: Text("""Apache License
+      barrierColor: Colors.transparent,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.only(left: 24, right: 24, top: 24, bottom: 120),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+            child: Container(
+              width: 500,
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.8,
+              ),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isDark
+                      ? [Colors.white.withOpacity(0.15), Colors.white.withOpacity(0.05)]
+                      : [Colors.white.withOpacity(0.9), Colors.white.withOpacity(0.7)],
+                ),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.25)
+                      : Colors.white.withOpacity(0.8),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
+                    blurRadius: 20,
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 标题
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                    child: Text(
+                      '开源许可证',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                  ),
+                  // 内容
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Text("""Apache License
 Version 2.0, January 2004
 http://www.apache.org/licenses/
 
@@ -655,95 +838,191 @@ You may add Your own copyright statement to Your modifications and may provide a
 9. Accepting Warranty or Additional Liability. While redistributing the Work or Derivative Works thereof, You may choose to offer, and charge a fee for, acceptance of support, warranty, indemnity, or other liability obligations and/or rights consistent with this License. However, in accepting such obligations, You may act only on Your own behalf and on Your sole responsibility, not on behalf of any other Contributor, and only if You agree to indemnify, defend, and hold each Contributor harmless for any liability incurred by, or claims asserted against, such Contributor by reason of your accepting any such warranty or additional liability.
 
 END OF TERMS AND CONDITIONS
-""", style: const TextStyle(fontSize: 14)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('确定'),
+""", style: const TextStyle(fontSize: 13, height: 1.6)),
+                    ),
+                  ),
+                  // 按钮
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('关闭'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
 
   void _feedbackAndImproveDialog() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('反馈与联系'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '欢迎通过以下方式与我们联系：',
-              style: TextStyle(fontSize: 14),
+      barrierColor: Colors.transparent,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.only(left: 24, right: 24, top: 24, bottom: 120),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+            child: Container(
+              width: 400,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isDark
+                      ? [Colors.white.withOpacity(0.15), Colors.white.withOpacity(0.05)]
+                      : [Colors.white.withOpacity(0.9), Colors.white.withOpacity(0.7)],
+                ),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.25)
+                      : Colors.white.withOpacity(0.8),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
+                    blurRadius: 20,
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 标题
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                    child: Text(
+                      '反馈与联系',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                  ),
+                  // 内容
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Text(
+                            '欢迎通过以下方式与我们联系',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        _buildLinkRow(
+                          context,
+                          '反馈 Bug',
+                          'https://github.com/motto1/motto-music/issues',
+                          CupertinoIcons.ant,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildLinkRow(
+                          context,
+                          '功能建议',
+                          'https://github.com/motto1/motto-music/discussions',
+                          CupertinoIcons.lightbulb,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildLinkRow(
+                          context,
+                          '项目主页',
+                          'https://github.com/motto1/motto-music',
+                          CupertinoIcons.book,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildLinkRow(
+                          context,
+                          '开发者',
+                          'https://github.com/motto1',
+                          CupertinoIcons.person,
+                        ),
+                      ],
+                    ),
+                  ),
+                  // 按钮
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('关闭'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
-            _buildLinkRow(
-              context,
-              '🐛 反馈 Bug',
-              'https://github.com/motto1/motto-music/issues',
-            ),
-            const SizedBox(height: 8),
-            _buildLinkRow(
-              context,
-              '💡 功能建议',
-              'https://github.com/motto1/motto-music/discussions',
-            ),
-            const SizedBox(height: 8),
-            _buildLinkRow(
-              context,
-              '📖 项目主页',
-              'https://github.com/motto1/motto-music',
-            ),
-            const SizedBox(height: 8),
-            _buildLinkRow(
-              context,
-              '👤 开发者',
-              'https://github.com/motto1',
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('确定'),
           ),
-        ],
+        ),
       ),
     );
   }
 
 
-  Widget _buildLinkRow(BuildContext context, String label, String url) {
-    return Row(
-      children: [
-        Text('$label: ', style: const TextStyle(fontWeight: FontWeight.bold)),
-        MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: GestureDetector(
-            onTap: () async {
-              final uri = Uri.parse(url);
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-              } else {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text('无法打开链接: $url')));
-              }
-            },
-            child: Text(
-              url,
-              style: const TextStyle(
-                color: Colors.blue,
-                decoration: TextDecoration.underline,
+  Widget _buildLinkRow(BuildContext context, String label, String url, IconData icon) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return InkWell(
+      onTap: () async {
+        final uri = Uri.parse(url);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        }
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.withOpacity(0.3)),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: Colors.red),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
               ),
             ),
-          ),
+            Icon(
+              CupertinoIcons.arrow_right,
+              size: 16,
+              color: isDark ? Colors.grey[400] : Colors.grey[600],
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
@@ -807,16 +1086,18 @@ class ThemeSelectionDialog extends StatelessWidget {
 
     return ListTile(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12), // 设置圆角半径
+        borderRadius: BorderRadius.circular(12),
       ),
       leading: Icon(
         icon,
         color: isSelected ? Theme.of(context).colorScheme.primary : null,
+        size: 24,
       ),
       title: Text(
         title,
         style: TextStyle(
           color: isSelected ? Theme.of(context).colorScheme.primary : null,
+          fontWeight: FontWeight.w500,
         ),
       ),
       subtitle: Text(subtitle),
@@ -824,6 +1105,7 @@ class ThemeSelectionDialog extends StatelessWidget {
           ? Icon(
               CupertinoIcons.checkmark_circle_fill,
               color: Theme.of(context).colorScheme.primary,
+              size: 24,
             )
           : null,
       onTap: () {
@@ -832,7 +1114,7 @@ class ThemeSelectionDialog extends StatelessWidget {
       },
       splashColor: Theme.of(
         context,
-      ).colorScheme.primary.withOpacity(0.2), // 可选：点击水波纹颜色
+      ).colorScheme.primary.withOpacity(0.2),
     );
   }
 }

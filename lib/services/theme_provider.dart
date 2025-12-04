@@ -14,7 +14,7 @@ class AppThemeProvider extends ChangeNotifier {
   static const _sidebarIsExtendedKey = 'theme_sidebar_is_extended';
 
   ThemeMode _themeMode = ThemeMode.system;
-  Color _seedColor = const Color(0xFF016B5B); // 默认主题色
+  Color _seedColor = Colors.red; // 统一使用红色主题
   double _seedAlpha = 1.0;
   String _opacityTarget = "window"; // 默认值
   bool _sidebarIsExtended = true;
@@ -40,8 +40,11 @@ class AppThemeProvider extends ChangeNotifier {
     if (savedSidebarIsExtended != null) {
       _sidebarIsExtended = savedSidebarIsExtended;
     }
-    if (savedColorValue != null) {
-      _seedColor = Color(savedColorValue);
+    // 强制重置为红色主题，修复可能存在的颜色异常
+    _seedColor = Colors.red;
+    // 如果保存的颜色不是红色，或者没有保存，都强制更新为红色
+    if (savedColorValue != Colors.red.value) {
+       await _prefs?.setInt(_seedColorKey, Colors.red.value);
     }
     if (savedAlphaValue != null) {
       _seedAlpha = savedAlphaValue;
@@ -128,16 +131,22 @@ class AppThemeProvider extends ChangeNotifier {
   ThemeData buildLightTheme() {
     return ThemeData(
       popupMenuTheme: PopupMenuThemeData(
-        color: Color(0xffe0e0e0),
-        shadowColor: Color(0xffe0e0e0),
+        color: Color(0xFFFFFFFF),
+        shadowColor: Color(0xFFFFFFFF),
         position: PopupMenuPosition.under,
       ),
       dialogTheme: DialogThemeData(backgroundColor: ThemeUtils.lightBg),
+      cardTheme: CardThemeData(
+        color: Color(0xFFFFFFFF),
+        surfaceTintColor: Colors.transparent,
+      ),
       fontFamily: PlatformUtils.getFontFamily(),
       brightness: Brightness.light,
       colorScheme: ColorScheme.fromSeed(
         seedColor: _seedColor,
         brightness: Brightness.light,
+        primary: _seedColor, // 强制使用种子颜色作为主色
+        surface: Color(0xFFFFFFFF),
       ),
       useMaterial3: true,
       scaffoldBackgroundColor: Colors.transparent,
@@ -163,6 +172,7 @@ class AppThemeProvider extends ChangeNotifier {
       colorScheme: ColorScheme.fromSeed(
         seedColor: _seedColor,
         brightness: Brightness.dark,
+        primary: _seedColor, // 强制使用种子颜色作为主色
       ),
       useMaterial3: true,
       scaffoldBackgroundColor: Colors.transparent,

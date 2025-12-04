@@ -350,7 +350,7 @@ class _GlobalBottomNavBar extends StatelessWidget {
       valueListenable: menuManager.currentPage,
       builder: (context, currentPage, _) {
         final theme = Theme.of(context);
-        final primary = theme.colorScheme.primary;
+        final primary = Colors.red;
         final isDark = theme.brightness == Brightness.dark;
         final defaultTextColor = isDark ? Colors.white : Colors.black;
 
