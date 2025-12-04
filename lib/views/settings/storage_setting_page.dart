@@ -243,9 +243,9 @@ class StorageSettingPageState extends State<StorageSettingPage>
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.dark 
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
           ? ThemeUtils.backgroundColor(context)
-          : const Color(0xFFF2F2F7),
+          : const Color(0xFFFFFFFF),
       body: CustomScrollView(
         physics: const ClampingScrollPhysics(),
         slivers: [

@@ -96,7 +96,7 @@ class AnimatedCoverArt extends StatelessWidget {
                   : null,
             ),
             clipBehavior: Clip.antiAlias,
-            child: _buildCoverImage(),
+            child: _buildCoverImage(context),
           ),
         ),
       ),
@@ -164,16 +164,19 @@ class AnimatedCoverArt extends StatelessWidget {
   }
 
   /// 构建封面图片
-  Widget _buildCoverImage() {
+  Widget _buildCoverImage(BuildContext context) {
     final albumArtPath = currentSong?.albumArtPath;
-    
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final placeholderBg = isDark ? Colors.grey[800]! : Colors.grey[200]!;
+    final placeholderIcon = isDark ? Colors.white38 : Colors.black26;
+
     if (albumArtPath == null || albumArtPath.isEmpty) {
       return Container(
-        color: Colors.grey[800],
-        child: const Icon(
+        color: placeholderBg,
+        child: Icon(
           Icons.music_note,
           size: 80,
-          color: Colors.white38,
+          color: placeholderIcon,
         ),
       );
     }
@@ -185,11 +188,11 @@ class AnimatedCoverArt extends StatelessWidget {
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
           return Container(
-            color: Colors.grey[800],
-            child: const Icon(
+            color: placeholderBg,
+            child: Icon(
               Icons.music_note,
               size: 80,
-              color: Colors.white38,
+              color: placeholderIcon,
             ),
           );
         },
@@ -203,11 +206,11 @@ class AnimatedCoverArt extends StatelessWidget {
         );
       } else {
         return Container(
-          color: Colors.grey[800],
-          child: const Icon(
+          color: placeholderBg,
+          child: Icon(
             Icons.music_note,
             size: 80,
-            color: Colors.white38,
+            color: placeholderIcon,
           ),
         );
       }

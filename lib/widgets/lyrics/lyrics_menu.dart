@@ -226,6 +226,7 @@ class LyricsMenu extends StatelessWidget {
   void _showSearchDialog(BuildContext context, String uniqueKey) {
     showDialog(
       context: context,
+      barrierColor: Colors.transparent,
       useRootNavigator: true, // 使用根导航器，确保显示在最顶层
       builder: (context) => ManualSearchLyricsDialog(
         uniqueKey: uniqueKey,

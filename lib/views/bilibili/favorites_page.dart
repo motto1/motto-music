@@ -722,9 +722,9 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
         }
       },
       child: Scaffold(
-        backgroundColor: Theme.of(context).brightness == Brightness.dark 
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
             ? ThemeUtils.backgroundColor(context)
-            : const Color(0xFFF2F2F7),
+            : const Color(0xFFFFFFFF),
         body: CustomScrollView(
           slivers: [
             // 整合的液态玻璃头部容器（AppBar + 搜索框）
@@ -1068,31 +1068,111 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
 
   /// 构建未登录视图
   Widget _buildNotLoggedInView() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.account_circle,
-              size: 80,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+            // Bilibili 粉色图标
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFFFB7299), // Bilibili Pink
+                    Color(0xFF23ADE5), // Bilibili Blue
+                  ],
+                ),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFFB7299).withOpacity(0.3),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.account_circle,
+                size: 50,
+                color: Colors.white,
+              ),
             ),
-            const SizedBox(height: 24),
+
+            const SizedBox(height: 32),
+
             const Text(
               '请先登录 Bilibili 账号',
-              style: TextStyle(fontSize: 18),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-            const SizedBox(height: 32),
-            ElevatedButton.icon(
-              onPressed: _navigateToLogin,
-              icon: const Icon(Icons.login),
-              label: const Text('登录'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
+
+            const SizedBox(height: 8),
+
+            Text(
+              '登录后即可同步收藏夹和下载音乐',
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark
+                  ? Colors.white.withOpacity(0.5)
+                  : Colors.black.withOpacity(0.5),
+              ),
+              textAlign: TextAlign.center,
+            ),
+
+            const SizedBox(height: 48),
+
+            // Apple 风格登录按钮
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: _navigateToLogin,
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 48,
+                    vertical: 16,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF007AFF), // Apple 系统蓝
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF007AFF).withOpacity(0.3),
+                        blurRadius: 12,
+                        spreadRadius: 0,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(
+                        Icons.login_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                      SizedBox(width: 12),
+                      Text(
+                        '登录',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -1183,9 +1263,9 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
     
     return Container(
       // 统一的背景色，防止BackdropFilter模糊到不同颜色
-      color: isDark 
+      color: isDark
           ? ThemeUtils.backgroundColor(context)
-          : const Color(0xFFF2F2F7),
+          : const Color(0xFFFFFFFF),
       child: Column(
         children: [
           // 列表（添加clipBehavior防止阴影溢出）

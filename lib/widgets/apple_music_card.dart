@@ -191,7 +191,7 @@ class _AppleMusicCardState extends State<AppleMusicCard> {
       decoration: BoxDecoration(
         color: widget.accentColor ?? (isDark
             ? const Color(0xFF3A3A3C)
-            : const Color(0xFFF2F2F7)),
+            : const Color(0xFFFFFFFF)),
         borderRadius: BorderRadius.circular(8),
         // 淡景深阴影
         boxShadow: [
@@ -212,7 +212,7 @@ class _AppleMusicCardState extends State<AppleMusicCard> {
                 placeholder: (context, url) => Container(
                   color: isDark
                       ? const Color(0xFF3A3A3C)
-                      : const Color(0xFFF2F2F7),
+                      : const Color(0xFFFFFFFF),
                   child: Center(
                     child: SizedBox(
                       width: 20,

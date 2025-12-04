@@ -84,7 +84,7 @@ class UnifiedCoverImage extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDarkMode
             ? const Color(0xFF3A3A3C)
-            : const Color(0xFFF2F2F7),
+            : const Color(0xFFFFFFFF),
         borderRadius: BorderRadius.circular(borderRadius),
       ),
       child: ClipRRect(
@@ -187,7 +187,7 @@ class UnifiedCoverImage extends StatelessWidget {
       height: height,
       color: isDarkMode
           ? const Color(0xFF3A3A3C)
-          : const Color(0xFFF2F2F7),
+          : const Color(0xFFFFFFFF),
       child: Center(
         child: SizedBox(
           width: width * 0.3,

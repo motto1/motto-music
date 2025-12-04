@@ -68,7 +68,7 @@ class _ExpandableBilibiliContentState extends State<ExpandableBilibiliContent> {
       child: Container(
         color: isDark
             ? ThemeUtils.backgroundColor(context).withOpacity(fullScreenOpacity)
-            : const Color(0xFFF2F2F7).withOpacity(fullScreenOpacity),
+            : const Color(0xFFFFFFFF).withOpacity(fullScreenOpacity),
         child: Opacity(
           opacity: fullScreenOpacity,
           child: _buildFullScreenMode(context),

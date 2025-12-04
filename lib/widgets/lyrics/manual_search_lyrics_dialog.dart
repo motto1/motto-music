@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:motto_music/models/lyrics/lyric_models.dart';
 import 'package:motto_music/services/lyrics/lyric_service.dart';
 import 'package:motto_music/utils/lyric_parser.dart';
+import 'dart:ui';
 
 /// 手动搜索歌词对话框
 class ManualSearchLyricsDialog extends StatefulWidget {
@@ -96,13 +97,29 @@ class _ManualSearchLyricsDialogState extends State<ManualSearchLyricsDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Colors.black.withOpacity(0.7)
+          : Colors.white.withOpacity(0.85),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(28),
+        side: BorderSide(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white.withOpacity(0.2)
+              : Colors.white.withOpacity(0.6),
+          width: 1.5,
+        ),
+      ),
       title: const Text('手动搜索歌词'),
-      content: SizedBox(
-        width: 500,
-        height: 450,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+      content: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+          child: SizedBox(
+            width: 500,
+            height: 450,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
             // 搜索框
             TextField(
               controller: _searchController,
@@ -140,6 +157,8 @@ class _ManualSearchLyricsDialogState extends State<ManualSearchLyricsDialog> {
               ),
             ],
           ],
+            ),
+          ),
         ),
       ),
       actions: [

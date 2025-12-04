@@ -757,7 +757,7 @@ class _VideoDetailPageState extends State<VideoDetailPage> with ShowAwarePage {
       decoration: BoxDecoration(
         color: isDark
             ? const Color(0xFF3A3A3C)
-            : const Color(0xFFF2F2F7),
+            : const Color(0xFFFFFFFF),
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(

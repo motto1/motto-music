@@ -157,9 +157,9 @@ class LibraryViewState extends State<LibraryView> with ShowAwarePage {
         }
       },
       child: Scaffold(
-        backgroundColor: Theme.of(context).brightness == Brightness.dark 
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
             ? ThemeUtils.backgroundColor(context)
-            : const Color(0xFFF2F2F7),
+            : const Color(0xFFFFFFFF),
         body: CustomScrollView(
           slivers: [
             // 液态玻璃头部容器（AppBar + 搜索框）

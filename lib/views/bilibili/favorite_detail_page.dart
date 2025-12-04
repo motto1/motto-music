@@ -483,7 +483,7 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
       child: Scaffold(
         backgroundColor: Theme.of(context).brightness == Brightness.dark
             ? ThemeUtils.backgroundColor(context)
-            : const Color(0xFFF2F2F7),
+            : const Color(0xFFFFFFFF),
         body: _buildBody(),
       ),
     );
@@ -577,7 +577,7 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
       // 统一的背景色，防止BackdropFilter模糊到不同颜色
       color: isDark 
           ? ThemeUtils.backgroundColor(context)
-          : const Color(0xFFF2F2F7),
+          : const Color(0xFFFFFFFF),
       child: CustomScrollView(
         slivers: [
               // 简洁的头部（移除固定的 AppBar）
@@ -703,7 +703,7 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
       padding: EdgeInsets.fromLTRB(16, statusBarHeight + 16, 16, 24),
       color: isDark
           ? ThemeUtils.backgroundColor(context)
-          : const Color(0xFFF2F2F7),
+          : const Color(0xFFFFFFFF),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [

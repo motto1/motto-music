@@ -20,6 +20,7 @@ import '../models/lyrics/lyric_models.dart';
 import '../models/bilibili/video.dart' as bili_models;
 import '../utils/lyric_parser.dart';
 import 'audio_handler_service.dart';
+import 'audio_source_registry.dart';
 import 'lyrics_notification_service.dart';
 import 'dart:io';
 import 'dart:convert';
@@ -58,7 +59,7 @@ class PlayerProvider with ChangeNotifier {
 
   final math.Random _random = math.Random();
   final PageCacheService _pageCache = PageCacheService();
-  final Set<String> _autoCacheInProgress = {};
+  final Set<String> _lockCachingInProgress = {}; // 防止同一首歌重复创建 LockCachingAudioSource
   Directory? _notificationArtCacheDir;
   Directory? _coverCacheDir;
 
@@ -215,7 +216,7 @@ class PlayerProvider with ChangeNotifier {
         }
 
         // 解析音频源
-        final resolved = await _resolveAudioSource(song, startCache: true);
+        final resolved = await _resolveAudioSource(song);
         if (resolved.path != null) {
           final pathPreview = resolved.path!.length > 50
               ? '${resolved.path!.substring(0, 50)}...'
@@ -260,7 +261,6 @@ class PlayerProvider with ChangeNotifier {
       debugPrint('[PlayerProvider] 🔄 队列索引变化: ${_audioHandler!.currentIndex.value}');
       _updateCurrentSongFromHandler();
       _notifySongChange();
-      _cacheCurrentSongIfNeeded();
     });
 
     // 监听播放状态变化
@@ -358,10 +358,7 @@ class PlayerProvider with ChangeNotifier {
 
       if (isInitial) {
         // 当前要播放的歌曲：完整解析音频源
-        mediaItems.add(await _convertSongToMediaItem(
-          song,
-          startCache: true,
-        ));
+        mediaItems.add(await _convertSongToMediaItem(song));
       } else {
         // 其他歌曲：只设置元数据，标记需要延迟解析
         mediaItems.add(_convertSongToMediaItemLazy(song));
@@ -428,10 +425,7 @@ class PlayerProvider with ChangeNotifier {
   }
 
   /// 将 Song 转换为 MediaItem
-  Future<MediaItem> _convertSongToMediaItem(
-    Song song, {
-    bool startCache = false,
-  }) async {
+  Future<MediaItem> _convertSongToMediaItem(Song song) async {
     final resolvedSong = await _ensureLocalAlbumArt(song);
     // 构建封面 URI
     Uri? artUri;
@@ -440,10 +434,7 @@ class PlayerProvider with ChangeNotifier {
       artUri = await _buildNotificationArtUri(resolvedSong.albumArtPath!);
     }
 
-    final resolvedSource = await _resolveAudioSource(
-      resolvedSong,
-      startCache: startCache,
-    );
+    final resolvedSource = await _resolveAudioSource(resolvedSong);
     final sourceType = resolvedSource.type;
     final headers = resolvedSource.headers;
 
@@ -599,15 +590,9 @@ class PlayerProvider with ChangeNotifier {
     return null;
   }
 
-  Future<_ResolvedAudioSource> _resolveAudioSource(
-    Song song, {
-    bool startCache = false,
-  }) async {
+  Future<_ResolvedAudioSource> _resolveAudioSource(Song song) async {
     if (song.source == 'bilibili') {
-      final biliSource = await _resolveBilibiliAudioSource(
-        song,
-        startCache: startCache,
-      );
+      final biliSource = await _resolveBilibiliAudioSource(song);
       if (biliSource != null) {
         return biliSource;
       }
@@ -622,10 +607,7 @@ class PlayerProvider with ChangeNotifier {
     return _ResolvedAudioSource.file(song.filePath);
   }
 
-  Future<_ResolvedAudioSource?> _resolveBilibiliAudioSource(
-    Song song, {
-    bool startCache = false,
-  }) async {
+  Future<_ResolvedAudioSource?> _resolveBilibiliAudioSource(Song song) async {
     final bvid = song.bvid;
     if (bvid == null || bvid.isEmpty) {
       return null;
@@ -674,66 +656,42 @@ class PlayerProvider with ChangeNotifier {
         return _ResolvedAudioSource.file(cachedFile.path);
       }
 
-      // ========== 优先级3: 直接流式播放 + 后台缓存 ==========
-      final streamInfo = await _bilibiliStreamService.getAudioStream(
-        bvid: bvid,
-        cid: cid,
-        quality: playQuality,
-      ).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () => throw TimeoutException('获取音频流超时'),
-      );
-
-      final cookie = await _cookieManager.getCookieString();
-      final headers = <String, String>{
-        'Referer': 'https://www.bilibili.com',
-        'User-Agent':
-            'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0',
-        if (cookie.isNotEmpty) 'Cookie': cookie,
-      };
-
-      debugPrint('[播放调试] ✅ 直连流 URL: ${streamInfo.url.substring(0, 50)}...');
-
-      // 播放的同时在后台写入锁缓存，避免初始化时并发下载
-      if (startCache) {
-        _startBackgroundCaching(bvid, cid, playQuality);
+      // ========== 优先级3: 使用 LockCachingAudioSource 播放并自动缓存 ==========
+      final sourceId = 'bilibili_${bvid}_${cid}_${playQuality.id}';
+      
+      // 防止重复创建
+      if (_lockCachingInProgress.contains(sourceId)) {
+        debugPrint('[播放调试] ⏳ LockCachingAudioSource 正在创建中，等待...');
+        await Future.delayed(const Duration(milliseconds: 100));
+        return _resolveBilibiliAudioSource(song);
       }
 
-      return _ResolvedAudioSource.url(
-        streamInfo.url,
-        headers: headers,
-      );
+      _lockCachingInProgress.add(sourceId);
+      try {
+        debugPrint('[播放调试] 🔄 创建 LockCachingAudioSource 进行播放和缓存');
+        
+        final lockCachingSource = await _bilibiliAutoCacheService.createLockCachingAudioSource(
+          bvid: bvid,
+          cid: cid,
+          quality: playQuality,
+        ).timeout(
+          const Duration(seconds: 10),
+          onTimeout: () => throw TimeoutException('创建缓存音频源超时'),
+        );
+
+        AudioSourceRegistry.register(sourceId, lockCachingSource);
+        
+        debugPrint('[播放调试] ✅ LockCachingAudioSource 已注册: $sourceId');
+
+        return _ResolvedAudioSource.lockCaching(sourceId);
+      } finally {
+        _lockCachingInProgress.remove(sourceId);
+      }
     } catch (e, stackTrace) {
       debugPrint('[播放调试] ❌ 解析音频源失败: $e');
       debugPrint('[播放调试] 堆栈: $stackTrace');
       return null;
     }
-  }
-
-  /// 播放当前曲目后，异步创建 LockCachingAudioSource 写入缓存，避免一次性并发下载
-  void _startBackgroundCaching(
-    String bvid,
-    int cid,
-    BilibiliAudioQuality quality,
-  ) {
-    final key = '$bvid-$cid-${quality.id}';
-    if (_autoCacheInProgress.contains(key)) return;
-    _autoCacheInProgress.add(key);
-    Future.microtask(() async {
-      try {
-        debugPrint('[后台缓存] 🔄 准备缓存 $bvid/$cid');
-        await _bilibiliAutoCacheService.createLockCachingAudioSource(
-          bvid: bvid,
-          cid: cid,
-          quality: quality,
-        );
-        debugPrint('[后台缓存] ✅ 缓存完成');
-      } catch (e) {
-        debugPrint('[后台缓存] ⚠️ 缓存失败: $e');
-      } finally {
-        _autoCacheInProgress.remove(key);
-      }
-    });
   }
 
   Future<List<bili_models.BilibiliVideoPage>> _getVideoPagesWithCache(
@@ -828,24 +786,6 @@ class PlayerProvider with ChangeNotifier {
     return list
         .map((song) => song.id == updated.id ? updated : song)
         .toList();
-  }
-
-  Future<void> _cacheCurrentSongIfNeeded() async {
-    final song = _currentSong;
-    if (song == null) return;
-    await _ensureLocalAlbumArt(song);
-
-    final updatedSong = _currentSong;
-    if (updatedSong == null || updatedSong.source != 'bilibili') return;
-
-    final bvid = updatedSong.bvid;
-    final cid = updatedSong.cid;
-    if (bvid == null || bvid.isEmpty || cid == null || cid <= 0) return;
-
-    final storage = await PlayerStateStorage.getInstance();
-    final playQuality =
-        BilibiliAudioQuality.fromId(storage.defaultBilibiliPlayQuality);
-    _startBackgroundCaching(bvid, cid, playQuality);
   }
 
   Future<int?> _resolveBilibiliCid(Song song, String bvid) async {

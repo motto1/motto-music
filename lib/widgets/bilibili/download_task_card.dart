@@ -4,8 +4,10 @@ import 'package:provider/provider.dart';
 import 'package:motto_music/database/database.dart';
 import 'package:motto_music/models/bilibili/audio_quality.dart';
 import 'package:motto_music/services/bilibili/download_manager.dart';
+import 'package:motto_music/services/cache/album_art_cache_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:ui';
+import 'dart:io';
 
 /// 下载任务卡片
 ///
@@ -110,7 +112,9 @@ class DownloadTaskCard extends StatelessWidget {
                           task.artist!,
                           style: TextStyle(
                             fontSize: 13,
-                            color: Colors.grey[600],
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.grey[400]
+                                : Colors.grey[600],
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -156,36 +160,86 @@ class DownloadTaskCard extends StatelessWidget {
     );
   }
 
-  /// 构建封面
+  /// 构建封面 - 使用统一的封面缓存系统
   Widget _buildCover() {
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
-      child: task.coverUrl != null && task.coverUrl!.isNotEmpty
-          ? CachedNetworkImage(
-              imageUrl: task.coverUrl!,
-              width: 60,
-              height: 60,
-              fit: BoxFit.cover,
-              placeholder: (context, url) => Container(
-                width: 60,
-                height: 60,
-                color: Colors.grey[300],
-                child: const Icon(CupertinoIcons.music_note, size: 30),
-              ),
-              errorWidget: (context, url, error) => Container(
-                width: 60,
-                height: 60,
-                color: Colors.grey[300],
-                child: const Icon(CupertinoIcons.exclamationmark_triangle, size: 30),
-              ),
-            )
-          : Container(
-              width: 60,
-              height: 60,
-              color: Colors.grey[300],
-              child: const Icon(CupertinoIcons.music_note, size: 30),
-            ),
+      child: FutureBuilder<Widget>(
+        future: _buildCoverImage(),
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            return snapshot.data!;
+          }
+          return Container(
+            width: 60,
+            height: 60,
+            color: Colors.grey[300],
+            child: const Icon(CupertinoIcons.music_note, size: 30),
+          );
+        },
+      ),
     );
+  }
+
+  /// 构建封面图片 - 优先使用本地缓存
+  Future<Widget> _buildCoverImage() async {
+    if (task.coverUrl == null || task.coverUrl!.isEmpty) {
+      return Container(
+        width: 60,
+        height: 60,
+        color: Colors.grey[300],
+        child: const Icon(CupertinoIcons.music_note, size: 30),
+      );
+    }
+
+    try {
+      // 使用 AlbumArtCacheService 获取本地缓存路径
+      final albumArtCache = AlbumArtCacheService.instance;
+      final localPath = await albumArtCache.ensureLocalPath(task.coverUrl!);
+
+      if (localPath != null) {
+        // 使用本地缓存
+        return Image.file(
+          File(localPath),
+          width: 60,
+          height: 60,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => Container(
+            width: 60,
+            height: 60,
+            color: Colors.grey[300],
+            child: const Icon(CupertinoIcons.exclamationmark_triangle, size: 30),
+          ),
+        );
+      }
+
+      // 缓存未命中，使用网络加载并缓存
+      return CachedNetworkImage(
+        imageUrl: task.coverUrl!,
+        width: 60,
+        height: 60,
+        fit: BoxFit.cover,
+        placeholder: (context, url) => Container(
+          width: 60,
+          height: 60,
+          color: Colors.grey[300],
+          child: const Icon(CupertinoIcons.music_note, size: 30),
+        ),
+        errorWidget: (context, url, error) => Container(
+          width: 60,
+          height: 60,
+          color: Colors.grey[300],
+          child: const Icon(CupertinoIcons.exclamationmark_triangle, size: 30),
+        ),
+      );
+    } catch (e) {
+      return Container(
+        width: 60,
+        height: 60,
+        color: Colors.grey[300],
+        child: const Icon(CupertinoIcons.exclamationmark_triangle, size: 30),
+      );
+    }
   }
 
   /// 构建状态图标

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:motto_music/database/database.dart';
 import 'package:motto_music/services/bilibili/download_manager.dart';
 import 'package:motto_music/services/player_provider.dart';
+import 'package:motto_music/services/cache/album_art_cache_service.dart';
 import 'package:motto_music/widgets/bilibili/download_task_card.dart';
 import 'package:motto_music/widgets/frosted_page_header.dart';
 import 'package:motto_music/utils/theme_utils.dart';
@@ -40,9 +41,9 @@ class _DownloadManagementPageState extends State<DownloadManagementPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Scaffold(
-      backgroundColor: isDark 
+      backgroundColor: isDark
           ? ThemeUtils.backgroundColor(context)
-          : const Color(0xFFF2F2F7),
+          : const Color(0xFFFFFFFF),
       body: NotificationListener<OverscrollIndicatorNotification>(
         onNotification: (notification) {
           notification.disallowIndicator();
@@ -398,6 +399,13 @@ class _DownloadManagementPageState extends State<DownloadManagementPage> {
     }
 
     try {
+      // 获取本地封面路径
+      String? localCoverPath;
+      if (task.coverUrl != null && task.coverUrl!.isNotEmpty) {
+        final albumArtCache = AlbumArtCacheService.instance;
+        localCoverPath = await albumArtCache.ensureLocalPath(task.coverUrl!);
+      }
+
       // 直接从任务信息创建 Song 对象并播放
       final song = Song(
         id: task.id,
@@ -409,7 +417,7 @@ class _DownloadManagementPageState extends State<DownloadManagementPage> {
         bitrate: null,
         sampleRate: null,
         duration: task.duration,
-        albumArtPath: task.coverUrl,
+        albumArtPath: localCoverPath ?? task.coverUrl,
         dateAdded: task.createdAt,
         isFavorite: false,
         lastPlayedTime: DateTime.now(),
