@@ -1,6 +1,6 @@
 /// Motto Music AudioHandler
 /// 完全基于 namida 的 BasicAudioHandler 实现
-/// 
+///
 /// 核心特性：
 /// - 继承自本地 BasicAudioHandler（模拟 namida 的 basic_audio_handler 包）
 /// - 完整移植 namida 的播放控制逻辑
@@ -12,6 +12,8 @@ import 'package:audio_session/audio_session.dart';
 import 'package:just_audio/just_audio.dart';
 import 'dart:async';
 import '../core/basic_audio_handler.dart';
+import '../models/bilibili/loudness_info.dart';
+import '../storage/player_state_storage.dart';
 import 'audio_source_registry.dart';
 import 'lyrics_notification_service.dart';
 
@@ -167,6 +169,14 @@ class MottoAudioHandler extends BasicAudioHandler<TrackItem> {
       await _audioSession?.setActive(true);
       await super.play();
       print('[AudioHandler] ✅ play() 执行完成');
+
+      // 应用淡入效果
+      final storage = await PlayerStateStorage.getInstance();
+      final fadeInMs = storage.fadeInDurationMs;
+      print('[AudioHandler] 🎚️ play()中的淡入设置: ${fadeInMs}ms');
+      if (fadeInMs > 0) {
+        await fadeIn(fadeInMs);
+      }
     } catch (e) {
       print('[AudioHandler] ❌ play() 失败: $e');
     }
@@ -242,6 +252,24 @@ class MottoAudioHandler extends BasicAudioHandler<TrackItem> {
         print('[AudioHandler] 🔑 提取到 headers: ${headers.keys.join(", ")}');
       }
 
+      // ⭐ 应用响度增益（自动场景选择）
+      final loudnessData = item.mediaItem.extras?['loudness'];
+      if (loudnessData != null && loudnessData is Map<String, dynamic>) {
+        final loudness = LoudnessInfo.fromJson(loudnessData);
+
+        // 自动选择场景
+        final autoScene = loudness.getAutoScene();
+        final gain = loudness.getLinearGain(); // 使用自动场景
+
+        setLoudnessGain(gain);
+
+        print('[AudioHandler] 🔊 自动场景: $autoScene');
+        print('[AudioHandler] 📊 响度参数: ${loudness.measuredI.toStringAsFixed(1)} LUFS, LRA: ${loudness.measuredLra.toStringAsFixed(1)} LU');
+        print('[AudioHandler] 🎚️ 增益: ${loudness.getGainDb().toStringAsFixed(1)} dB (${gain.toStringAsFixed(2)}x)');
+      } else {
+        setLoudnessGain(1.0);
+      }
+
       // 设置音频源（使用 URL 字符串）
       final duration = await setSource(
         audioUrl,
@@ -256,10 +284,26 @@ class MottoAudioHandler extends BasicAudioHandler<TrackItem> {
       mediaItem.add(item.mediaItem);
       _broadcastState(index);
 
+      print('[AudioHandler] 🔍 playWhenReady: ${playWhenReady.value}');
+
       // 如果设置了自动播放
       if (playWhenReady.value) {
+        print('[AudioHandler] ▶️ 开始播放流程');
         await _audioSession?.setActive(true);
         await player.play();
+        print('[AudioHandler] ✅ player.play() 完成');
+
+        // 应用淡入效果
+        final storage = await PlayerStateStorage.getInstance();
+        final fadeInMs = storage.fadeInDurationMs;
+        print('[AudioHandler] 🎚️ 淡入设置: ${fadeInMs}ms');
+        if (fadeInMs > 0) {
+          await fadeIn(fadeInMs);
+        } else {
+          print('[AudioHandler] ⏭️ 淡入已禁用（时长为0）');
+        }
+      } else {
+        print('[AudioHandler] ⏸️ playWhenReady=false，跳过自动播放');
       }
 
       print('[AudioHandler] ✅ 播放设置完成 (时长: $duration)');

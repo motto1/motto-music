@@ -14,6 +14,7 @@ import 'cache/bilibili_auto_cache_service.dart';
 import 'cache/page_cache_service.dart';
 import 'cache/album_art_cache_service.dart';
 import '../models/bilibili/audio_quality.dart';
+import '../models/bilibili/loudness_info.dart';
 import 'package:drift/drift.dart';
 import 'lyrics/lyric_service.dart';
 import '../models/lyrics/lyric_models.dart';
@@ -335,6 +336,25 @@ class PlayerProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  int get fadeInDurationMs => playerState?.fadeInDurationMs ?? 500;
+  int get fadeOutDurationMs => playerState?.fadeOutDurationMs ?? 500;
+  bool get gaplessEnabled => playerState?.gaplessEnabled ?? true;
+
+  Future<void> setFadeInDuration(int durationMs) async {
+    await playerState?.setFadeInDuration(durationMs);
+    notifyListeners();
+  }
+
+  Future<void> setFadeOutDuration(int durationMs) async {
+    await playerState?.setFadeOutDuration(durationMs);
+    notifyListeners();
+  }
+
+  Future<void> setGaplessEnabled(bool enabled) async {
+    await playerState?.setGaplessEnabled(enabled);
+    notifyListeners();
+  }
+
   /// 设置播放列表到 AudioHandler
   ///
   /// 采用懒加载策略：只为当前要播放的歌曲解析音频源，
@@ -442,6 +462,7 @@ class PlayerProvider with ChangeNotifier {
       'sourceType': sourceType,
       if (resolvedSource.path != null) 'sourcePath': resolvedSource.path,
       if (headers != null) 'headers': headers,
+      if (resolvedSource.loudness != null) 'loudness': resolvedSource.loudness!.toJson(),
       'songId': resolvedSong.id,
       'bvid': resolvedSong.bvid ?? '',
       'cid': resolvedSong.cid ?? 0,
@@ -639,7 +660,31 @@ class PlayerProvider with ChangeNotifier {
       );
       if (downloadedPath != null && downloadedPath.isNotEmpty) {
         debugPrint('[播放调试] ✅ 使用手动下载: $downloadedPath');
-        return _ResolvedAudioSource.file(downloadedPath);
+
+        // 优先从数据库读取响度信息
+        final loudness = _getLoudnessFromSong(song);
+        if (loudness != null) {
+          debugPrint('[播放调试] ✅ 从数据库读取响度信息');
+          return _ResolvedAudioSource._('file', downloadedPath, null, loudness);
+        }
+
+        // 数据库无响度，从 API 获取并保存
+        try {
+          final streamInfo = await _bilibiliStreamService.getAudioStream(
+            bvid: bvid,
+            cid: cid,
+            quality: playQuality,
+          ).timeout(const Duration(seconds: 3));
+
+          if (streamInfo.loudness != null) {
+            await _saveLoudnessToDatabase(song.id, streamInfo.loudness!);
+          }
+
+          return _ResolvedAudioSource._('file', downloadedPath, null, streamInfo.loudness);
+        } catch (e) {
+          debugPrint('[播放调试] ⚠️ 获取响度信息失败: $e');
+          return _ResolvedAudioSource.file(downloadedPath);
+        }
       }
 
       // ========== 优先级2: LockCaching 缓存文件命中 ==========
@@ -653,7 +698,31 @@ class PlayerProvider with ChangeNotifier {
       );
       if (cachedFile != null) {
         debugPrint('[播放调试] ✅ 自动缓存命中: ${cachedFile.path}');
-        return _ResolvedAudioSource.file(cachedFile.path);
+
+        // 优先从数据库读取响度信息
+        final loudness = _getLoudnessFromSong(song);
+        if (loudness != null) {
+          debugPrint('[播放调试] ✅ 从数据库读取响度信息');
+          return _ResolvedAudioSource._('file', cachedFile.path, null, loudness);
+        }
+
+        // 数据库无响度，从 API 获取并保存
+        try {
+          final streamInfo = await _bilibiliStreamService.getAudioStream(
+            bvid: bvid,
+            cid: cid,
+            quality: playQuality,
+          ).timeout(const Duration(seconds: 3));
+
+          if (streamInfo.loudness != null) {
+            await _saveLoudnessToDatabase(song.id, streamInfo.loudness!);
+          }
+
+          return _ResolvedAudioSource._('file', cachedFile.path, null, streamInfo.loudness);
+        } catch (e) {
+          debugPrint('[播放调试] ⚠️ 获取响度信息失败: $e');
+          return _ResolvedAudioSource.file(cachedFile.path);
+        }
       }
 
       // ========== 优先级3: 使用 LockCachingAudioSource 播放并自动缓存 ==========
@@ -669,7 +738,7 @@ class PlayerProvider with ChangeNotifier {
       _lockCachingInProgress.add(sourceId);
       try {
         debugPrint('[播放调试] 🔄 创建 LockCachingAudioSource 进行播放和缓存');
-        
+
         final lockCachingSource = await _bilibiliAutoCacheService.createLockCachingAudioSource(
           bvid: bvid,
           cid: cid,
@@ -680,10 +749,18 @@ class PlayerProvider with ChangeNotifier {
         );
 
         AudioSourceRegistry.register(sourceId, lockCachingSource);
-        
+
         debugPrint('[播放调试] ✅ LockCachingAudioSource 已注册: $sourceId');
 
-        return _ResolvedAudioSource.lockCaching(sourceId);
+        // 获取响度信息（createLockCachingAudioSource 内部已调用 getAudioStream）
+        // 这里需要从 service 缓存或重新获取
+        final streamInfo = await _bilibiliStreamService.getAudioStream(
+          bvid: bvid,
+          cid: cid,
+          quality: playQuality,
+        );
+
+        return _ResolvedAudioSource.lockCaching(sourceId, loudness: streamInfo.loudness);
       } finally {
         _lockCachingInProgress.remove(sourceId);
       }
@@ -786,6 +863,38 @@ class PlayerProvider with ChangeNotifier {
     return list
         .map((song) => song.id == updated.id ? updated : song)
         .toList();
+  }
+
+  /// 从 Song 对象读取响度信息
+  LoudnessInfo? _getLoudnessFromSong(Song song) {
+    if (song.loudnessMeasuredI == null || song.loudnessTargetI == null) {
+      return null;
+    }
+
+    return LoudnessInfo(
+      measuredI: song.loudnessMeasuredI!,
+      targetI: song.loudnessTargetI!,
+      measuredTp: song.loudnessMeasuredTp ?? -1.0,
+    );
+  }
+
+  /// 保存响度信息到数据库
+  Future<void> _saveLoudnessToDatabase(int songId, LoudnessInfo loudness) async {
+    try {
+      await (MusicDatabase.database.update(MusicDatabase.database.songs)
+            ..where((t) => t.id.equals(songId)))
+          .write(
+        SongsCompanion(
+          loudnessMeasuredI: Value(loudness.measuredI),
+          loudnessTargetI: Value(loudness.targetI),
+          loudnessMeasuredTp: Value(loudness.measuredTp),
+          loudnessData: Value(loudness.toJson().toString()),
+        ),
+      );
+      debugPrint('[播放调试] ✅ 响度信息已保存到数据库');
+    } catch (e) {
+      debugPrint('[播放调试] ⚠️ 保存响度信息失败: $e');
+    }
   }
 
   Future<int?> _resolveBilibiliCid(Song song, String bvid) async {
@@ -1485,18 +1594,19 @@ class _ResolvedAudioSource {
   final String type;
   final String? path;
   final Map<String, String>? headers;
+  final LoudnessInfo? loudness;
 
-  const _ResolvedAudioSource._(this.type, this.path, this.headers);
+  const _ResolvedAudioSource._(this.type, this.path, this.headers, this.loudness);
 
   factory _ResolvedAudioSource.file(String path) =>
-      _ResolvedAudioSource._('file', path, null);
+      _ResolvedAudioSource._('file', path, null, null);
 
   factory _ResolvedAudioSource.url(
     String path, {
     Map<String, String>? headers,
   }) =>
-      _ResolvedAudioSource._('url', path, headers);
+      _ResolvedAudioSource._('url', path, headers, null);
 
-  factory _ResolvedAudioSource.lockCaching(String id) =>
-      _ResolvedAudioSource._('lock_caching', id, null);
+  factory _ResolvedAudioSource.lockCaching(String id, {LoudnessInfo? loudness}) =>
+      _ResolvedAudioSource._('lock_caching', id, null, loudness);
 }

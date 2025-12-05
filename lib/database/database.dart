@@ -39,6 +39,12 @@ class Songs extends Table {
   // 音质管理字段
   TextColumn get downloadedQualities => text().nullable()(); // 已下载的音质列表（如 "30280,30232"）
   IntColumn get currentQuality => integer().nullable()(); // 当前播放的音质 ID
+
+  // 响度均衡字段
+  RealColumn get loudnessMeasuredI => real().nullable()(); // 实际响度 (LUFS)
+  RealColumn get loudnessTargetI => real().nullable()(); // 目标响度 (LUFS)
+  RealColumn get loudnessMeasuredTp => real().nullable()(); // 真峰值 (dBTP)
+  TextColumn get loudnessData => text().nullable()(); // 完整响度 JSON（包含 multi_scene_args）
 }
 
 /// Bilibili 视频表
@@ -172,7 +178,7 @@ class MusicDatabase extends _$MusicDatabase {
   }
 
   @override
-  int get schemaVersion => 8; // ⭐ 升级版本：添加下载任务和用户设置表，扩展音质管理字段
+  int get schemaVersion => 9; // ⭐ 升级版本：添加响度均衡字段
 
   @override
   MigrationStrategy get migration {
@@ -327,6 +333,35 @@ class MusicDatabase extends _$MusicDatabase {
           );
 
           print('✅ 下载管理和音质设置已初始化');
+        }
+
+        if (from < 9) {
+          // Schema version 8 -> 9: 添加响度均衡字段
+          try {
+            await m.addColumn(songs, songs.loudnessMeasuredI);
+          } catch (e) {
+            print('⚠️ loudnessMeasuredI 字段已存在，跳过');
+          }
+
+          try {
+            await m.addColumn(songs, songs.loudnessTargetI);
+          } catch (e) {
+            print('⚠️ loudnessTargetI 字段已存在，跳过');
+          }
+
+          try {
+            await m.addColumn(songs, songs.loudnessMeasuredTp);
+          } catch (e) {
+            print('⚠️ loudnessMeasuredTp 字段已存在，跳过');
+          }
+
+          try {
+            await m.addColumn(songs, songs.loudnessData);
+          } catch (e) {
+            print('⚠️ loudnessData 字段已存在，跳过');
+          }
+
+          print('✅ 响度均衡字段检查完成');
         }
       },
     );

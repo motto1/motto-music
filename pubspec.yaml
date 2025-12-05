@@ -1,7 +1,7 @@
 name: motto_music
 description: "基于 Flutter 开发的 Android 音乐播放器，聚合 Bilibili 音源与本地收藏。"
 publish_to: 'none'
-version: 0.1.2+3
+version: 0.1.4+4
 
 environment:
   sdk: ">=3.3.0 <4.0.0"

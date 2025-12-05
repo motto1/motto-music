@@ -8,6 +8,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
+import '../storage/player_state_storage.dart';
 
 /// 播放项基类（模拟 namida Playable）
 abstract class Playable {
@@ -70,9 +71,17 @@ abstract class BasicAudioHandler<Q extends Playable> extends BaseAudioHandler
   final RxBaseCore<bool> playWhenReady = RxBaseCore<bool>(true);
   final RxBaseCore<int> currentPositionMS = RxBaseCore<int>(0);
   final Rxn<Duration> currentItemDuration = Rxn<Duration>();
-  
+
   /// 队列管理
   final QueueWrapper<Q> currentQueue = QueueWrapper<Q>();
+
+  /// 响度增益
+  double _loudnessGain = 1.0;
+  double _userVolume = 1.0;
+
+  /// 淡入淡出
+  Timer? _fadeTimer;
+  bool _isFading = false;
 
   /// 定时器：更新播放位置
   Timer? _positionTimer; // UI更新定时器（200ms）
@@ -152,6 +161,7 @@ abstract class BasicAudioHandler<Q extends Playable> extends BaseAudioHandler
 
   @override
   Future<void> skipToNext() async {
+    await _handleGaplessSkip();
     if (currentIndex.value < currentQueue.queueRx.value.length - 1) {
       await skipToQueueItem(currentIndex.value + 1);
     }
@@ -159,8 +169,24 @@ abstract class BasicAudioHandler<Q extends Playable> extends BaseAudioHandler
 
   @override
   Future<void> skipToPrevious() async {
+    await _handleGaplessSkip();
     if (currentIndex.value > 0) {
       await skipToQueueItem(currentIndex.value - 1);
+    }
+  }
+
+  Future<void> _handleGaplessSkip() async {
+    // 检查Gapless设置，决定是否停止淡入淡出
+    try {
+      final storage = await PlayerStateStorage.getInstance();
+      if (storage.gaplessEnabled) {
+        stopFade();
+        print('[BasicAudioHandler] ✅ Gapless已启用，停止淡入淡出');
+      } else {
+        print('[BasicAudioHandler] ⏸️ Gapless已禁用，保持淡入淡出');
+      }
+    } catch (e) {
+      print('[BasicAudioHandler] ⚠️ 获取Gapless设置失败: $e');
     }
   }
 
@@ -257,12 +283,77 @@ abstract class BasicAudioHandler<Q extends Playable> extends BaseAudioHandler
 
   // ========== 音量和速度 ==========
 
+  /// 设置用户音量（0.0-1.5）
   Future<void> setVolume(double volume) async {
-    await player.setVolume(volume.clamp(0.0, 1.0));
+    _userVolume = volume.clamp(0.0, 1.5);
+    await _applyVolume();
+  }
+
+  /// 设置响度增益
+  void setLoudnessGain(double gain) {
+    _loudnessGain = gain.clamp(0.5, 2.0);
+    _applyVolume();
+  }
+
+  /// 应用最终音量 = 用户音量 × 响度增益
+  Future<void> _applyVolume() async {
+    final finalVolume = (_userVolume * _loudnessGain).clamp(0.0, 1.0);
+    await player.setVolume(finalVolume);
   }
 
   Future<void> setSpeed(double speed) async {
     await player.setSpeed(speed);
+  }
+
+  /// 淡入（从0到目标音量）
+  Future<void> fadeIn(int durationMs) async {
+    if (durationMs <= 0) return;
+    print('[BasicAudioHandler] 🎚️ 开始淡入: ${durationMs}ms');
+    _fadeTimer?.cancel();
+    _isFading = true;
+
+    final targetVolume = (_userVolume * _loudnessGain).clamp(0.0, 1.0);
+    const steps = 20;
+    final stepDuration = durationMs ~/ steps;
+
+    for (int i = 0; i <= steps && _isFading; i++) {
+      final volume = (targetVolume * i / steps).clamp(0.0, 1.0);
+      await player.setVolume(volume);
+      if (i < steps) await Future.delayed(Duration(milliseconds: stepDuration));
+    }
+
+    _isFading = false;
+    print('[BasicAudioHandler] ✅ 淡入完成');
+  }
+
+  /// 淡出（从当前音量到0）
+  Future<void> fadeOut(int durationMs) async {
+    if (durationMs <= 0) return;
+    print('[BasicAudioHandler] 🎚️ 开始淡出: ${durationMs}ms');
+    _fadeTimer?.cancel();
+    _isFading = true;
+
+    final currentVolume = (_userVolume * _loudnessGain).clamp(0.0, 1.0);
+    const steps = 20;
+    final stepDuration = durationMs ~/ steps;
+
+    for (int i = steps; i >= 0 && _isFading; i--) {
+      final volume = (currentVolume * i / steps).clamp(0.0, 1.0);
+      await player.setVolume(volume);
+      if (i > 0) await Future.delayed(Duration(milliseconds: stepDuration));
+    }
+
+    _isFading = false;
+    print('[BasicAudioHandler] ✅ 淡出完成');
+  }
+
+  /// 停止淡入淡出
+  void stopFade() {
+    if (_isFading) {
+      print('[BasicAudioHandler] ⏹️ 停止淡入淡出（Gapless切换）');
+    }
+    _isFading = false;
+    _fadeTimer?.cancel();
   }
 
   // ========== 抽象方法：子类必须实现 ==========

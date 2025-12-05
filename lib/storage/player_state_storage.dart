@@ -26,6 +26,9 @@ class PlayerStateStorage {
   static const String _bilibiliPlayQualityKey = 'bilibili_play_quality';
   static const String _lyricsNotificationEnabledKey = 'lyrics_notification_enabled';
   static const String _lockScreenEnabledKey = 'lockscreen_lyrics_enabled';
+  static const String _fadeInDurationKey = 'fade_in_duration_ms';
+  static const String _fadeOutDurationKey = 'fade_out_duration_ms';
+  static const String _gaplessEnabledKey = 'gapless_enabled';
 
   // 私有成员
   bool _isPlaying = false;
@@ -40,6 +43,9 @@ class PlayerStateStorage {
   int _defaultBilibiliPlayQuality = 30232; // 默认高音质 (128kbps)
   bool _lyricsNotificationEnabled = false;
   bool _lockScreenEnabled = false;
+  int _fadeInDurationMs = 500; // 默认500ms淡入
+  int _fadeOutDurationMs = 500; // 默认500ms淡出
+  bool _gaplessEnabled = true; // 默认启用无缝播放
 
   /// 对外只读属性
   bool get isPlaying => _isPlaying;
@@ -55,6 +61,9 @@ class PlayerStateStorage {
   int get defaultBilibiliPlayQuality => _defaultBilibiliPlayQuality;
   bool get lyricsNotificationEnabled => _lyricsNotificationEnabled;
   bool get lockScreenEnabled => _lockScreenEnabled;
+  int get fadeInDurationMs => _fadeInDurationMs;
+  int get fadeOutDurationMs => _fadeOutDurationMs;
+  bool get gaplessEnabled => _gaplessEnabled;
 
   /// 启动时初始化，从本地读取
   static Future<PlayerStateStorage> _load() async {
@@ -88,6 +97,9 @@ class PlayerStateStorage {
     state._defaultBilibiliPlayQuality = prefs.getInt(_bilibiliPlayQualityKey) ?? 30232;
     state._lyricsNotificationEnabled = prefs.getBool(_lyricsNotificationEnabledKey) ?? false;
     state._lockScreenEnabled = prefs.getBool(_lockScreenEnabledKey) ?? false;
+    state._fadeInDurationMs = prefs.getInt(_fadeInDurationKey) ?? 500;
+    state._fadeOutDurationMs = prefs.getInt(_fadeOutDurationKey) ?? 500;
+    state._gaplessEnabled = prefs.getBool(_gaplessEnabledKey) ?? true;
 
     final pageIndex = prefs.getInt(_pageKey);
     if (pageIndex != null &&
@@ -258,5 +270,23 @@ extension PlayerStateSetters on PlayerStateStorage {
   Future<void> setLockScreenEnabled(bool enabled) async {
     _lockScreenEnabled = enabled;
     await _saveLockScreenEnabled();
+  }
+
+  Future<void> setFadeInDuration(int durationMs) async {
+    _fadeInDurationMs = durationMs.clamp(0, 3000);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(PlayerStateStorage._fadeInDurationKey, _fadeInDurationMs);
+  }
+
+  Future<void> setFadeOutDuration(int durationMs) async {
+    _fadeOutDurationMs = durationMs.clamp(0, 3000);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(PlayerStateStorage._fadeOutDurationKey, _fadeOutDurationMs);
+  }
+
+  Future<void> setGaplessEnabled(bool enabled) async {
+    _gaplessEnabled = enabled;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(PlayerStateStorage._gaplessEnabledKey, enabled);
   }
 }

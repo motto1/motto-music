@@ -283,6 +283,103 @@ class SettingsPageState extends State<SettingsPage> with ShowAwarePage {
                       playerProvider.setLockScreenEnabled(value);
                     },
                   ),
+                  Divider(height: 1, indent: 16, endIndent: 0),
+
+                  SwitchListTile.adaptive(
+                    title: const Text('无缝播放', style: TextStyle(fontWeight: FontWeight.w400)),
+                    subtitle: Text(
+                      '切歌时减少静音间隙',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? Colors.white.withOpacity(0.5) : Colors.grey[600],
+                      ),
+                    ),
+                    value: playerProvider.gaplessEnabled,
+                    activeColor: Colors.red,
+                    onChanged: (value) {
+                      playerProvider.setGaplessEnabled(value);
+                    },
+                  ),
+                  Divider(height: 1, indent: 16, endIndent: 0),
+
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: Row(
+                      children: [
+                        Text(
+                          '淡入时长',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w400,
+                            color: isDark ? Colors.white : Colors.black,
+                          ),
+                        ),
+                        Expanded(
+                          child: Slider(
+                            value: playerProvider.fadeInDurationMs.toDouble(),
+                            min: 0,
+                            max: 3000,
+                            divisions: 30,
+                            activeColor: Colors.red,
+                            onChanged: (value) {
+                              playerProvider.setFadeInDuration(value.toInt());
+                            },
+                          ),
+                        ),
+                        SizedBox(
+                          width: 55,
+                          child: Text(
+                            '${playerProvider.fadeInDurationMs}ms',
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: isDark ? Colors.white.withOpacity(0.7) : Colors.grey[700],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Divider(height: 1, indent: 16, endIndent: 0),
+
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: Row(
+                      children: [
+                        Text(
+                          '淡出时长',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w400,
+                            color: isDark ? Colors.white : Colors.black,
+                          ),
+                        ),
+                        Expanded(
+                          child: Slider(
+                            value: playerProvider.fadeOutDurationMs.toDouble(),
+                            min: 0,
+                            max: 3000,
+                            divisions: 30,
+                            activeColor: Colors.red,
+                            onChanged: (value) {
+                              playerProvider.setFadeOutDuration(value.toInt());
+                            },
+                          ),
+                        ),
+                        SizedBox(
+                          width: 55,
+                          child: Text(
+                            '${playerProvider.fadeOutDurationMs}ms',
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: isDark ? Colors.white.withOpacity(0.7) : Colors.grey[700],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),

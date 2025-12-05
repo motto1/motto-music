@@ -1,6 +1,7 @@
 import 'package:motto_music/services/bilibili/api_client.dart';
 import 'package:motto_music/services/bilibili/bilibili_exception.dart';
 import 'package:motto_music/models/bilibili/audio_quality.dart';
+import 'package:motto_music/models/bilibili/loudness_info.dart';
 
 /// 音频流信息
 class AudioStreamInfo {
@@ -8,12 +9,14 @@ class AudioStreamInfo {
   final BilibiliAudioQuality quality;
   final int size;           // 文件大小(字节)
   final int? actualBitrate; // 实际比特率(kbps),从API的bandwidth字段提取
+  final LoudnessInfo? loudness; // 响度均衡参数
 
   AudioStreamInfo({
     required this.url,
     required this.quality,
     required this.size,
-    this.actualBitrate,     // 可选参数,无值时UI将回退到枚举的默认bitrate
+    this.actualBitrate,
+    this.loudness,
   });
 }
 
@@ -62,6 +65,7 @@ class BilibiliStreamService {
           'fnver': '0',
           'fourk': '1',
           'qn': quality.id.toString(), // 音质参数
+          'voice_balance': '1',  // 关键：启用响度均衡参数返回
         },
       );
       
@@ -72,6 +76,21 @@ class BilibiliStreamService {
 
       final dash = response['dash'] as Map<String, dynamic>?;
       final durl = response['durl'] as List<dynamic>?;
+
+      // 调试：检查响度参数位置
+      if (dash != null) {
+        print('🔍 dash 键: ${dash.keys.toList()}');
+      }
+      final playConf = response['play_conf'];
+      if (playConf != null) {
+        print('🔍 play_conf: $playConf');
+      }
+      final volumeData = response['volume'];
+      if (volumeData != null) {
+        print('🔍 volume: $volumeData');
+      } else {
+        print('⚠️ volume 字段不存在');
+      }
 
       // ========== 详细音质日志 ==========
       if (dash != null) {
@@ -264,18 +283,45 @@ class BilibiliStreamService {
         }
       }
 
+      // 提取响度参数（从 response['volume']）
+      LoudnessInfo? loudness;
+      try {
+        final volumeData = response['volume'];
+        if (volumeData != null && volumeData is Map<String, dynamic>) {
+          final measuredI = volumeData['measured_i'] as num?;
+          final targetI = volumeData['target_i'] as num?;
+          final measuredTp = volumeData['measured_tp'] as num?;
+          final measuredLra = volumeData['measured_lra'] as num?;
+          final targetOffset = volumeData['target_offset'] as num?;
+
+          if (measuredI != null && targetI != null) {
+            loudness = LoudnessInfo(
+              measuredI: measuredI.toDouble(),
+              targetI: targetI.toDouble(),
+              measuredTp: measuredTp?.toDouble() ?? 0.0,
+              measuredLra: measuredLra?.toDouble() ?? 0.0,
+              targetOffset: targetOffset?.toDouble() ?? 0.0,
+            );
+            print('🔊 响度: ${loudness.measuredI.toStringAsFixed(1)}→${loudness.targetI.toStringAsFixed(1)}dB (增益:${loudness.getGainDb().toStringAsFixed(1)}dB)');
+          }
+        }
+      } catch (e) {
+        print('⚠️ 响度参数解析失败: $e');
+      }
+
       print('✅ 音频流获取成功');
       print('  - 实际音质: ${actualQuality.displayName} (ID=${actualQuality.id})');
       print('  - 枚举Bitrate: ${actualQuality.bitrate} kbps');
       print('  - 实际Bitrate: ${actualBitrate ?? "未知"} kbps (from API bandwidth)');
       print('  - 文件大小: ${(size / (1024 * 1024)).toStringAsFixed(2)} MB');
       print('  - URL: ${streamUrl.substring(0, 50)}...');
-      
+
       return AudioStreamInfo(
         url: streamUrl,
         quality: actualQuality,
         size: size,
         actualBitrate: actualBitrate,
+        loudness: loudness,
       );
     } catch (e) {
       if (e is BilibiliApiException) {

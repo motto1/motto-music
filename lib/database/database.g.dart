@@ -1370,6 +1370,30 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, Song> {
   late final GeneratedColumn<int> currentQuality = GeneratedColumn<int>(
       'current_quality', aliasedName, true,
       type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _loudnessMeasuredIMeta =
+      const VerificationMeta('loudnessMeasuredI');
+  @override
+  late final GeneratedColumn<double> loudnessMeasuredI =
+      GeneratedColumn<double>('loudness_measured_i', aliasedName, true,
+          type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _loudnessTargetIMeta =
+      const VerificationMeta('loudnessTargetI');
+  @override
+  late final GeneratedColumn<double> loudnessTargetI = GeneratedColumn<double>(
+      'loudness_target_i', aliasedName, true,
+      type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _loudnessMeasuredTpMeta =
+      const VerificationMeta('loudnessMeasuredTp');
+  @override
+  late final GeneratedColumn<double> loudnessMeasuredTp =
+      GeneratedColumn<double>('loudness_measured_tp', aliasedName, true,
+          type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _loudnessDataMeta =
+      const VerificationMeta('loudnessData');
+  @override
+  late final GeneratedColumn<String> loudnessData = GeneratedColumn<String>(
+      'loudness_data', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -1393,7 +1417,11 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, Song> {
         bilibiliVideoId,
         bilibiliFavoriteId,
         downloadedQualities,
-        currentQuality
+        currentQuality,
+        loudnessMeasuredI,
+        loudnessTargetI,
+        loudnessMeasuredTp,
+        loudnessData
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1516,6 +1544,30 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, Song> {
           currentQuality.isAcceptableOrUnknown(
               data['current_quality']!, _currentQualityMeta));
     }
+    if (data.containsKey('loudness_measured_i')) {
+      context.handle(
+          _loudnessMeasuredIMeta,
+          loudnessMeasuredI.isAcceptableOrUnknown(
+              data['loudness_measured_i']!, _loudnessMeasuredIMeta));
+    }
+    if (data.containsKey('loudness_target_i')) {
+      context.handle(
+          _loudnessTargetIMeta,
+          loudnessTargetI.isAcceptableOrUnknown(
+              data['loudness_target_i']!, _loudnessTargetIMeta));
+    }
+    if (data.containsKey('loudness_measured_tp')) {
+      context.handle(
+          _loudnessMeasuredTpMeta,
+          loudnessMeasuredTp.isAcceptableOrUnknown(
+              data['loudness_measured_tp']!, _loudnessMeasuredTpMeta));
+    }
+    if (data.containsKey('loudness_data')) {
+      context.handle(
+          _loudnessDataMeta,
+          loudnessData.isAcceptableOrUnknown(
+              data['loudness_data']!, _loudnessDataMeta));
+    }
     return context;
   }
 
@@ -1569,6 +1621,14 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, Song> {
           DriftSqlType.string, data['${effectivePrefix}downloaded_qualities']),
       currentQuality: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}current_quality']),
+      loudnessMeasuredI: attachedDatabase.typeMapping.read(
+          DriftSqlType.double, data['${effectivePrefix}loudness_measured_i']),
+      loudnessTargetI: attachedDatabase.typeMapping.read(
+          DriftSqlType.double, data['${effectivePrefix}loudness_target_i']),
+      loudnessMeasuredTp: attachedDatabase.typeMapping.read(
+          DriftSqlType.double, data['${effectivePrefix}loudness_measured_tp']),
+      loudnessData: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}loudness_data']),
     );
   }
 
@@ -1601,6 +1661,10 @@ class Song extends DataClass implements Insertable<Song> {
   final int? bilibiliFavoriteId;
   final String? downloadedQualities;
   final int? currentQuality;
+  final double? loudnessMeasuredI;
+  final double? loudnessTargetI;
+  final double? loudnessMeasuredTp;
+  final String? loudnessData;
   const Song(
       {required this.id,
       required this.title,
@@ -1623,7 +1687,11 @@ class Song extends DataClass implements Insertable<Song> {
       this.bilibiliVideoId,
       this.bilibiliFavoriteId,
       this.downloadedQualities,
-      this.currentQuality});
+      this.currentQuality,
+      this.loudnessMeasuredI,
+      this.loudnessTargetI,
+      this.loudnessMeasuredTp,
+      this.loudnessData});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1677,6 +1745,18 @@ class Song extends DataClass implements Insertable<Song> {
     if (!nullToAbsent || currentQuality != null) {
       map['current_quality'] = Variable<int>(currentQuality);
     }
+    if (!nullToAbsent || loudnessMeasuredI != null) {
+      map['loudness_measured_i'] = Variable<double>(loudnessMeasuredI);
+    }
+    if (!nullToAbsent || loudnessTargetI != null) {
+      map['loudness_target_i'] = Variable<double>(loudnessTargetI);
+    }
+    if (!nullToAbsent || loudnessMeasuredTp != null) {
+      map['loudness_measured_tp'] = Variable<double>(loudnessMeasuredTp);
+    }
+    if (!nullToAbsent || loudnessData != null) {
+      map['loudness_data'] = Variable<String>(loudnessData);
+    }
     return map;
   }
 
@@ -1725,6 +1805,18 @@ class Song extends DataClass implements Insertable<Song> {
       currentQuality: currentQuality == null && nullToAbsent
           ? const Value.absent()
           : Value(currentQuality),
+      loudnessMeasuredI: loudnessMeasuredI == null && nullToAbsent
+          ? const Value.absent()
+          : Value(loudnessMeasuredI),
+      loudnessTargetI: loudnessTargetI == null && nullToAbsent
+          ? const Value.absent()
+          : Value(loudnessTargetI),
+      loudnessMeasuredTp: loudnessMeasuredTp == null && nullToAbsent
+          ? const Value.absent()
+          : Value(loudnessMeasuredTp),
+      loudnessData: loudnessData == null && nullToAbsent
+          ? const Value.absent()
+          : Value(loudnessData),
     );
   }
 
@@ -1755,6 +1847,12 @@ class Song extends DataClass implements Insertable<Song> {
       downloadedQualities:
           serializer.fromJson<String?>(json['downloadedQualities']),
       currentQuality: serializer.fromJson<int?>(json['currentQuality']),
+      loudnessMeasuredI:
+          serializer.fromJson<double?>(json['loudnessMeasuredI']),
+      loudnessTargetI: serializer.fromJson<double?>(json['loudnessTargetI']),
+      loudnessMeasuredTp:
+          serializer.fromJson<double?>(json['loudnessMeasuredTp']),
+      loudnessData: serializer.fromJson<String?>(json['loudnessData']),
     );
   }
   @override
@@ -1783,6 +1881,10 @@ class Song extends DataClass implements Insertable<Song> {
       'bilibiliFavoriteId': serializer.toJson<int?>(bilibiliFavoriteId),
       'downloadedQualities': serializer.toJson<String?>(downloadedQualities),
       'currentQuality': serializer.toJson<int?>(currentQuality),
+      'loudnessMeasuredI': serializer.toJson<double?>(loudnessMeasuredI),
+      'loudnessTargetI': serializer.toJson<double?>(loudnessTargetI),
+      'loudnessMeasuredTp': serializer.toJson<double?>(loudnessMeasuredTp),
+      'loudnessData': serializer.toJson<String?>(loudnessData),
     };
   }
 
@@ -1808,7 +1910,11 @@ class Song extends DataClass implements Insertable<Song> {
           Value<int?> bilibiliVideoId = const Value.absent(),
           Value<int?> bilibiliFavoriteId = const Value.absent(),
           Value<String?> downloadedQualities = const Value.absent(),
-          Value<int?> currentQuality = const Value.absent()}) =>
+          Value<int?> currentQuality = const Value.absent(),
+          Value<double?> loudnessMeasuredI = const Value.absent(),
+          Value<double?> loudnessTargetI = const Value.absent(),
+          Value<double?> loudnessMeasuredTp = const Value.absent(),
+          Value<String?> loudnessData = const Value.absent()}) =>
       Song(
         id: id ?? this.id,
         title: title ?? this.title,
@@ -1840,6 +1946,17 @@ class Song extends DataClass implements Insertable<Song> {
             : this.downloadedQualities,
         currentQuality:
             currentQuality.present ? currentQuality.value : this.currentQuality,
+        loudnessMeasuredI: loudnessMeasuredI.present
+            ? loudnessMeasuredI.value
+            : this.loudnessMeasuredI,
+        loudnessTargetI: loudnessTargetI.present
+            ? loudnessTargetI.value
+            : this.loudnessTargetI,
+        loudnessMeasuredTp: loudnessMeasuredTp.present
+            ? loudnessMeasuredTp.value
+            : this.loudnessMeasuredTp,
+        loudnessData:
+            loudnessData.present ? loudnessData.value : this.loudnessData,
       );
   Song copyWithCompanion(SongsCompanion data) {
     return Song(
@@ -1881,6 +1998,18 @@ class Song extends DataClass implements Insertable<Song> {
       currentQuality: data.currentQuality.present
           ? data.currentQuality.value
           : this.currentQuality,
+      loudnessMeasuredI: data.loudnessMeasuredI.present
+          ? data.loudnessMeasuredI.value
+          : this.loudnessMeasuredI,
+      loudnessTargetI: data.loudnessTargetI.present
+          ? data.loudnessTargetI.value
+          : this.loudnessTargetI,
+      loudnessMeasuredTp: data.loudnessMeasuredTp.present
+          ? data.loudnessMeasuredTp.value
+          : this.loudnessMeasuredTp,
+      loudnessData: data.loudnessData.present
+          ? data.loudnessData.value
+          : this.loudnessData,
     );
   }
 
@@ -1908,7 +2037,11 @@ class Song extends DataClass implements Insertable<Song> {
           ..write('bilibiliVideoId: $bilibiliVideoId, ')
           ..write('bilibiliFavoriteId: $bilibiliFavoriteId, ')
           ..write('downloadedQualities: $downloadedQualities, ')
-          ..write('currentQuality: $currentQuality')
+          ..write('currentQuality: $currentQuality, ')
+          ..write('loudnessMeasuredI: $loudnessMeasuredI, ')
+          ..write('loudnessTargetI: $loudnessTargetI, ')
+          ..write('loudnessMeasuredTp: $loudnessMeasuredTp, ')
+          ..write('loudnessData: $loudnessData')
           ..write(')'))
         .toString();
   }
@@ -1936,7 +2069,11 @@ class Song extends DataClass implements Insertable<Song> {
         bilibiliVideoId,
         bilibiliFavoriteId,
         downloadedQualities,
-        currentQuality
+        currentQuality,
+        loudnessMeasuredI,
+        loudnessTargetI,
+        loudnessMeasuredTp,
+        loudnessData
       ]);
   @override
   bool operator ==(Object other) =>
@@ -1963,7 +2100,11 @@ class Song extends DataClass implements Insertable<Song> {
           other.bilibiliVideoId == this.bilibiliVideoId &&
           other.bilibiliFavoriteId == this.bilibiliFavoriteId &&
           other.downloadedQualities == this.downloadedQualities &&
-          other.currentQuality == this.currentQuality);
+          other.currentQuality == this.currentQuality &&
+          other.loudnessMeasuredI == this.loudnessMeasuredI &&
+          other.loudnessTargetI == this.loudnessTargetI &&
+          other.loudnessMeasuredTp == this.loudnessMeasuredTp &&
+          other.loudnessData == this.loudnessData);
 }
 
 class SongsCompanion extends UpdateCompanion<Song> {
@@ -1989,6 +2130,10 @@ class SongsCompanion extends UpdateCompanion<Song> {
   final Value<int?> bilibiliFavoriteId;
   final Value<String?> downloadedQualities;
   final Value<int?> currentQuality;
+  final Value<double?> loudnessMeasuredI;
+  final Value<double?> loudnessTargetI;
+  final Value<double?> loudnessMeasuredTp;
+  final Value<String?> loudnessData;
   const SongsCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
@@ -2012,6 +2157,10 @@ class SongsCompanion extends UpdateCompanion<Song> {
     this.bilibiliFavoriteId = const Value.absent(),
     this.downloadedQualities = const Value.absent(),
     this.currentQuality = const Value.absent(),
+    this.loudnessMeasuredI = const Value.absent(),
+    this.loudnessTargetI = const Value.absent(),
+    this.loudnessMeasuredTp = const Value.absent(),
+    this.loudnessData = const Value.absent(),
   });
   SongsCompanion.insert({
     this.id = const Value.absent(),
@@ -2036,6 +2185,10 @@ class SongsCompanion extends UpdateCompanion<Song> {
     this.bilibiliFavoriteId = const Value.absent(),
     this.downloadedQualities = const Value.absent(),
     this.currentQuality = const Value.absent(),
+    this.loudnessMeasuredI = const Value.absent(),
+    this.loudnessTargetI = const Value.absent(),
+    this.loudnessMeasuredTp = const Value.absent(),
+    this.loudnessData = const Value.absent(),
   })  : title = Value(title),
         filePath = Value(filePath);
   static Insertable<Song> custom({
@@ -2061,6 +2214,10 @@ class SongsCompanion extends UpdateCompanion<Song> {
     Expression<int>? bilibiliFavoriteId,
     Expression<String>? downloadedQualities,
     Expression<int>? currentQuality,
+    Expression<double>? loudnessMeasuredI,
+    Expression<double>? loudnessTargetI,
+    Expression<double>? loudnessMeasuredTp,
+    Expression<String>? loudnessData,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2087,6 +2244,11 @@ class SongsCompanion extends UpdateCompanion<Song> {
       if (downloadedQualities != null)
         'downloaded_qualities': downloadedQualities,
       if (currentQuality != null) 'current_quality': currentQuality,
+      if (loudnessMeasuredI != null) 'loudness_measured_i': loudnessMeasuredI,
+      if (loudnessTargetI != null) 'loudness_target_i': loudnessTargetI,
+      if (loudnessMeasuredTp != null)
+        'loudness_measured_tp': loudnessMeasuredTp,
+      if (loudnessData != null) 'loudness_data': loudnessData,
     });
   }
 
@@ -2112,7 +2274,11 @@ class SongsCompanion extends UpdateCompanion<Song> {
       Value<int?>? bilibiliVideoId,
       Value<int?>? bilibiliFavoriteId,
       Value<String?>? downloadedQualities,
-      Value<int?>? currentQuality}) {
+      Value<int?>? currentQuality,
+      Value<double?>? loudnessMeasuredI,
+      Value<double?>? loudnessTargetI,
+      Value<double?>? loudnessMeasuredTp,
+      Value<String?>? loudnessData}) {
     return SongsCompanion(
       id: id ?? this.id,
       title: title ?? this.title,
@@ -2136,6 +2302,10 @@ class SongsCompanion extends UpdateCompanion<Song> {
       bilibiliFavoriteId: bilibiliFavoriteId ?? this.bilibiliFavoriteId,
       downloadedQualities: downloadedQualities ?? this.downloadedQualities,
       currentQuality: currentQuality ?? this.currentQuality,
+      loudnessMeasuredI: loudnessMeasuredI ?? this.loudnessMeasuredI,
+      loudnessTargetI: loudnessTargetI ?? this.loudnessTargetI,
+      loudnessMeasuredTp: loudnessMeasuredTp ?? this.loudnessMeasuredTp,
+      loudnessData: loudnessData ?? this.loudnessData,
     );
   }
 
@@ -2208,6 +2378,18 @@ class SongsCompanion extends UpdateCompanion<Song> {
     if (currentQuality.present) {
       map['current_quality'] = Variable<int>(currentQuality.value);
     }
+    if (loudnessMeasuredI.present) {
+      map['loudness_measured_i'] = Variable<double>(loudnessMeasuredI.value);
+    }
+    if (loudnessTargetI.present) {
+      map['loudness_target_i'] = Variable<double>(loudnessTargetI.value);
+    }
+    if (loudnessMeasuredTp.present) {
+      map['loudness_measured_tp'] = Variable<double>(loudnessMeasuredTp.value);
+    }
+    if (loudnessData.present) {
+      map['loudness_data'] = Variable<String>(loudnessData.value);
+    }
     return map;
   }
 
@@ -2235,7 +2417,11 @@ class SongsCompanion extends UpdateCompanion<Song> {
           ..write('bilibiliVideoId: $bilibiliVideoId, ')
           ..write('bilibiliFavoriteId: $bilibiliFavoriteId, ')
           ..write('downloadedQualities: $downloadedQualities, ')
-          ..write('currentQuality: $currentQuality')
+          ..write('currentQuality: $currentQuality, ')
+          ..write('loudnessMeasuredI: $loudnessMeasuredI, ')
+          ..write('loudnessTargetI: $loudnessTargetI, ')
+          ..write('loudnessMeasuredTp: $loudnessMeasuredTp, ')
+          ..write('loudnessData: $loudnessData')
           ..write(')'))
         .toString();
   }
@@ -4856,6 +5042,10 @@ typedef $$SongsTableCreateCompanionBuilder = SongsCompanion Function({
   Value<int?> bilibiliFavoriteId,
   Value<String?> downloadedQualities,
   Value<int?> currentQuality,
+  Value<double?> loudnessMeasuredI,
+  Value<double?> loudnessTargetI,
+  Value<double?> loudnessMeasuredTp,
+  Value<String?> loudnessData,
 });
 typedef $$SongsTableUpdateCompanionBuilder = SongsCompanion Function({
   Value<int> id,
@@ -4880,6 +5070,10 @@ typedef $$SongsTableUpdateCompanionBuilder = SongsCompanion Function({
   Value<int?> bilibiliFavoriteId,
   Value<String?> downloadedQualities,
   Value<int?> currentQuality,
+  Value<double?> loudnessMeasuredI,
+  Value<double?> loudnessTargetI,
+  Value<double?> loudnessMeasuredTp,
+  Value<String?> loudnessData,
 });
 
 final class $$SongsTableReferences
@@ -4989,6 +5183,21 @@ class $$SongsTableFilterComposer
   ColumnFilters<int> get currentQuality => $composableBuilder(
       column: $table.currentQuality,
       builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get loudnessMeasuredI => $composableBuilder(
+      column: $table.loudnessMeasuredI,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get loudnessTargetI => $composableBuilder(
+      column: $table.loudnessTargetI,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get loudnessMeasuredTp => $composableBuilder(
+      column: $table.loudnessMeasuredTp,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get loudnessData => $composableBuilder(
+      column: $table.loudnessData, builder: (column) => ColumnFilters(column));
 
   $$BilibiliVideosTableFilterComposer get bilibiliVideoId {
     final $$BilibiliVideosTableFilterComposer composer = $composerBuilder(
@@ -5104,6 +5313,22 @@ class $$SongsTableOrderingComposer
       column: $table.currentQuality,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<double> get loudnessMeasuredI => $composableBuilder(
+      column: $table.loudnessMeasuredI,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get loudnessTargetI => $composableBuilder(
+      column: $table.loudnessTargetI,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get loudnessMeasuredTp => $composableBuilder(
+      column: $table.loudnessMeasuredTp,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get loudnessData => $composableBuilder(
+      column: $table.loudnessData,
+      builder: (column) => ColumnOrderings(column));
+
   $$BilibiliVideosTableOrderingComposer get bilibiliVideoId {
     final $$BilibiliVideosTableOrderingComposer composer = $composerBuilder(
         composer: this,
@@ -5214,6 +5439,18 @@ class $$SongsTableAnnotationComposer
   GeneratedColumn<int> get currentQuality => $composableBuilder(
       column: $table.currentQuality, builder: (column) => column);
 
+  GeneratedColumn<double> get loudnessMeasuredI => $composableBuilder(
+      column: $table.loudnessMeasuredI, builder: (column) => column);
+
+  GeneratedColumn<double> get loudnessTargetI => $composableBuilder(
+      column: $table.loudnessTargetI, builder: (column) => column);
+
+  GeneratedColumn<double> get loudnessMeasuredTp => $composableBuilder(
+      column: $table.loudnessMeasuredTp, builder: (column) => column);
+
+  GeneratedColumn<String> get loudnessData => $composableBuilder(
+      column: $table.loudnessData, builder: (column) => column);
+
   $$BilibiliVideosTableAnnotationComposer get bilibiliVideoId {
     final $$BilibiliVideosTableAnnotationComposer composer = $composerBuilder(
         composer: this,
@@ -5301,6 +5538,10 @@ class $$SongsTableTableManager extends RootTableManager<
             Value<int?> bilibiliFavoriteId = const Value.absent(),
             Value<String?> downloadedQualities = const Value.absent(),
             Value<int?> currentQuality = const Value.absent(),
+            Value<double?> loudnessMeasuredI = const Value.absent(),
+            Value<double?> loudnessTargetI = const Value.absent(),
+            Value<double?> loudnessMeasuredTp = const Value.absent(),
+            Value<String?> loudnessData = const Value.absent(),
           }) =>
               SongsCompanion(
             id: id,
@@ -5325,6 +5566,10 @@ class $$SongsTableTableManager extends RootTableManager<
             bilibiliFavoriteId: bilibiliFavoriteId,
             downloadedQualities: downloadedQualities,
             currentQuality: currentQuality,
+            loudnessMeasuredI: loudnessMeasuredI,
+            loudnessTargetI: loudnessTargetI,
+            loudnessMeasuredTp: loudnessMeasuredTp,
+            loudnessData: loudnessData,
           ),
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
@@ -5349,6 +5594,10 @@ class $$SongsTableTableManager extends RootTableManager<
             Value<int?> bilibiliFavoriteId = const Value.absent(),
             Value<String?> downloadedQualities = const Value.absent(),
             Value<int?> currentQuality = const Value.absent(),
+            Value<double?> loudnessMeasuredI = const Value.absent(),
+            Value<double?> loudnessTargetI = const Value.absent(),
+            Value<double?> loudnessMeasuredTp = const Value.absent(),
+            Value<String?> loudnessData = const Value.absent(),
           }) =>
               SongsCompanion.insert(
             id: id,
@@ -5373,6 +5622,10 @@ class $$SongsTableTableManager extends RootTableManager<
             bilibiliFavoriteId: bilibiliFavoriteId,
             downloadedQualities: downloadedQualities,
             currentQuality: currentQuality,
+            loudnessMeasuredI: loudnessMeasuredI,
+            loudnessTargetI: loudnessTargetI,
+            loudnessMeasuredTp: loudnessMeasuredTp,
+            loudnessData: loudnessData,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) =>
