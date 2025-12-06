@@ -27,6 +27,7 @@ import 'package:motto_music/views/bilibili/download_management_page.dart';
 import 'package:motto_music/views/bilibili/bilibili_settings_page.dart';
 import 'package:motto_music/services/bilibili/download_manager.dart';
 import 'package:motto_music/widgets/unified_cover_image.dart';
+import 'package:motto_music/models/bilibili/audio_quality.dart';
 
 /// Bilibili 收藏夹列表页面
 class BilibiliFavoritesPage extends StatefulWidget {
@@ -49,6 +50,8 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
   String? _errorMessage;
   String _searchQuery = '';
   String? _userAvatarUrl;
+  bool _isSelectionMode = false;
+  final Set<int> _selectedFavoriteIds = <int>{};
 
   @override
   void initState() {
@@ -1459,14 +1462,36 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
     );
   }
 
-  /// 搜索所有收藏夹内的歌曲
+  Future<List<db.Song>> _collectSongsForFavorites(
+    List<api.BilibiliFavorite> favorites,
+  ) async {
+    if (favorites.isEmpty) return [];
+    return _loadSongsForFavorites(
+      favorites: favorites,
+      query: null,
+    );
+  }
+
+  /// 搜索所有收藏夹内的歌曲（按关键字过滤）
   Future<List<db.Song>> _searchSongsInFavorites(String query) async {
     if (query.isEmpty) return [];
-    
-    final queryLower = query.toLowerCase();
+    final sourceFavorites = List<api.BilibiliFavorite>.from(_favorites ?? const []);
+    if (sourceFavorites.isEmpty) return [];
+    return _loadSongsForFavorites(
+      favorites: sourceFavorites,
+      query: query,
+    );
+  }
+
+  /// 根据收藏夹列表加载歌曲，支持可选关键字过滤
+  Future<List<db.Song>> _loadSongsForFavorites({
+    required List<api.BilibiliFavorite> favorites,
+    String? query,
+  }) async {
+    final queryLower = query?.toLowerCase();
     final allSongs = <db.Song>[];
     
-    for (final favorite in _favorites ?? []) {
+    for (final favorite in favorites) {
       final dbFav = await _db.getBilibiliFavoriteByRemoteId(favorite.id);
       if (dbFav == null) continue;
       
@@ -1475,8 +1500,14 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
         final songs = await (_db.select(_db.songs)
               ..where((s) => s.bilibiliFavoriteId.equals(dbFav.id)))
             .get();
-        final matched = songs.where((s) => s.title.toLowerCase().contains(queryLower)).toList();
-        allSongs.addAll(matched);
+        if (queryLower == null || queryLower.isEmpty) {
+          allSongs.addAll(songs);
+        } else {
+          final matched = songs
+              .where((s) => s.title.toLowerCase().contains(queryLower))
+              .toList();
+          allSongs.addAll(matched);
+        }
       } else {
         // 在线收藏夹：从API获取并展开分P
         try {
@@ -1488,29 +1519,33 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
               () => _apiService.getVideoPages(item.bvid!),
             );
             for (final page in pages) {
-              if (page.part.toLowerCase().contains(queryLower)) {
-                allSongs.add(db.Song(
-                  id: -(page.cid),
-                  title: page.part,
-                  artist: item.upper?.name,
-                  album: item.title,
-                  filePath: buildBilibiliFilePath(
-                    bvid: item.bvid,
-                    cid: page.cid,
-                    pageNumber: page.page,
-                  ),
-                  duration: page.duration,
-                  albumArtPath: item.cover,
-                  dateAdded: DateTime.now(),
-                  isFavorite: false,
-                  lastPlayedTime: DateTime.now(),
-                  playedCount: 0,
-                  source: 'bilibili',
+              final partLower = page.part.toLowerCase();
+              if (queryLower != null &&
+                  queryLower.isNotEmpty &&
+                  !partLower.contains(queryLower)) {
+                continue;
+              }
+              allSongs.add(db.Song(
+                id: -(page.cid),
+                title: page.part,
+                artist: item.upper?.name,
+                album: item.title,
+                filePath: buildBilibiliFilePath(
                   bvid: item.bvid,
                   cid: page.cid,
                   pageNumber: page.page,
-                ));
-              }
+                ),
+                duration: page.duration,
+                albumArtPath: item.cover,
+                dateAdded: DateTime.now(),
+                isFavorite: false,
+                lastPlayedTime: DateTime.now(),
+                playedCount: 0,
+                source: 'bilibili',
+                bvid: item.bvid,
+                cid: page.cid,
+                pageNumber: page.page,
+              ));
             }
           }
         } catch (e) {
@@ -1530,7 +1565,7 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
       builder: (context, snapshot) {
         final isLocal = snapshot.data?.isLocal ?? false;
         final subtitle = isLocal ? 'Bilibili 本地收藏夹' : 'Bilibili';
-        
+
         return AppleMusicCard(
           title: favorite.title,
           subtitle: subtitle,
@@ -1553,6 +1588,279 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
           title: favorite.title,
         ),
         type: PageTransitionType.slideLeft,
+      ),
+    );
+  }
+
+  /// 根据收藏夹批量下载歌曲
+  Future<void> _confirmAndDownloadFavorites(
+      List<api.BilibiliFavorite> favorites) async {
+    if (favorites.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('当前没有可下载的收藏夹')),
+        );
+      }
+      return;
+    }
+
+    final estimatedCount =
+        favorites.fold<int>(0, (sum, f) => sum + (f.mediaCount));
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('批量下载收藏夹'),
+        content: Text(
+          '将为 ${favorites.length} 个收藏夹'
+          '${estimatedCount > 0 ? '（约 $estimatedCount 首歌曲）' : ''} 添加下载任务。\n'
+          '这可能会消耗较多网络流量和存储空间，是否继续？',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('继续'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final songs = await _collectSongsForFavorites(favorites);
+      if (songs.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('未找到可下载的歌曲')),
+          );
+        }
+        return;
+      }
+
+      final downloadManager = context.read<DownloadManager>();
+      final defaultQualityId =
+          downloadManager.userSettings?.defaultDownloadQuality ??
+              BilibiliAudioQuality.flac.id;
+      final quality = BilibiliAudioQuality.fromId(defaultQualityId);
+
+      await downloadManager.batchDownload(
+        songs: songs,
+        quality: quality,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('已为 ${songs.length} 首歌曲创建下载任务')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('批量下载失败: $e')),
+        );
+      }
+    }
+  }
+
+  /// 页面级更多操作菜单
+  void _showPageMenu() {
+    if (!_isLoggedIn) return;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        final canDownloadAll =
+            _filteredFavorites != null && _filteredFavorites!.isNotEmpty;
+        final inSearchMode = _searchQuery.isNotEmpty;
+
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(
+                  _isSelectionMode
+                      ? Icons.check_box_outline_blank
+                      : Icons.check_box,
+                ),
+                title: Text(
+                  _isSelectionMode ? '退出多选模式' : '多选下载收藏夹内的音乐',
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  if (_isSelectionMode) {
+                    _exitSelectionMode();
+                  } else {
+                    _enterSelectionMode();
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.download_for_offline_outlined),
+                title: const Text('下载当前列表中所有收藏夹'),
+                enabled: canDownloadAll && !inSearchMode,
+                onTap: canDownloadAll && !inSearchMode
+                    ? () {
+                        Navigator.pop(context);
+                        final favorites = List<api.BilibiliFavorite>.from(
+                          _filteredFavorites ?? const [],
+                        );
+                        _confirmAndDownloadFavorites(favorites);
+                      }
+                    : null,
+              ),
+              if (inSearchMode)
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Text(
+                    '当前处于搜索结果视图，批量下载仅在收藏夹列表视图可用。',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.6),
+                    ),
+                  ),
+                ),
+              SizedBox(
+                height: MediaQuery.of(context).padding.bottom + 120,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _enterSelectionMode({api.BilibiliFavorite? initialFavorite}) {
+    if (!_isLoggedIn) return;
+    setState(() {
+      _isSelectionMode = true;
+      _selectedFavoriteIds.clear();
+      if (initialFavorite != null) {
+        _selectedFavoriteIds.add(initialFavorite.id);
+      }
+    });
+  }
+
+  void _exitSelectionMode() {
+    setState(() {
+      _isSelectionMode = false;
+      _selectedFavoriteIds.clear();
+    });
+  }
+
+  void _toggleFavoriteSelection(api.BilibiliFavorite favorite) {
+    if (!_isSelectionMode) {
+      _enterSelectionMode(initialFavorite: favorite);
+      return;
+    }
+    setState(() {
+      if (_selectedFavoriteIds.contains(favorite.id)) {
+        _selectedFavoriteIds.remove(favorite.id);
+      } else {
+        _selectedFavoriteIds.add(favorite.id);
+      }
+    });
+  }
+
+  void _selectAllVisibleFavorites() {
+    final list = _filteredFavorites ?? _favorites ?? [];
+    if (list.isEmpty) return;
+    setState(() {
+      _isSelectionMode = true;
+      _selectedFavoriteIds
+        ..clear()
+        ..addAll(list.map((f) => f.id));
+    });
+  }
+
+  void _clearSelectionOnly() {
+    setState(() {
+      _selectedFavoriteIds.clear();
+    });
+  }
+
+  List<api.BilibiliFavorite> _getSelectedFavorites() {
+    final list = _favorites ?? [];
+    if (_selectedFavoriteIds.isEmpty) return const [];
+    return list.where((f) => _selectedFavoriteIds.contains(f.id)).toList();
+  }
+
+  Future<void> _downloadSelectedFavorites() async {
+    final selected = _getSelectedFavorites();
+    if (selected.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('请先选择要下载的收藏夹')),
+        );
+      }
+      return;
+    }
+    await _confirmAndDownloadFavorites(selected);
+  }
+
+  Widget _buildSelectionBar() {
+    final selectedCount = _selectedFavoriteIds.length;
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Text(
+              '已选 $selectedCount 个收藏夹',
+              style: TextStyle(
+                fontSize: 13,
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withOpacity(0.7),
+              ),
+            ),
+            const Spacer(),
+            TextButton(
+              onPressed: _selectAllVisibleFavorites,
+              child: const Text('全选'),
+            ),
+            TextButton(
+              onPressed:
+                  selectedCount > 0 ? _clearSelectionOnly : null,
+              child: const Text('清空'),
+            ),
+            const SizedBox(width: 4),
+            FilledButton(
+              onPressed:
+                  selectedCount > 0 ? _downloadSelectedFavorites : null,
+              child: const Text('下载所选'),
+            ),
+            const SizedBox(width: 4),
+            TextButton(
+              onPressed: _exitSelectionMode,
+              child: const Text('取消'),
+            ),
+          ],
+        ),
       ),
     );
   }

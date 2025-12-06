@@ -8,6 +8,7 @@ import 'package:motto_music/services/bilibili/api_client.dart';
 import 'package:motto_music/services/bilibili/cookie_manager.dart';
 import 'package:motto_music/services/player_provider.dart';
 import 'package:motto_music/services/cache/page_cache_service.dart';
+import 'package:motto_music/services/bilibili/download_manager.dart';
 import 'package:motto_music/widgets/frosted_container.dart';
 import 'package:motto_music/utils/theme_utils.dart';
 import 'package:motto_music/utils/bilibili_song_utils.dart';
@@ -23,6 +24,7 @@ import 'dart:ui';
 import 'package:motto_music/widgets/apple_music_song_tile.dart';
 import 'package:motto_music/widgets/audio_quality_section.dart';
 import 'package:motto_music/widgets/unified_cover_image.dart';
+import 'package:motto_music/models/bilibili/audio_quality.dart';
 
 /// 收藏夹详情页面
 class FavoriteDetailPage extends StatefulWidget {
@@ -52,6 +54,8 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
   bool _hasMore = true;
   bool _isLocalFavorite = false;
   final Map<String, bool> _favoriteStatusMap = {};
+  bool _isSongSelectionMode = false;
+  final Set<String> _selectedSongKeys = <String>{};
 
   String _favoriteKey(String? bvid, int? cid) =>
       '${bvid ?? 'unknown'}_${cid ?? 0}';
@@ -573,18 +577,20 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
     
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
-    return Container(
-      // 统一的背景色，防止BackdropFilter模糊到不同颜色
-      color: isDark 
-          ? ThemeUtils.backgroundColor(context)
-          : const Color(0xFFFFFFFF),
-      child: CustomScrollView(
-        slivers: [
+    return Stack(
+      children: [
+        Container(
+          // 统一的背景色，防止BackdropFilter模糊到不同颜色
+          color: isDark
+              ? ThemeUtils.backgroundColor(context)
+              : const Color(0xFFFFFFFF),
+          child: CustomScrollView(
+            slivers: [
               // 简洁的头部（移除固定的 AppBar）
               SliverToBoxAdapter(
                 child: _buildFavoriteHeader(),
               ),
-              
+
               // 歌曲列表（添加动画）
               SliverList(
                 delegate: SliverChildBuilderDelegate(
@@ -599,33 +605,66 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
                         child: Center(child: CircularProgressIndicator()),
                       );
                     }
-                    
+
                     if (index >= _videos!.length) return null;
-                    
+
                     final video = _videos![index];
+                    final key = _favoriteKey(video.bvid, video.cid);
+                    final isSelected =
+                        _isSongSelectionMode && _selectedSongKeys.contains(key);
+
+                    final tile = AppleMusicSongTile(
+                      title: video.title,
+                      artist: video.upper?.name,
+                      coverUrl: video.cover,
+                      duration: video.duration != null
+                          ? formatDuration(video.duration!)
+                          : null,
+                      isFavorite: _getSongFavoriteStatus(video),
+                      onTap: () {
+                        if (_isSongSelectionMode) {
+                          _toggleSongSelectionByKey(key);
+                        } else {
+                          _playVideoAndSetPlaylist(video, index);
+                        }
+                      },
+                      onFavoriteTap: () =>
+                          _toggleFavoriteForVideo(video, index),
+                      onMoreTap: _isSongSelectionMode
+                          ? null
+                          : () => _showSongMenu(video, index),
+                      trailing: _isSongSelectionMode
+                          ? GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () => _toggleSongSelectionByKey(key),
+                              child: _buildSongSelectionCheckIcon(isSelected),
+                            )
+                          : null,
+                    );
+
+                    final wrappedTile = _isSongSelectionMode
+                        ? AnimatedOpacity(
+                            opacity: isSelected ? 1.0 : 0.75,
+                            duration: const Duration(milliseconds: 150),
+                            child: tile,
+                          )
+                        : tile;
+
                     return AnimatedListItem(
                       index: index,
                       delay: 33, // 加快1.5倍（50 / 1.5 ≈ 33）
                       child: Column(
                         children: [
-                          AppleMusicSongTile(
-                            title: video.title,
-                            artist: video.upper?.name,
-                            coverUrl: video.cover,
-                            duration: video.duration != null 
-                                ? formatDuration(video.duration!)
-                                : null,
-                            isFavorite: _getSongFavoriteStatus(video),
-                            onTap: () => _playVideoAndSetPlaylist(video, index),
-                            onFavoriteTap: () => _toggleFavoriteForVideo(video, index),
-                            onMoreTap: () => _showSongMenu(video, index),
-                          ),
+                          wrappedTile,
                           // Apple Music 风格分隔线
                           Divider(
                             height: 1,
                             thickness: 0.5,
                             indent: 88, // 左侧缩进（封面宽度 + padding）
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.1),
                           ),
                         ],
                       ),
@@ -634,13 +673,25 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
                   childCount: _videos!.length + (_hasMore ? 1 : 0),
                 ),
               ),
-              
+
               // 底部安全区域（避免被播放器遮挡）
               SliverPadding(
                 padding: EdgeInsets.only(bottom: 180),
               ),
             ],
           ),
+        ),
+        if (_isSongSelectionMode)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 120),
+              child: _buildSongSelectionBar(),
+            ),
+          ),
+      ],
     );
   }
   
@@ -707,18 +758,30 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // 返回按钮
-          Align(
-            alignment: Alignment.centerLeft,
-            child: IconButton(
-              icon: Icon(
-                Icons.arrow_back_ios_new,
-                size: 22,
-                color: isDark ? Colors.white : Colors.black,
+          // 顶部返回 + 更多操作
+          Row(
+            children: [
+              IconButton(
+                icon: Icon(
+                  Icons.arrow_back_ios_new,
+                  size: 22,
+                  color: isDark ? Colors.white : Colors.black,
+                ),
+                onPressed: () => Navigator.of(context).pop(),
+                tooltip: '返回',
               ),
-              onPressed: () => Navigator.of(context).pop(),
-              tooltip: '返回',
-            ),
+              const Spacer(),
+              if (_videos != null && _videos!.isNotEmpty)
+                IconButton(
+                  icon: Icon(
+                    Icons.more_vert,
+                    size: 22,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+                  onPressed: _showSongPageMenu,
+                  tooltip: '更多操作',
+                ),
+            ],
           ),
           
           const SizedBox(height: 16),
@@ -933,6 +996,691 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
     await _playVideoAndSetPlaylist(_videos![0], 0, shuffle: shuffle);
   }
 
+  /// 构建多选勾选图标
+  Widget _buildSongSelectionCheckIcon(bool isSelected) {
+    final theme = Theme.of(context);
+    if (isSelected) {
+      return Container(
+        width: 20,
+        height: 20,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.primary,
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(
+          Icons.check,
+          size: 14,
+          color: Colors.white,
+        ),
+      );
+    }
+
+    return Container(
+      width: 20,
+      height: 20,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: theme.colorScheme.outline,
+          width: 1.5,
+        ),
+      ),
+    );
+  }
+
+  /// 页面级更多操作菜单（针对当前收藏夹歌曲）
+  void _showSongPageMenu() {
+    if (_videos == null || _videos!.isEmpty) {
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        final canDownloadAll = _videos != null && _videos!.isNotEmpty;
+        final screenHeight = MediaQuery.of(context).size.height;
+        final extraRatio = 120 / screenHeight;
+        final initialSize = (0.3 + extraRatio).clamp(0.2, 0.9);
+        final info = _favoriteInfo;
+        return DraggableScrollableSheet(
+          initialChildSize: initialSize,
+          minChildSize: 0.2,
+          maxChildSize: 0.7,
+          builder: (context, scrollController) => ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.black.withOpacity(0.3)
+                      : Colors.white.withOpacity(0.5),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(28)),
+                  border: Border.all(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white.withOpacity(0.2)
+                        : Colors.white.withOpacity(0.6),
+                    width: 1.5,
+                  ),
+                ),
+                child: ListView(
+                  controller: scrollController,
+                  children: [
+                    // 顶部拖动把手
+                    Center(
+                      child: Container(
+                        margin:
+                            const EdgeInsets.only(top: 12, bottom: 8),
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color:
+                              Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white.withOpacity(0.2)
+                                  : Colors.black.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(2.5),
+                        ),
+                      ),
+                    ),
+
+                    // 收藏夹信息（小一号卡片）
+                    if (info != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        child: Row(
+                          children: [
+                            UnifiedCoverImage(
+                              coverPath: info.cover,
+                              width: 48,
+                              height: 48,
+                              borderRadius: 8,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    info.title,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '共 ${info.mediaCount} 个条目',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withOpacity(0.6),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    const Divider(height: 1),
+
+                    ListTile(
+                      leading: Icon(
+                        _isSongSelectionMode
+                            ? Icons.check_box_outline_blank
+                            : Icons.check_box,
+                      ),
+                      title: Text(
+                        _isSongSelectionMode ? '退出多选模式' : '多选下载歌曲',
+                      ),
+                      onTap: () {
+                        Navigator.pop(context);
+                        if (_isSongSelectionMode) {
+                          _exitSongSelectionMode();
+                        } else {
+                          _enterSongSelectionMode();
+                        }
+                      },
+                    ),
+                    ListTile(
+                      leading:
+                          const Icon(Icons.download_for_offline_outlined),
+                      title: const Text('下载本收藏夹全部歌曲'),
+                      enabled: canDownloadAll,
+                      onTap: canDownloadAll
+                          ? () {
+                              Navigator.pop(context);
+                              _downloadAllSongs();
+                            }
+                          : null,
+                    ),
+
+                    SizedBox(
+                      height:
+                          MediaQuery.of(context).padding.bottom + 120,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _enterSongSelectionMode() {
+    setState(() {
+      _isSongSelectionMode = true;
+      _selectedSongKeys.clear();
+    });
+  }
+
+  void _exitSongSelectionMode() {
+    setState(() {
+      _isSongSelectionMode = false;
+      _selectedSongKeys.clear();
+    });
+  }
+
+  void _toggleSongSelectionByKey(String key) {
+    setState(() {
+      if (_selectedSongKeys.contains(key)) {
+        _selectedSongKeys.remove(key);
+      } else {
+        _selectedSongKeys.add(key);
+      }
+    });
+  }
+
+  void _selectAllSongs() {
+    final videos = _videos ?? [];
+    if (videos.isEmpty) return;
+    setState(() {
+      _isSongSelectionMode = true;
+      _selectedSongKeys
+        ..clear()
+        ..addAll(videos.map((v) => _favoriteKey(v.bvid, v.cid)));
+    });
+  }
+
+  void _clearSongSelectionOnly() {
+    setState(() {
+      _selectedSongKeys.clear();
+    });
+  }
+
+  List<BilibiliFavoriteItem> _getSelectedVideoItems() {
+    final videos = _videos ?? [];
+    if (_selectedSongKeys.isEmpty) return const [];
+    return videos
+        .where((v) => _selectedSongKeys.contains(_favoriteKey(v.bvid, v.cid)))
+        .toList();
+  }
+
+  Future<List<Song>> _buildSongsForDownload(
+    List<BilibiliFavoriteItem> items,
+  ) async {
+    final songs = <Song>[];
+    final cidCache = <String, int>{};
+
+    for (var i = 0; i < items.length; i++) {
+      final item = items[i];
+      final bvid = item.bvid.trim();
+      if (bvid.isEmpty) continue;
+
+      int? cid = item.cid;
+
+      // 对于缺少 cid 的条目，尝试通过 API 获取
+      if (cid == null || cid <= 0) {
+        cid = cidCache[bvid];
+
+        if (cid == null) {
+          try {
+            final pages = await _apiService.getVideoPages(bvid);
+            if (pages.isNotEmpty) {
+              cid = pages.first.cid;
+            }
+          } catch (_) {
+            // 忽略网络错误，继续尝试下一步
+          }
+
+          // 兜底再尝试从视频详情获取
+          if (cid == null || cid <= 0) {
+            try {
+              final detail = await _apiService.getVideoDetails(bvid);
+              cid = detail.cid;
+            } catch (_) {
+              // 依然失败则放弃该条目
+            }
+          }
+
+          if (cid != null && cid > 0) {
+            cidCache[bvid] = cid;
+          }
+        }
+      }
+
+      if (cid == null || cid <= 0) {
+        // 仍然拿不到有效 cid，则无法下载，跳过
+        continue;
+      }
+
+      final key = _favoriteKey(bvid, cid);
+      final isFavorite = _favoriteStatusMap[key] ?? false;
+
+      songs.add(
+        Song(
+          id: -cid, // 负数ID避免与数据库冲突
+          title: item.title,
+          artist: item.upper?.name,
+          album: null,
+          filePath: buildBilibiliFilePath(
+            bvid: bvid,
+            cid: cid,
+          ),
+          lyrics: null,
+          bitrate: null,
+          sampleRate: null,
+          duration: item.duration,
+          albumArtPath: item.cover,
+          dateAdded: DateTime.now(),
+          isFavorite: isFavorite,
+          lastPlayedTime: DateTime.now(),
+          playedCount: 0,
+          source: 'bilibili',
+          bvid: bvid,
+          cid: cid,
+          pageNumber: null,
+          bilibiliVideoId: item.id,
+        ),
+      );
+    }
+
+    return songs;
+  }
+
+  Future<void> _downloadAllSongs() async {
+    final videos = _videos ?? [];
+    final songs = await _buildSongsForDownload(videos);
+
+    if (songs.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('未找到可下载的歌曲')),
+        );
+      }
+      return;
+    }
+
+    final confirmed = await _showDownloadConfirmSheet(
+      scopeDescription: '本收藏夹全部歌曲',
+      songCount: songs.length,
+    );
+    if (confirmed != true) return;
+
+    await _performBatchDownload(songs);
+  }
+
+  Future<void> _downloadSelectedSongs() async {
+    final selectedVideos = _getSelectedVideoItems();
+    if (selectedVideos.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('请先选择要下载的歌曲')),
+        );
+      }
+      return;
+    }
+    final songs = await _buildSongsForDownload(selectedVideos);
+
+    if (songs.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('未找到可下载的歌曲')),
+        );
+      }
+      return;
+    }
+
+    final confirmed = await _showDownloadConfirmSheet(
+      scopeDescription: '所选歌曲',
+      songCount: songs.length,
+    );
+    if (confirmed != true) return;
+
+    await _performBatchDownload(songs);
+    _exitSongSelectionMode();
+  }
+
+  Future<bool?> _showDownloadConfirmSheet({
+    required String scopeDescription,
+    required int songCount,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.28,
+          minChildSize: 0.22,
+          maxChildSize: 0.5,
+          builder: (context, scrollController) {
+            return ClipRRect(
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(28)),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.black.withOpacity(0.3)
+                        : Colors.white.withOpacity(0.5),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(28),
+                    ),
+                    border: Border.all(
+                      color: isDark
+                          ? Colors.white.withOpacity(0.2)
+                          : Colors.white.withOpacity(0.6),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: ListView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                    children: [
+                      Center(
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? Colors.white.withOpacity(0.2)
+                                : Colors.black.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(2.5),
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '批量下载',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '将为 $scopeDescription 添加 $songCount 首歌曲的下载任务。\\n'
+                        '这可能会消耗较多网络流量和存储空间，是否继续？',
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodyMedium
+                            ?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.75),
+                            ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('取消'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: FilledButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text('继续'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(
+                        height:
+                            MediaQuery.of(context).padding.bottom + 120,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _performBatchDownload(List<Song> songs) async {
+    try {
+      final downloadManager = context.read<DownloadManager>();
+      final defaultQualityId =
+          downloadManager.userSettings?.defaultDownloadQuality ??
+              BilibiliAudioQuality.flac.id;
+      final quality = BilibiliAudioQuality.fromId(defaultQualityId);
+
+      await downloadManager.batchDownload(
+        songs: songs,
+        quality: quality,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('已为 ${songs.length} 首歌曲创建下载任务')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('批量下载失败: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _confirmAndDownloadSongs(
+    List<Song> songs, {
+    required String scopeDescription,
+  }) async {
+    if (songs.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('未找到可下载的歌曲')),
+        );
+      }
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('批量下载'),
+        content: Text(
+          '将为 $scopeDescription 添加 ${songs.length} 首歌曲的下载任务。\n'
+          '这可能会消耗较多网络流量和存储空间，是否继续？',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('继续'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final downloadManager = context.read<DownloadManager>();
+      final defaultQualityId =
+          downloadManager.userSettings?.defaultDownloadQuality ??
+              BilibiliAudioQuality.flac.id;
+      final quality = BilibiliAudioQuality.fromId(defaultQualityId);
+
+      await downloadManager.batchDownload(
+        songs: songs,
+        quality: quality,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('已为 ${songs.length} 首歌曲创建下载任务')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('批量下载失败: $e')),
+        );
+      }
+    }
+  }
+
+  Widget _buildSongSelectionBar() {
+    final selectedCount = _selectedSongKeys.length;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.black.withOpacity(0.45)
+                    : Colors.white.withOpacity(0.85),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.18)
+                      : Colors.black.withOpacity(0.06),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.25),
+                    blurRadius: 18,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '已选 $selectedCount 首歌曲',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: theme.colorScheme.onSurface.withOpacity(0.8),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: _selectAllSongs,
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: const Size(0, 36),
+                          ),
+                          child: const Text(
+                            '全选',
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: TextButton(
+                          onPressed: selectedCount > 0
+                              ? _clearSongSelectionOnly
+                              : null,
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: const Size(0, 36),
+                          ),
+                          child: const Text(
+                            '清空',
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: selectedCount > 0
+                              ? _downloadSelectedSongs
+                              : null,
+                          style: FilledButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: const Size(0, 36),
+                          ),
+                          child: const Text(
+                            '下载所选',
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: TextButton(
+                          onPressed: _exitSongSelectionMode,
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: const Size(0, 36),
+                          ),
+                          child: const Text(
+                            '取消',
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   /// 显示歌曲菜单
   Future<void> _showSongMenu(BilibiliFavoriteItem video, int index) async {
     // 获取对应的Song对象
@@ -1077,16 +1825,18 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
                   const Divider(height: 1),
 
                   // ========== 原有菜单项 ==========
-                  if (_isLocalFavorite) ...[
-                    ListTile(
-                      leading: const Icon(Icons.remove_circle_outline),
-                      title: const Text('从收藏夹移除'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        _removeFromFavorite(currentSong);
-                      },
-                    ),
-                  ],
+                  ListTile(
+                    leading: const Icon(Icons.remove_circle_outline),
+                    title: const Text('从收藏夹移除'),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      if (_isLocalFavorite) {
+                        await _removeFromFavorite(currentSong);
+                      } else {
+                        await _removeFromOnlineFavorite(video);
+                      }
+                    },
+                  ),
                   ListTile(
                     leading: Icon(
                       currentSong.isFavorite ? Icons.favorite : Icons.favorite_border,
@@ -1144,6 +1894,31 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
       // 重新加载
       await _loadVideos();
       
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('已从收藏夹移除')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('移除失败: $e')),
+        );
+      }
+    }
+  }
+
+  /// 从在线收藏夹移除（同步到 Bilibili）
+  Future<void> _removeFromOnlineFavorite(BilibiliFavoriteItem item) async {
+    try {
+      await _apiService.removeFromFavorite(
+        mediaId: item.id,
+        favoriteId: widget.favoriteId,
+      );
+
+      // 重新加载当前收藏夹内容，确保与远端同步
+      await _loadVideos();
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('已从收藏夹移除')),

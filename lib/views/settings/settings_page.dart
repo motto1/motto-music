@@ -1,4 +1,4 @@
-// theme_provider.dart - 主题管理
+﻿// theme_provider.dart - 主题管理
 import 'package:window_manager/window_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
@@ -196,45 +196,6 @@ class SettingsPageState extends State<SettingsPage> with ShowAwarePage {
               ),
               child: Column(
                 children: [
-                  // 音量控制
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                    child: Row(
-                      children: [
-                        Icon(
-                          playerProvider.volume == 0
-                              ? CupertinoIcons.volume_off
-                              : CupertinoIcons.volume_up,
-                          color: Colors.grey[600],
-                          size: 20,
-                        ),
-                        Expanded(
-                          child: Slider(
-                            value: playerProvider.volume,
-                            min: 0,
-                            max: 1.5,
-                            activeColor: Colors.red,
-                            onChanged: (value) {
-                              playerProvider.setVolume(value);
-                            },
-                          ),
-                        ),
-                        SizedBox(
-                          width: 45,
-                          child: Text(
-                            '${(playerProvider.volume * 100).toInt()}%',
-                            textAlign: TextAlign.right,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: isDark ? Colors.white.withOpacity(0.7) : Colors.grey[700],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Divider(height: 1, indent: 16, endIndent: 0),
-
                   ListTile(
                     title: const Text('音效设置', style: TextStyle(fontWeight: FontWeight.w400)),
                     subtitle: Text(
@@ -444,7 +405,7 @@ class SettingsPageState extends State<SettingsPage> with ShowAwarePage {
               ListTile(
                 title: const Text('关于应用', style: TextStyle(fontWeight: FontWeight.w400)),
                 subtitle: Text(
-                  '版本 0.1.0-beta',
+                  '版本 0.1.4',
                   style: TextStyle(
                     fontSize: 13,
                     color: isDark ? Colors.white.withOpacity(0.5) : Colors.grey[600],
@@ -728,7 +689,7 @@ class SettingsPageState extends State<SettingsPage> with ShowAwarePage {
                                 ),
                                 SizedBox(height: 8),
                                 Text(
-                                  '版本: 0.1.0-beta',
+                                  '版本: 0.1.4',
                                   style: TextStyle(fontSize: 14, color: Colors.grey),
                                 ),
                                 SizedBox(height: 4),

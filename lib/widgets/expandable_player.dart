@@ -28,7 +28,7 @@ class ExpandablePlayer extends StatefulWidget {
   /// 高度变化回调
   final void Function(double percentage)? onHeightChange;
   
-  /// 动画时长（默认 800ms，Apple Music 风格）
+  /// 动画时长（默认 600ms，Apple Music 风格）
   final Duration duration;
   
   /// 动画曲线（默认 easeOutExpo，流畅自然）
@@ -41,7 +41,7 @@ class ExpandablePlayer extends StatefulWidget {
     required this.builder,
     required this.bgColor,
     this.onHeightChange,
-    this.duration = const Duration(milliseconds: 800),
+    this.duration = const Duration(milliseconds: 600),
     this.curve = Curves.easeOutExpo,
   });
 

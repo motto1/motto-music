@@ -55,7 +55,7 @@ class LyricsNotificationService {
     List<Map<String, dynamic>>? charTimestamps,
   }) async {
     if (!Platform.isAndroid) return;
-    if (!_notificationEnabled && !_lockScreenEnabled) return;
+    if (!_notificationEnabled) return;
 
     try {
       await _channel.invokeMethod('updateLyrics', {
@@ -75,7 +75,7 @@ class LyricsNotificationService {
   /// [positionMs] 当前播放位置（毫秒）
   Future<void> updatePosition(int positionMs) async {
     if (!Platform.isAndroid) return;
-    if (!_notificationEnabled && !_lockScreenEnabled) return;
+    if (!_notificationEnabled) return;
 
     try {
       await _channel.invokeMethod('updatePosition', {

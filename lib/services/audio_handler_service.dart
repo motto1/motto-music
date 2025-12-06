@@ -7,15 +7,22 @@
 /// - vivo 等厂商系统兼容性修复
 /// - 保持与 PlayerProvider 的接口兼容
 
+import 'dart:async';
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:just_audio/just_audio.dart';
-import 'dart:async';
 import '../core/basic_audio_handler.dart';
 import '../models/bilibili/loudness_info.dart';
 import '../storage/player_state_storage.dart';
 import 'audio_source_registry.dart';
 import 'lyrics_notification_service.dart';
+
+/// 播放失败回调，用于将底层播放器错误上报到上层（如 PlayerProvider）
+typedef PlaybackErrorCallback = void Function(
+  MediaItem mediaItem,
+  Object error,
+  StackTrace stackTrace,
+);
 
 /// TrackItem - 音频项包装类
 /// 实现 Playable 接口以兼容 BasicAudioHandler
@@ -88,6 +95,9 @@ class MottoAudioHandler extends BasicAudioHandler<TrackItem> {
   // ========== 懒加载解析回调 ==========
   LazyResolveCallback? onLazyResolve;
 
+  // ========== 播放失败回调（供上层状态管理使用）==========
+  PlaybackErrorCallback? onPlaybackError;
+
   // ========== 均衡器访问器 ==========
   AndroidEqualizer get equalizer => _equalizer ??= AndroidEqualizer();
 
@@ -102,6 +112,21 @@ class MottoAudioHandler extends BasicAudioHandler<TrackItem> {
       print('[AudioHandler] 🔄 播放状态变化: ${isPlaying.value}');
       _broadcastState(currentIndex.value);
     });
+  }
+
+  @override
+  Future<void> configureEnginePlaylist({
+    required List<TrackItem> queue,
+    required int initialIndex,
+    required bool gaplessEnabled,
+  }) async {
+    // 当前版本不启用底层引擎播放列表，仅记录调用信息，保留扩展点。
+    enginePlaylistEnabled = false;
+    print(
+      '[AudioHandler] 🎛️ configureEnginePlaylist: queue=${queue.length}, '
+      'initial=$initialIndex, gaplessEnabled=$gaplessEnabled '
+      '(当前实现未启用底层播放列表)',
+    );
   }
 
   // ========== 覆盖通知栏位置更新回调 ==========
@@ -186,11 +211,31 @@ class MottoAudioHandler extends BasicAudioHandler<TrackItem> {
   Future<void> pause() async {
     print('[AudioHandler] ⏸️ pause() 调用 (播放中: ${isPlaying.value})');
 
+    final wasPlaying = isPlaying.value;
+
     // ⭐ namida 防抖设置
     _lastPauseAt = DateTime.now();
     _suppressNextPlay = true;
 
+    // 立即更新本地播放状态，提升按钮响应速度
+    if (wasPlaying) {
+      isPlaying.value = false;
+      _broadcastState(currentIndex.value);
+    }
+
     try {
+      // 应用淡出效果（针对用户主动暂停）
+      try {
+        final storage = await PlayerStateStorage.getInstance();
+        final fadeOutMs = storage.fadeOutDurationMs;
+        if (fadeOutMs > 0 && wasPlaying) {
+          print('[AudioHandler] 🎚️ pause()中的淡出设置: ${fadeOutMs}ms');
+          await fadeOut(fadeOutMs);
+        }
+      } catch (e) {
+        print('[AudioHandler] ⚠️ pause() 获取淡出配置失败: $e');
+      }
+
       await super.pause();
       // ⚠️ 关键：不调用 setActive(false)，避免 vivo 系统异常回调
       print('[AudioHandler] ✅ pause() 执行完成');
@@ -202,6 +247,27 @@ class MottoAudioHandler extends BasicAudioHandler<TrackItem> {
   @override
   Future<void> stop() async {
     print('[AudioHandler] ⏹️ stop() 调用');
+
+    final wasPlaying = isPlaying.value;
+
+    // 立即更新本地播放状态，提升按钮响应速度
+    if (wasPlaying) {
+      isPlaying.value = false;
+      _broadcastState(currentIndex.value);
+    }
+
+    // 停止播放前尝试根据设置做一次淡出
+    try {
+      final storage = await PlayerStateStorage.getInstance();
+      final fadeOutMs = storage.fadeOutDurationMs;
+      if (fadeOutMs > 0 && wasPlaying) {
+        print('[AudioHandler] 🎚️ stop()中的淡出设置: ${fadeOutMs}ms');
+        await fadeOut(fadeOutMs);
+      }
+    } catch (e) {
+      print('[AudioHandler] ⚠️ stop() 获取淡出配置失败: $e');
+    }
+
     await super.stop();
     await _audioSession?.setActive(false);
   }
@@ -219,7 +285,8 @@ class MottoAudioHandler extends BasicAudioHandler<TrackItem> {
 
     try {
       String? audioUrl = item.audioUrl;
-      Map<String, String>? headers = item.mediaItem.extras?['headers'] as Map<String, String>?;
+      Map<String, String>? headers =
+          item.mediaItem.extras?['headers'] as Map<String, String>?;
       bool isFile = item.isFile;
 
       // ⭐ 懒加载处理：如果需要解析，调用回调获取音频源
@@ -248,6 +315,26 @@ class MottoAudioHandler extends BasicAudioHandler<TrackItem> {
         }
       }
 
+      // ⭐ LockCachingAudioSource 兼容处理：
+      // 懒加载场景下，_resolveBilibiliAudioSource 会在 AudioSourceRegistry 中注册
+      // 一个 LockCachingAudioSource，并返回其 ID（如 bilibili_BV..._cid_quality）。
+      // 若此时 TrackItem.audioSource 仍为空，则优先尝试从注册表取回真实音源，
+      // 避免将该 ID 误当作本地文件路径或普通 URL 交给 ExoPlayer。
+      AudioVideoSource? effectiveAudioSource = item.audioSource;
+      if (effectiveAudioSource == null && audioUrl != null) {
+        final lockCachingSource = AudioSourceRegistry.take(audioUrl);
+        if (lockCachingSource != null) {
+          print(
+            '[AudioHandler] 🎧 检测到 LockCachingAudioSource 标识，'
+            '从注册表接管为自定义音源: $audioUrl',
+          );
+          effectiveAudioSource = lockCachingSource;
+          // 此时 audioUrl 只是内部标识，不应再作为 URL 使用
+          audioUrl = null;
+          isFile = false;
+        }
+      }
+
       if (headers != null) {
         print('[AudioHandler] 🔑 提取到 headers: ${headers.keys.join(", ")}');
       }
@@ -270,15 +357,25 @@ class MottoAudioHandler extends BasicAudioHandler<TrackItem> {
         setLoudnessGain(1.0);
       }
 
-      // 设置音频源（使用 URL 字符串）
-      final duration = await setSource(
-        audioUrl,
+      // 设置音频源（使用 URL 字符串或自定义音频源），带有限次重试
+      final duration = await _setSourceWithRetry(
         item: item,
         index: index,
+        audioUrl: audioUrl,
         isFile: isFile,
         headers: headers,
-        audioSource: item.audioSource,
+        audioSource: effectiveAudioSource,
       );
+
+      // 如果多次重试后仍然无法加载音源，视为当前曲目不可播放，直接跳过
+      if (duration == null) {
+        print(
+          '[AudioHandler] ❌ 多次重试后仍无法设置音频源，跳过此曲目: '
+          '${item.mediaItem.title}',
+        );
+        skipItem();
+        return;
+      }
 
       // 更新媒体信息到通知栏
       mediaItem.add(item.mediaItem);
@@ -293,11 +390,27 @@ class MottoAudioHandler extends BasicAudioHandler<TrackItem> {
         await player.play();
         print('[AudioHandler] ✅ player.play() 完成');
 
-        // 应用淡入效果
+        // 应用淡入效果（根据 Gapless 设置决定切歌时淡入策略）
         final storage = await PlayerStateStorage.getInstance();
         final fadeInMs = storage.fadeInDurationMs;
-        print('[AudioHandler] 🎚️ 淡入设置: ${fadeInMs}ms');
-        if (fadeInMs > 0) {
+        final gaplessEnabled = storage.gaplessEnabled;
+        print(
+          '[AudioHandler] 🎚️ 淡入设置: ${fadeInMs}ms, gaplessEnabled: $gaplessEnabled',
+        );
+
+        if (gaplessEnabled) {
+          // Gapless 模式下：使用极短淡入以消除爆音，同时尽量减少感知间隙
+          final microFadeMs = fadeInMs.clamp(0, 100);
+          if (microFadeMs > 0) {
+            print(
+              '[AudioHandler] ⏭️ Gapless 已启用，使用微淡入: ${microFadeMs}ms',
+            );
+            await fadeIn(microFadeMs);
+          } else {
+            print('[AudioHandler] ⏭️ Gapless 已启用，但淡入时长为0，跳过淡入');
+          }
+        } else if (fadeInMs > 0) {
+          // 非 Gapless 模式：使用用户配置的完整淡入
           await fadeIn(fadeInMs);
         } else {
           print('[AudioHandler] ⏭️ 淡入已禁用（时长为0）');
@@ -311,6 +424,114 @@ class MottoAudioHandler extends BasicAudioHandler<TrackItem> {
       print('[AudioHandler] ❌ 播放失败: $e\n$stack');
       // 播放失败时跳过
       skipItem();
+    }
+  }
+
+  /// 带有限次重试的音源设置逻辑
+  ///
+  /// - 避免单次网络抖动导致直接失败
+  /// - 总重试次数和间隔保持较小，保证队列不会被长时间阻塞
+  Future<Duration?> _setSourceWithRetry({
+    required TrackItem item,
+    required int index,
+    required String? audioUrl,
+    required bool isFile,
+    required Map<String, String>? headers,
+    required AudioVideoSource? audioSource,
+  }) async {
+    const maxAttempts = 3;
+
+    Duration? duration;
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      duration = await setSource(
+        audioUrl,
+        item: item,
+        index: index,
+        isFile: isFile,
+        headers: headers,
+        audioSource: audioSource,
+      );
+
+      if (duration != null) {
+        if (attempt > 1) {
+          print(
+            '[AudioHandler] ✅ 设置音源在第 $attempt 次尝试后成功: '
+            '${item.mediaItem.title}',
+          );
+        }
+        return duration;
+      }
+
+      if (attempt < maxAttempts) {
+        // 线性退避：200ms, 400ms，总重试等待约 600ms
+        final delayMs = 200 * attempt;
+        print(
+          '[AudioHandler] ⏳ 设置音源失败，第 $attempt 次尝试后将在 '
+          '${delayMs}ms 后重试: ${item.mediaItem.title}',
+        );
+        await Future.delayed(Duration(milliseconds: delayMs));
+      }
+    }
+
+    print(
+      '[AudioHandler] ❌ 设置音源在重试 $maxAttempts 次后仍失败: '
+      '${item.mediaItem.title}',
+    );
+    return null;
+  }
+
+  /// 调整底层播放队列顺序（与 UI 拖动保持一致）
+  ///
+  /// 仅在当前队列不为空时生效，不会打断当前播放的歌曲，
+  /// 只更新后续播放顺序以及 currentIndex。
+  ///
+  /// 参数使用 ReorderableListView 的原始索引，内部会做标准调整。
+  Future<void> reorderQueue(int oldIndex, int newIndex) async {
+    final queue = currentQueue.queueRx.value;
+    if (queue.isEmpty) return;
+    if (oldIndex < 0 || oldIndex >= queue.length) return;
+    // ReorderableListView 允许 newIndex == length，表示插入到末尾之后
+    if (newIndex < 0 || newIndex > queue.length) return;
+    if (oldIndex == newIndex) return;
+
+    // ReorderableListView 标准调整逻辑
+    if (newIndex > oldIndex) {
+      newIndex -= 1;
+    }
+
+    print('[AudioHandler] 🔄 reorderQueue: $oldIndex -> $newIndex');
+
+    final updatedQueue = List<TrackItem>.from(queue);
+    final movedItem = updatedQueue.removeAt(oldIndex);
+    updatedQueue.insert(newIndex, movedItem);
+    currentQueue.queueRx.value = updatedQueue;
+
+    // 保持当前正在播放的条目不变，只更新其索引
+    final current = currentItem.value;
+    if (current != null) {
+      final newCurrentIndex = updatedQueue.indexWhere((t) => t.id == current.id);
+      if (newCurrentIndex != -1) {
+        currentIndex.value = newCurrentIndex;
+        print('[AudioHandler] 📍 当前播放索引更新: $newCurrentIndex');
+      }
+    }
+
+    // 打印队列顺序用于调试
+    print('[AudioHandler] 📋 新队列顺序: ${updatedQueue.map((t) => t.mediaItem.title).toList()}');
+
+    await onQueueChanged();
+  }
+
+  @override
+  void onSourceError(
+    TrackItem? item,
+    int index,
+    Object error,
+    StackTrace stackTrace,
+  ) {
+    final media = item?.mediaItem;
+    if (media != null && onPlaybackError != null) {
+      onPlaybackError!(media, error, stackTrace);
     }
   }
 

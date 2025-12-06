@@ -348,6 +348,24 @@ class BilibiliApiService {
     );
   }
 
+  /// 从收藏夹移除视频
+  ///
+  /// [mediaId] 视频的 AV 号
+  /// [favoriteId] 收藏夹 ID
+  Future<void> removeFromFavorite({
+    required int mediaId,
+    required int favoriteId,
+  }) async {
+    await _client.postWithCsrf(
+      '/x/v3/fav/resource/deal',
+      data: {
+        'rid': mediaId.toString(),
+        'type': '2',
+        'del_media_ids': favoriteId.toString(),
+      },
+    );
+  }
+
   /// 创建新收藏夹
   /// 
   /// [title] 收藏夹标题

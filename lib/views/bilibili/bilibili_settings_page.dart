@@ -7,6 +7,10 @@ import 'package:motto_music/models/bilibili/audio_quality.dart';
 import 'package:motto_music/widgets/frosted_page_header.dart';
 import 'package:motto_music/utils/theme_utils.dart';
 import 'package:open_filex/open_filex.dart';
+import 'dart:ui';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 
 /// Bilibili 设置页面
 ///
@@ -41,7 +45,7 @@ class BilibiliSettingsPage extends StatelessWidget {
           ),
 
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 24, 16, 120),
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 150),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
                 _buildQualitySection(isDark),
@@ -306,6 +310,44 @@ class BilibiliSettingsPage extends StatelessWidget {
                             downloadManager.setAutoCacheSizeGB(value.toInt());
                           },
                         ),
+                        FutureBuilder<String>(
+                          future: _getCacheSize(downloadManager),
+                          builder: (context, snapshot) {
+                            final cacheSize = snapshot.data ?? '计算中...';
+                            return Text(
+                              '已使用: $cacheSize',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isDark ? Colors.white.withOpacity(0.5) : Colors.grey[600],
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  Divider(height: 1, indent: 16, endIndent: 0),
+
+                  ListTile(
+                    title: const Text('缓存管理', style: TextStyle(fontWeight: FontWeight.w400)),
+                    subtitle: Text(
+                      '打开缓存目录或清空缓存',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? Colors.white.withOpacity(0.5) : Colors.grey[600],
+                      ),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: Icon(CupertinoIcons.folder, size: 18, color: Colors.grey[400]),
+                          onPressed: () => _openCacheDirectory(context, downloadManager),
+                        ),
+                        IconButton(
+                          icon: Icon(CupertinoIcons.trash, size: 18, color: Colors.red),
+                          onPressed: () => _clearCache(context, downloadManager),
+                        ),
                       ],
                     ),
                   ),
@@ -353,6 +395,7 @@ class BilibiliSettingsPage extends StatelessWidget {
         ),
 
         Container(
+          width: double.infinity,
           decoration: BoxDecoration(
             color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
             borderRadius: BorderRadius.circular(10),
@@ -401,27 +444,74 @@ class BilibiliSettingsPage extends StatelessWidget {
     required BilibiliAudioQuality currentQuality,
     required Function(BilibiliAudioQuality) onSelected,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: BilibiliAudioQuality.values.map((quality) {
-            final isSelected = quality == currentQuality;
-            return ListTile(
-              title: Text(quality.name),
-              subtitle: Text('${quality.description} · ${quality.estimatedSize}'),
-              trailing: isSelected
-                  ? Icon(CupertinoIcons.checkmark_circle_fill, color: Colors.red)
-                  : null,
-              selected: isSelected,
-              onTap: () {
-                onSelected(quality);
-                Navigator.pop(context);
-              },
-            );
-          }).toList(),
+      barrierColor: Colors.transparent,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.only(left: 24, right: 24, top: 24, bottom: 120),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isDark
+                      ? [Colors.white.withOpacity(0.15), Colors.white.withOpacity(0.05)]
+                      : [Colors.white.withOpacity(0.9), Colors.white.withOpacity(0.7)],
+                ),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.25)
+                      : Colors.white.withOpacity(0.8),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
+                    blurRadius: 20,
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                  ),
+                  ...BilibiliAudioQuality.values.map((quality) {
+                    final isSelected = quality == currentQuality;
+                    return ListTile(
+                      title: Text(quality.name),
+                      subtitle: Text('${quality.description} · ${quality.estimatedSize}'),
+                      trailing: isSelected
+                          ? Icon(CupertinoIcons.checkmark_circle_fill, color: Colors.red)
+                          : null,
+                      selected: isSelected,
+                      onTap: () {
+                        onSelected(quality);
+                        Navigator.pop(context);
+                      },
+                    );
+                  }).toList(),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -473,6 +563,96 @@ class BilibiliSettingsPage extends StatelessWidget {
       if (!context.mounted) return;
       messenger.showSnackBar(
         SnackBar(content: Text('无法打开目录: $e')),
+      );
+    }
+  }
+
+  /// 获取缓存大小
+  static Future<String> _getCacheSize(DownloadManager downloadManager) async {
+    try {
+      final appCacheDir = await getApplicationCacheDirectory();
+      final cacheDir = p.join(appCacheDir.path, 'bilibili_auto');
+      final dir = Directory(cacheDir);
+      if (!await dir.exists()) return '0 MB';
+      
+      int totalSize = 0;
+      await for (final entity in dir.list(recursive: true)) {
+        if (entity is File) {
+          totalSize += await entity.length();
+        }
+      }
+      
+      final sizeInMB = totalSize / (1024 * 1024);
+      if (sizeInMB < 1024) {
+        return '${sizeInMB.toStringAsFixed(2)} MB';
+      } else {
+        return '${(sizeInMB / 1024).toStringAsFixed(2)} GB';
+      }
+    } catch (e) {
+      return '计算失败';
+    }
+  }
+
+  /// 打开缓存目录
+  static Future<void> _openCacheDirectory(BuildContext context, DownloadManager downloadManager) async {
+    try {
+      final appCacheDir = await getApplicationCacheDirectory();
+      final cacheDir = p.join(appCacheDir.path, 'bilibili_auto');
+      final result = await OpenFilex.open(cacheDir);
+      
+      if (!context.mounted) return;
+      if (result.type != ResultType.done) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('无法打开缓存目录: ${result.message}')),
+        );
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('无法打开缓存目录: $e')),
+      );
+    }
+  }
+
+  /// 清空缓存
+  static Future<void> _clearCache(BuildContext context, DownloadManager downloadManager) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('清空缓存'),
+        content: const Text('确定要清空所有自动缓存吗？此操作不可恢复。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('确定', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      final appCacheDir = await getApplicationCacheDirectory();
+      final cacheDir = p.join(appCacheDir.path, 'bilibili_auto');
+      final dir = Directory(cacheDir);
+      if (await dir.exists()) {
+        await dir.delete(recursive: true);
+        await dir.create();
+      }
+      
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('缓存已清空')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('清空缓存失败: $e')),
       );
     }
   }

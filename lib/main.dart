@@ -198,18 +198,12 @@ class _HomePageWrapperState extends State<HomePageWrapper> {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     final navBarHeight = 44 + bottomPadding; // 导航栏总高度（包括安全区域，44 内容高度）
     
-    debugPrint('========== 插入 Overlay 开始 ==========');
-    debugPrint('使用根 Navigator Overlay: ${overlay.hashCode}');
-    debugPrint('当前 Context: ${context.widget.runtimeType}');
-    debugPrint('导航栏高度: $navBarHeight');
-    
     // 初始化播放器底部偏移量（迷你模式时在导航栏上方）
     _playerBottomNotifier.value = 0.0; // 改为0，导航栏的偏移由自身控制
     
     // 插入底部导航栏（最底层，使用 ValueListenableBuilder 实现动态偏移）
     _navBarOverlay = OverlayEntry(
       builder: (context) {
-        debugPrint('[NavBar Overlay] 正在构建，Context: ${context.widget.runtimeType}');
         return ValueListenableBuilder<double>(
           valueListenable: _playerBottomNotifier,
           builder: (context, percentage, child) {
@@ -237,13 +231,10 @@ class _HomePageWrapperState extends State<HomePageWrapper> {
       },
     );
     overlay.insert(_navBarOverlay!);
-    debugPrint('[NavBar Overlay] 已插入，Entry: ${_navBarOverlay.hashCode}');
     
     // 插入全局播放器（在导航栏上方，动态调整底部偏移）
     _playerOverlay = OverlayEntry(
       builder: (context) {
-        debugPrint('[Player Overlay] 正在构建（仅一次）');
-        
         return ValueListenableBuilder<double>(
           valueListenable: _playerBottomNotifier,
           builder: (context, percentage, child) {
@@ -266,7 +257,7 @@ class _HomePageWrapperState extends State<HomePageWrapper> {
               minHeight: 84,
               maxHeight: MediaQuery.of(context).size.height,
               bgColor: Colors.transparent,
-              duration: const Duration(milliseconds: 800),
+              duration: const Duration(milliseconds: 600),
               curve: Curves.easeOutExpo,
               onHeightChange: (percentage) {
                 // 更新百分比，触发播放器和导航栏位置更新
@@ -290,7 +281,6 @@ class _HomePageWrapperState extends State<HomePageWrapper> {
       },
     );
     overlay.insert(_playerOverlay!);
-    debugPrint('[Player Overlay] 已插入，Entry: ${_playerOverlay.hashCode}');
     debugPrint('========== 插入 Overlay 完成 ==========\n');
   }
   

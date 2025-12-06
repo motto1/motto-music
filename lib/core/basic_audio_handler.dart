@@ -79,9 +79,13 @@ abstract class BasicAudioHandler<Q extends Playable> extends BaseAudioHandler
   double _loudnessGain = 1.0;
   double _userVolume = 1.0;
 
+  /// 引擎级播放列表启用状态（具体行为由子类决定）
+  bool enginePlaylistEnabled = false;
+
   /// 淡入淡出
   Timer? _fadeTimer;
   bool _isFading = false;
+  int _fadeGeneration = 0; // 用于并发控制，避免旧淡入/淡出继续执行
 
   /// 定时器：更新播放位置
   Timer? _positionTimer; // UI更新定时器（200ms）
@@ -176,14 +180,28 @@ abstract class BasicAudioHandler<Q extends Playable> extends BaseAudioHandler
   }
 
   Future<void> _handleGaplessSkip() async {
-    // 检查Gapless设置，决定是否停止淡入淡出
+    // 检查 Gapless 及淡出设置，决定切歌前的过渡策略
     try {
       final storage = await PlayerStateStorage.getInstance();
-      if (storage.gaplessEnabled) {
+      final gaplessEnabled = storage.gaplessEnabled;
+      final fadeOutMs = storage.fadeOutDurationMs;
+
+      if (gaplessEnabled) {
+        // 无缝模式：不做额外淡出，只停止当前淡入/淡出任务
         stopFade();
-        print('[BasicAudioHandler] ✅ Gapless已启用，停止淡入淡出');
+        print('[BasicAudioHandler] ✅ Gapless已启用，切歌前不额外淡出');
       } else {
-        print('[BasicAudioHandler] ⏸️ Gapless已禁用，保持淡入淡出');
+        // 非无缝模式：如配置了淡出时长，则在切歌前淡出当前曲目
+        if (fadeOutMs > 0) {
+          print(
+            '[BasicAudioHandler] 🎚️ Gapless已禁用，切歌前淡出: ${fadeOutMs}ms',
+          );
+          await fadeOut(fadeOutMs);
+        } else {
+          print(
+            '[BasicAudioHandler] ⏸️ Gapless已禁用，但淡出时长为0，直接切歌',
+          );
+        }
       }
     } catch (e) {
       print('[BasicAudioHandler] ⚠️ 获取Gapless设置失败: $e');
@@ -216,6 +234,20 @@ abstract class BasicAudioHandler<Q extends Playable> extends BaseAudioHandler
     final newQueue = queue.toList();
     currentQueue.queueRx.value = newQueue;
     playWhenReady.value = startPlaying;
+
+    // 尝试根据当前设置配置引擎级播放列表（若子类有实现）
+    bool gaplessEnabled = false;
+    try {
+      final storage = await PlayerStateStorage.getInstance();
+      gaplessEnabled = storage.gaplessEnabled;
+    } catch (e) {
+      debugPrint('[BasicAudioHandler] ⚠️ 获取 Gapless 设置失败用于引擎队列配置: $e');
+    }
+    await configureEnginePlaylist(
+      queue: newQueue,
+      initialIndex: playAtIndex,
+      gaplessEnabled: gaplessEnabled,
+    );
 
     if (playAtIndex >= 0 && playAtIndex < newQueue.length) {
       currentIndex.value = playAtIndex;
@@ -305,23 +337,62 @@ abstract class BasicAudioHandler<Q extends Playable> extends BaseAudioHandler
     await player.setSpeed(speed);
   }
 
+  /// 供子类覆写：根据当前队列配置底层播放器的播放列表
+  ///
+  /// 默认实现不启用引擎级播放列表，仅作为扩展点。
+  @protected
+  Future<void> configureEnginePlaylist({
+    required List<Q> queue,
+    required int initialIndex,
+    required bool gaplessEnabled,
+  }) async {
+    enginePlaylistEnabled = false;
+    debugPrint(
+      '[BasicAudioHandler] ⏭️ configureEnginePlaylist 基类实现：不启用引擎队列 '
+      '(queue=${queue.length}, initial=$initialIndex, gapless=$gaplessEnabled)',
+    );
+  }
+
   /// 淡入（从0到目标音量）
   Future<void> fadeIn(int durationMs) async {
     if (durationMs <= 0) return;
     print('[BasicAudioHandler] 🎚️ 开始淡入: ${durationMs}ms');
-    _fadeTimer?.cancel();
+    _fadeTimer?.cancel(); // 兼容旧实现，保留但不再使用定时器
+
+    // 增加一代淡入任务，旧任务在下一步检查时自动失效
+    _fadeGeneration++;
+    final currentGeneration = _fadeGeneration;
     _isFading = true;
 
     final targetVolume = (_userVolume * _loudnessGain).clamp(0.0, 1.0);
-    const steps = 20;
-    final stepDuration = durationMs ~/ steps;
+    // 为避免播放起始瞬间突刺音量，先将实际输出音量归零
+    await player.setVolume(0.0);
 
-    for (int i = 0; i <= steps && _isFading; i++) {
-      final volume = (targetVolume * i / steps).clamp(0.0, 1.0);
+    // 动态步数：目标单步时长约 15ms，限制在 [10, 120] 步
+    final estimatedSteps = (durationMs / 15).clamp(10, 120).round();
+    final steps = estimatedSteps > 0 ? estimatedSteps : 10;
+    final stepDurationMs = (durationMs / steps).clamp(1, durationMs).round();
+
+    for (int i = 0; i <= steps; i++) {
+      // 并发检查：若有新的淡入/淡出开始或被 stopFade() 终止，则立即退出
+      if (!_isFading || _fadeGeneration != currentGeneration) {
+        print('[BasicAudioHandler] ⏹️ 淡入被中断');
+        return;
+      }
+
+      final t = i / steps;
+      // 使用二次曲线，使初始段更平滑
+      final curved = t * t;
+      final volume = (targetVolume * curved).clamp(0.0, 1.0);
       await player.setVolume(volume);
-      if (i < steps) await Future.delayed(Duration(milliseconds: stepDuration));
+
+      if (i < steps) {
+        await Future.delayed(Duration(milliseconds: stepDurationMs));
+      }
     }
 
+    // 结束时确保到达目标音量
+    await player.setVolume(targetVolume);
     _isFading = false;
     print('[BasicAudioHandler] ✅ 淡入完成');
   }
@@ -330,19 +401,39 @@ abstract class BasicAudioHandler<Q extends Playable> extends BaseAudioHandler
   Future<void> fadeOut(int durationMs) async {
     if (durationMs <= 0) return;
     print('[BasicAudioHandler] 🎚️ 开始淡出: ${durationMs}ms');
-    _fadeTimer?.cancel();
+    _fadeTimer?.cancel(); // 兼容旧实现，保留但不再使用定时器
+
+    // 增加一代淡出任务，旧任务在下一步检查时自动失效
+    _fadeGeneration++;
+    final currentGeneration = _fadeGeneration;
     _isFading = true;
 
     final currentVolume = (_userVolume * _loudnessGain).clamp(0.0, 1.0);
-    const steps = 20;
-    final stepDuration = durationMs ~/ steps;
+    // 动态步数：目标单步时长约 15ms，限制在 [10, 120] 步
+    final estimatedSteps = (durationMs / 15).clamp(10, 120).round();
+    final steps = estimatedSteps > 0 ? estimatedSteps : 10;
+    final stepDurationMs = (durationMs / steps).clamp(1, durationMs).round();
 
-    for (int i = steps; i >= 0 && _isFading; i--) {
-      final volume = (currentVolume * i / steps).clamp(0.0, 1.0);
+    for (int i = 0; i <= steps; i++) {
+      // 并发检查：若有新的淡入/淡出开始或被 stopFade() 终止，则立即退出
+      if (!_isFading || _fadeGeneration != currentGeneration) {
+        print('[BasicAudioHandler] ⏹️ 淡出被中断');
+        return;
+      }
+
+      final t = i / steps;
+      // 使用二次曲线，使尾部更平滑
+      final curved = t * t;
+      final volume = (currentVolume * (1.0 - curved)).clamp(0.0, 1.0);
       await player.setVolume(volume);
-      if (i > 0) await Future.delayed(Duration(milliseconds: stepDuration));
+
+      if (i < steps) {
+        await Future.delayed(Duration(milliseconds: stepDurationMs));
+      }
     }
 
+    // 结束时确保完全静音
+    await player.setVolume(0.0);
     _isFading = false;
     print('[BasicAudioHandler] ✅ 淡出完成');
   }
@@ -353,6 +444,7 @@ abstract class BasicAudioHandler<Q extends Playable> extends BaseAudioHandler
       print('[BasicAudioHandler] ⏹️ 停止淡入淡出（Gapless切换）');
     }
     _isFading = false;
+    _fadeGeneration++; // 递增 generation，使当前/旧淡入淡出循环尽快退出
     _fadeTimer?.cancel();
   }
 
@@ -413,10 +505,25 @@ abstract class BasicAudioHandler<Q extends Playable> extends BaseAudioHandler
         throw ArgumentError('Invalid audio source configuration');
       }
       return duration;
-    } catch (e) {
+    } catch (e, stack) {
       print('[BasicAudioHandler] ❌ setSource 失败: $e');
+      // 交由子类进行错误上报或额外处理（例如状态记录）
+      onSourceError(item, index, e, stack);
       return null;
     }
+  }
+
+  /// 当底层播放器在设置音源时发生错误的回调钩子
+  ///
+  /// 默认不做任何事，子类可以重写以便将错误上报到上层（例如 UI 或状态管理）。
+  @protected
+  void onSourceError(
+    Q? item,
+    int index,
+    Object error,
+    StackTrace stackTrace,
+  ) {
+    // 默认实现为空
   }
 
   /// 变换 PlaybackEvent 为 PlaybackState

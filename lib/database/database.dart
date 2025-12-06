@@ -138,8 +138,8 @@ class UserSettings extends Table {
   IntColumn get id => integer().autoIncrement()();
 
   // 音质设置
-  IntColumn get defaultPlayQuality => integer().withDefault(const Constant(30232))(); // 默认播放音质（High）
-  IntColumn get defaultDownloadQuality => integer().withDefault(const Constant(30280))(); // 默认下载音质（FLAC）
+  IntColumn get defaultPlayQuality => integer().withDefault(const Constant(30251))(); // 默认播放音质（Hi-Res）
+  IntColumn get defaultDownloadQuality => integer().withDefault(const Constant(30251))(); // 默认下载音质（Hi-Res）
   BoolColumn get autoSelectQuality => boolean().withDefault(const Constant(false))(); // 是否根据网络自动选择音质
 
   // 下载设置
@@ -322,8 +322,8 @@ class MusicDatabase extends _$MusicDatabase {
           // 4. 初始化默认用户设置
           await into(userSettings).insert(
             UserSettingsCompanion.insert(
-              defaultPlayQuality: const Value(30232), // High
-              defaultDownloadQuality: const Value(30280), // FLAC
+              defaultPlayQuality: const Value(30251), // Hi-Res
+              defaultDownloadQuality: const Value(30251), // Hi-Res
               autoSelectQuality: const Value(false),
               wifiOnlyDownload: const Value(true),
               maxConcurrentDownloads: const Value(3),
@@ -1155,8 +1155,8 @@ class MusicDatabase extends _$MusicDatabase {
     // 创建默认设置
     final id = await into(userSettings).insert(
       UserSettingsCompanion.insert(
-        defaultPlayQuality: const Value(30232), // High
-        defaultDownloadQuality: const Value(30280), // FLAC
+        defaultPlayQuality: const Value(30251), // Hi-Res
+        defaultDownloadQuality: const Value(30251), // Hi-Res
         autoSelectQuality: const Value(false),
         wifiOnlyDownload: const Value(true),
         maxConcurrentDownloads: const Value(3),

@@ -51,6 +51,12 @@ class UnifiedCoverImage extends StatelessWidget {
   /// 是否为深色模式（用于默认占位符颜色）
   final bool? isDark;
 
+  /// 是否跳过本地文件的异步存在性检查，直接尝试加载文件
+  ///
+  /// - true: 直接使用 Image.file + errorBuilder，避免 FutureBuilder 带来的短暂加载占位（默认）
+  /// - false: 使用异步 exists 检查，适合文件路径可能频繁变化的场景
+  final bool skipAsyncFileCheck;
+
   const UnifiedCoverImage({
     super.key,
     this.coverPath,
@@ -61,6 +67,7 @@ class UnifiedCoverImage extends StatelessWidget {
     this.placeholder,
     this.errorWidget,
     this.isDark,
+    this.skipAsyncFileCheck = true, // 默认跳过异步检查，避免重建时闪烁
   });
 
   /// 判断是否为网络图片
@@ -114,6 +121,19 @@ class UnifiedCoverImage extends StatelessWidget {
 
     // 本地文件：异步检查文件存在性
     if (_isLocalFile) {
+      if (skipAsyncFileCheck) {
+        // 直接尝试加载本地文件，由 errorBuilder 处理不存在或解码失败的情况
+        return Image.file(
+          File(coverPath!),
+          width: width,
+          height: height,
+          fit: fit,
+          errorBuilder: (context, error, stackTrace) {
+            return errorWidget ?? _buildDefaultIcon(isDarkMode);
+          },
+        );
+      }
+
       return FutureBuilder<bool>(
         future: _checkFileExists(coverPath!),
         builder: (context, snapshot) {

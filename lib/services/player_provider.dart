@@ -75,6 +75,11 @@ class PlayerProvider with ChangeNotifier {
   StreamSubscription? _positionSub;
   StreamSubscription? _playbackStateSub;
 
+  // 最近一次播放失败状态（用于状态记录与后续网络恢复策略）
+  Song? _lastPlaybackFailedSong;
+  bool _lastPlaybackFailedNetworkRelated = false;
+  DateTime? _lastPlaybackFailedAt;
+
   // 通知栏歌词服务
   final LyricsNotificationService _lyricsNotificationService = LyricsNotificationService();
 
@@ -86,9 +91,15 @@ class PlayerProvider with ChangeNotifier {
   ValueNotifier<Duration> get position => _position;
   Duration get duration => _duration;
   PlayMode get playMode => _playMode;
-  List<Song> get playlist => List.unmodifiable(_playlist);
+  // 返回可修改的副本，避免外部直接修改内部状态
+  List<Song> get playlist => List.from(_playlist);
   int get currentIndex => _currentIndex;
   double get volume => _volume;
+
+  // 最近一次播放失败信息（暂未在 UI 中使用，但用于后续扩展）
+  Song? get lastPlaybackFailedSong => _lastPlaybackFailedSong;
+  bool get lastPlaybackFailedNetworkRelated => _lastPlaybackFailedNetworkRelated;
+  DateTime? get lastPlaybackFailedAt => _lastPlaybackFailedAt;
 
   // 歌词相关 Getters
   ParsedLrc? get currentLyrics => _currentLyrics;
@@ -150,7 +161,8 @@ class PlayerProvider with ChangeNotifier {
     // 设置懒加载解析回调
     if (_audioHandler != null) {
       _audioHandler!.onLazyResolve = _resolveLazyMediaItem;
-      debugPrint('[PlayerProvider] ✅ 懒加载解析回调已设置');
+      _audioHandler!.onPlaybackError = _handlePlaybackError;
+      debugPrint('[PlayerProvider] ✅ 懒加载解析与播放失败回调已设置');
     }
 
     _initializeListeners();
@@ -279,9 +291,11 @@ class PlayerProvider with ChangeNotifier {
   Future<void> _restoreState() async {
     playerState = await PlayerStateStorage.getInstance();
     _currentSong = playerState?.currentSong;
-    _playlist = playerState?.playlist ?? [];
-    _originalPlaylist = playerState?.playlist ?? [];
-    _shuffledPlaylist = playerState?.playlist ?? [];
+    // 必须使用 List.from() 创建可修改的副本，因为 playerState.playlist 返回不可修改列表
+    final restoredPlaylist = playerState?.playlist;
+    _playlist = restoredPlaylist != null ? List.from(restoredPlaylist) : [];
+    _originalPlaylist = restoredPlaylist != null ? List.from(restoredPlaylist) : [];
+    _shuffledPlaylist = restoredPlaylist != null ? List.from(restoredPlaylist) : [];
     _volume = playerState?.volume ?? 1.0;
     _playMode = playerState?.playMode ?? PlayMode.loop;
     _position.value = playerState?.position ?? Duration.zero;
@@ -352,6 +366,51 @@ class PlayerProvider with ChangeNotifier {
 
   Future<void> setGaplessEnabled(bool enabled) async {
     await playerState?.setGaplessEnabled(enabled);
+    notifyListeners();
+  }
+
+  void _handlePlaybackError(
+    MediaItem mediaItem,
+    Object error,
+    StackTrace stackTrace,
+  ) {
+    // 关联到 Song（如果 extras 中带有 songId）
+    Song? song;
+    final extras = mediaItem.extras ?? const <String, dynamic>{};
+    final songId = extras['songId'] as int?;
+    if (songId != null && songId > 0) {
+      final index = _playlist.indexWhere((s) => s.id == songId);
+      if (index != -1) {
+        song = _playlist[index];
+      } else if (_currentSong != null && _currentSong!.id == songId) {
+        song = _currentSong;
+      }
+    }
+
+    final sourceType = extras['sourceType'] as String?;
+    final errorText = error.toString();
+
+    final isNetworkLikeSource =
+        sourceType == 'url' || sourceType == 'lock_caching';
+    final isLikelyNetworkError = isNetworkLikeSource &&
+        (errorText.contains('SocketException') ||
+            errorText.contains('Failed host lookup') ||
+            errorText.contains('Connection reset') ||
+            errorText.contains('timed out'));
+
+    _lastPlaybackFailedSong = song;
+    _lastPlaybackFailedNetworkRelated = isLikelyNetworkError;
+    _lastPlaybackFailedAt = DateTime.now();
+
+    final title = song?.title ?? mediaItem.title;
+    if (isLikelyNetworkError) {
+      _errorMessage = '网络问题导致无法播放: $title';
+    } else {
+      _errorMessage = '无法播放: $title (${error.runtimeType})';
+    }
+
+    debugPrint('[PlayerProvider] ❌ 播放失败: $_errorMessage');
+    debugPrint(stackTrace.toString());
     notifyListeners();
   }
 
@@ -956,7 +1015,7 @@ class PlayerProvider with ChangeNotifier {
 
         if (_playMode == PlayMode.shuffle && shuffle) {
           _createShuffledPlaylist();
-          _playlist = _shuffledPlaylist;
+          _playlist = List.from(_shuffledPlaylist);
           _currentIndex = _shuffledPlaylist.indexWhere((s) => s.id == song.id);
         } else {
           _playlist = List.from(playlist);
@@ -974,10 +1033,10 @@ class PlayerProvider with ChangeNotifier {
       } else {
         if (_playMode == PlayMode.shuffle) {
           _currentIndex = _shuffledPlaylist.indexWhere((s) => s.id == song.id);
-          _playlist = _shuffledPlaylist;
+          _playlist = List.from(_shuffledPlaylist);
         } else {
           _currentIndex = _originalPlaylist.indexWhere((s) => s.id == song.id);
-          _playlist = _originalPlaylist;
+          _playlist = List.from(_originalPlaylist);
         }
       }
 
@@ -1171,7 +1230,7 @@ class PlayerProvider with ChangeNotifier {
   void _switchToShuffleMode() {
     if (_originalPlaylist.isEmpty) return;
     _createShuffledPlaylist();
-    _playlist = _shuffledPlaylist;
+    _playlist = List.from(_shuffledPlaylist);
     if (_currentSong != null) {
       _currentIndex = _shuffledPlaylist.indexWhere(
         (s) => s.id == _currentSong!.id,
@@ -1188,7 +1247,7 @@ class PlayerProvider with ChangeNotifier {
       if (songs.isNotEmpty) {
         _currentSong = songs[_currentIndex];
         _createShuffledPlaylist();
-        _playlist = _shuffledPlaylist;
+        _playlist = List.from(_shuffledPlaylist);
         _currentIndex = _shuffledPlaylist.indexWhere(
           (s) => s.id == _currentSong!.id,
         );
@@ -1213,7 +1272,7 @@ class PlayerProvider with ChangeNotifier {
         final randomIndex = _random.nextInt(_shuffledPlaylist.length + 1);
         _shuffledPlaylist.insert(randomIndex, song);
       }
-      _playlist = _shuffledPlaylist;
+      _playlist = List.from(_shuffledPlaylist);
     } else {
       _playlist.add(song);
     }
@@ -1261,8 +1320,13 @@ class PlayerProvider with ChangeNotifier {
 
   void reorderPlaylist(int oldIndex, int newIndex) {
     if (oldIndex < 0 || oldIndex >= _playlist.length) return;
-    if (newIndex < 0 || newIndex >= _playlist.length) return;
+    // ReorderableListView 允许 newIndex == length，表示插入到末尾之后
+    if (newIndex < 0 || newIndex > _playlist.length) return;
     if (oldIndex == newIndex) return;
+
+    // 保存原始索引用于 AudioHandler（它需要原始的 ReorderableListView 索引）
+    final originalOldIndex = oldIndex;
+    final originalNewIndex = newIndex;
 
     if (newIndex > oldIndex) {
       newIndex -= 1;
@@ -1278,15 +1342,23 @@ class PlayerProvider with ChangeNotifier {
       _currentIndex = _playlist.indexWhere((song) => song.id == _currentSong!.id);
     }
 
+    // 同步更新底层 AudioHandler 队列顺序
+    // 注意：传递原始索引，让 AudioHandler 自己处理调整
+    if (_audioHandler != null) {
+      _audioHandler!.reorderQueue(originalOldIndex, originalNewIndex);
+    }
+
     playerState?.setPlaylist(_playlist);
-    notifyListeners();
+
+    // 延迟通知，让 ReorderableListView 完成动画
+    Future.microtask(() => notifyListeners());
   }
 
   void reshufflePlaylist() {
     if (_playMode != PlayMode.shuffle || _originalPlaylist.isEmpty) return;
 
     _createShuffledPlaylist();
-    _playlist = _shuffledPlaylist;
+    _playlist = List.from(_shuffledPlaylist);
 
     if (_currentSong != null) {
       _currentIndex = _shuffledPlaylist.indexWhere(
@@ -1329,13 +1401,26 @@ class PlayerProvider with ChangeNotifier {
 
   void _updateCurrentSongFromHandler() {
     if (_audioHandler == null) return;
-    final currentItem = _audioHandler!.queueList[_audioHandler!.currentQueueIndex].mediaItem;
+    final handlerIndex = _audioHandler!.currentQueueIndex;
+    if (handlerIndex < 0 || handlerIndex >= _audioHandler!.queueList.length) {
+      return;
+    }
+
+    final currentItem = _audioHandler!.queueList[handlerIndex].mediaItem;
     final songId = int.tryParse(currentItem.id) ?? -1;
+
+    if (_playlist.isEmpty) return;
+
     _currentSong = _playlist.firstWhere(
       (s) => s.id == songId,
       orElse: () => _playlist.first,
     );
-    _currentIndex = _audioHandler!.currentQueueIndex;
+
+    // 始终通过歌曲 ID 在当前播放列表中定位索引，确保与 UI 顺序一致
+    _currentIndex = _playlist.indexWhere((s) => s.id == _currentSong!.id);
+    if (_currentIndex < 0) {
+      _currentIndex = 0;
+    }
     _lyricsNotificationService.updateMetadata(
       title: _currentSong?.title,
       artist: _currentSong?.artist,

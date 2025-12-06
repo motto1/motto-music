@@ -13,6 +13,7 @@ class AppleMusicSongTile extends StatefulWidget {
   final VoidCallback? onLongPress;
   final VoidCallback? onMoreTap;
   final VoidCallback? onFavoriteTap; // 点击喜欢按钮
+  final Widget? trailing; // 自定义右侧区域（覆盖默认更多按钮）
 
   const AppleMusicSongTile({
     super.key,
@@ -26,6 +27,7 @@ class AppleMusicSongTile extends StatefulWidget {
     this.onLongPress,
     this.onMoreTap,
     this.onFavoriteTap,
+    this.trailing,
   });
 
   @override
@@ -124,23 +126,26 @@ class _AppleMusicSongTileState extends State<AppleMusicSongTile> {
               ),
             ],
 
-            // 更多按钮
+            // 右侧区域：优先使用自定义 trailing，其次默认更多按钮
             const SizedBox(width: 8),
-            IconButton(
-              icon: Icon(
-                Icons.more_horiz,
-                color: isDark
-                    ? Colors.white.withOpacity(0.5)
-                    : Colors.black.withOpacity(0.5),
-                size: 24,
+            if (widget.trailing != null)
+              widget.trailing!
+            else
+              IconButton(
+                icon: Icon(
+                  Icons.more_horiz,
+                  color: isDark
+                      ? Colors.white.withOpacity(0.5)
+                      : Colors.black.withOpacity(0.5),
+                  size: 24,
+                ),
+                onPressed: widget.onMoreTap,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(
+                  minWidth: 32,
+                  minHeight: 32,
+                ),
               ),
-              onPressed: widget.onMoreTap,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(
-                minWidth: 32,
-                minHeight: 32,
-              ),
-            ),
           ],
         ),
       ),

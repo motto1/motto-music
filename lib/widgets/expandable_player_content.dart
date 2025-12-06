@@ -605,14 +605,6 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
 
   /// 显示播放器菜单(三点窗口)
   void _showPlayerMenuOverlay(Song song, PlayerProvider playerProvider) {
-    print('\n========== 🎯 调用 _showPlayerMenuOverlay ==========');
-    print('  歌曲: ${song.title}');
-    print('  来源: ${song.source}');
-    print('  BVID: ${song.bvid}');
-    print('  CID: ${song.cid}');
-    print('  当前 overlay: $_currentOverlay');
-    print('====================================================\n');
-
     if (_currentOverlay == PlayerOverlayType.playerMenu) return;
 
     setState(() {
@@ -859,19 +851,15 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
       // 只在全屏模式且没有叠加层时拦截返回
       canPop: widget.percentage < 0.9 || _currentOverlay != PlayerOverlayType.none,
       onPopInvokedWithResult: (didPop, result) {
-        debugPrint('[PlayerContent PopScope] didPop: $didPop, percentage: ${(widget.percentage * 100).toStringAsFixed(1)}%, overlay: $_currentOverlay');
-
         if (!didPop) {
           // 如果有叠加层，先关闭叠加层
           if (_currentOverlay != PlayerOverlayType.none) {
-            debugPrint('[PlayerContent PopScope] → 关闭叠加层');
             _hideOverlay();
             return;
           }
 
           // 如果是全屏播放器，调用回调缩小播放器
           if (widget.percentage >= 0.9) {
-            debugPrint('[PlayerContent PopScope] → 请求关闭播放器');
             widget.onRequestClose?.call();
           }
         }
@@ -883,7 +871,6 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
 
           // ⭐ 检测歌曲变化并自动加载歌词
           if (currentSong != null && currentSong.id != _lastSongId) {
-            debugPrint('[PlayerContent] 🎵 检测到歌曲变化: ${currentSong.title}');
             _lastSongId = currentSong.id;
             // 使用 post frame callback 避免在 build 过程中调用 setState
             WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -959,18 +946,12 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
                   if (_currentOverlay == PlayerOverlayType.playerMenu && widget.percentage > 0.7) ...[
                     Builder(
                       builder: (context) {
-                        print('  🏗️ Stack 条件满足, 正在渲染三点窗口');
-                        print('  _currentOverlay: $_currentOverlay');
-                        print('  widget.percentage: ${widget.percentage}');
                         return _buildPlayerMenuOverlay();
                       },
                     ),
                   ] else if (_currentOverlay == PlayerOverlayType.playerMenu) ...[
                     Builder(
                       builder: (context) {
-                        print('  ⚠️ Stack 条件不满足! _currentOverlay 是 playerMenu 但 percentage 不足');
-                        print('  _currentOverlay: $_currentOverlay');
-                        print('  widget.percentage: ${widget.percentage} (需要 > 0.7)');
                         return const SizedBox.shrink();
                       },
                     ),
@@ -1767,11 +1748,6 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
                           constraints: const BoxConstraints(),
                           onPressed: currentSong != null
                               ? () {
-                                  print('\n========== 🖱️ 用户点击三点按钮 ==========');
-                                  print('  currentSong: ${currentSong.title}');
-                                  print('  widget.percentage: ${widget.percentage}');
-                                  print('  将调用 _showPlayerMenuOverlay...');
-                                  print('==========================================\n');
                                   _showPlayerMenuOverlay(currentSong, playerProvider);
                                 }
                               : null,
@@ -2158,7 +2134,7 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
   Widget _buildPlaylistContent(PlayerProvider playerProvider) {
     final currentSong = playerProvider.currentSong;
     final playlist = playerProvider.playlist;
-    
+
     return Column(
       children: [
         // 顶部拖拽指示器
@@ -2282,14 +2258,18 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
                       child: child,
                     );
                   },
-                  itemBuilder: (context, index) => _buildPlaylistItem(
-                    context,
-                    playlist[index],
-                    index,
-                    currentSong?.id == playlist[index].id,
-                    playlist,
-                    playerProvider,
-                  ),
+                  itemBuilder: (context, index) {
+                    // 使用外层获取的 playlist 快照，保持与 itemCount 一致
+                    final song = playlist[index];
+                    final isPlaying = currentSong?.id == song.id;
+                    return _buildPlaylistItem(
+                      context,
+                      song,
+                      index,
+                      isPlaying,
+                      playerProvider,
+                    );
+                  },
                 ),
         ),
       ],
@@ -2302,7 +2282,6 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
     Song song,
     int index,
     bool isPlaying,
-    List<Song> playlist,
     PlayerProvider playerProvider,
   ) {
     return Dismissible(
@@ -2361,7 +2340,15 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            playerProvider.playSong(song, playlist: playlist, index: index);
+            // 使用当前最新的播放列表和索引，避免使用过期快照
+            final currentPlaylist = playerProvider.playlist;
+            final currentIndex = currentPlaylist.indexWhere((s) => s.id == song.id);
+            final safeIndex = currentIndex >= 0 ? currentIndex : index;
+            playerProvider.playSong(
+              song,
+              playlist: currentPlaylist,
+              index: safeIndex,
+            );
             _hideOverlay();
           },
           child: Container(
@@ -2691,33 +2678,14 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
 
   /// 构建播放器菜单叠加层(从底部滑入,三点窗口)
   Widget _buildPlayerMenuOverlay() {
-    print('\n========== 🏗️ 构建 _buildPlayerMenuOverlay ==========');
-    print('  _overlayCurrentSong: ${_overlayCurrentSong?.title ?? "null"}');
-    print('  _overlayPlayerProvider: ${_overlayPlayerProvider != null ? "存在" : "null"}');
-
     if (_overlayCurrentSong == null || _overlayPlayerProvider == null) {
-      print('  ❌ song 或 playerProvider 为 null, 返回空 widget');
-      print('====================================================\n');
       return const SizedBox.shrink();
     }
 
     final song = _overlayCurrentSong!;
     final playerProvider = _overlayPlayerProvider!;
-
-    print('  ✅ 开始构建三点窗口');
-    print('  歌曲: ${song.title}');
-    print('  来源: ${song.source}');
-    print('  BVID: ${song.bvid}');
-    print('  CID: ${song.cid}');
-
     // 检查音质选择区域的条件
     final showQualitySection = song.source == 'bilibili' && song.bvid != null;
-    print('\n  --- 音质选择区域条件检查 ---');
-    print('  song.source == "bilibili": ${song.source == "bilibili"}');
-    print('  song.bvid != null: ${song.bvid != null}');
-    print('  最终结果: $showQualitySection');
-    print('  ${showQualitySection ? "✅ 将显示音质选择" : "❌ 不显示音质选择"}');
-    print('====================================================\n');
 
     return Positioned.fill(
       child: GestureDetector(
@@ -3782,6 +3750,8 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
       height: 56,
       borderRadius: 0, // 外层已有 ClipRRect，这里不需要圆角
       fit: BoxFit.cover,
+      // 播放列表/菜单中频繁重建，跳过异步 exists 检查以减少“加载中”闪烁
+      skipAsyncFileCheck: true,
     );
   }
 
