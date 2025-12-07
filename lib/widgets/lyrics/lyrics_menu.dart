@@ -257,18 +257,22 @@ class LyricsMenu extends StatelessWidget {
   }
 
   void _showOffsetDialog(BuildContext context, String uniqueKey) {
-    showDialog(
+    showLyricOffsetPanel(
       context: context,
-      useRootNavigator: true, // 使用根导航器，确保显示在最顶层
-      builder: (context) => LyricOffsetDialog(
-        uniqueKey: uniqueKey,
-        lyrics: currentLyrics!,
-        onOffsetChanged: (lyrics) {
-          if (onLyricsUpdated != null) {
-            onLyricsUpdated!(lyrics);
-          }
-        },
-      ),
+      uniqueKey: uniqueKey,
+      lyrics: currentLyrics!,
+      onOffsetChanged: (lyrics) {
+        if (onLyricsUpdated != null) {
+          onLyricsUpdated!(lyrics);
+        }
+      },
+      onOffsetPreview: (offset) {
+        // 实时预览：创建临时歌词对象并通知更新
+        if (onLyricsUpdated != null) {
+          final previewLyrics = currentLyrics!.copyWith(offset: offset);
+          onLyricsUpdated!(previewLyrics);
+        }
+      },
     );
   }
 

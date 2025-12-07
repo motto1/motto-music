@@ -656,14 +656,15 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
   void _showAdjustOffset(Song song, PlayerProvider playerProvider) {
     if (_currentOverlay == PlayerOverlayType.adjustLyricsOffset) return;
     if (playerProvider.currentLyrics == null) return;
-    
+
     setState(() {
       _currentOverlay = PlayerOverlayType.adjustLyricsOffset;
       _overlayCurrentSong = song;
       _overlayPlayerProvider = playerProvider;
-      
-      // 初始化偏移量状态
+
+      // 初始化偏移量状态，保存原始值用于取消时恢复
       _currentLyricOffset = playerProvider.currentLyrics!.offset.toDouble();
+      _originalLyricOffset = _currentLyricOffset;
       _isSavingOffset = false;
     });
     _dialogOverlayController.forward(from: 0.0);
@@ -1775,10 +1776,11 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
     
     if (lyrics != null && lyrics.lyrics != null && lyrics.lyrics!.isNotEmpty) {
       return KaraokeLyricsView(
-        key: ValueKey('${currentSong?.id}_${lyrics.hashCode}'),
+        // 只使用歌曲ID和歌词内容作为key，避免偏移量变化时重建整个视图
+        key: ValueKey('${currentSong?.id}_${lyrics.rawOriginalLyrics.hashCode}'),
         lyricsContent: lyrics.rawOriginalLyrics,
         currentPosition: playerProvider.position,
-        offsetInSeconds: lyrics.offset, // 🔧 传入偏移量
+        offsetInSeconds: lyrics.offset,
         onTapLine: (time) {
           playerProvider.seekTo(time);
         },
@@ -3411,53 +3413,225 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
     }
   }
   
-  /// 构建调整歌词偏移量叠加层（对话框样式，居中显示，液态玻璃效果）
+  /// 构建调整歌词偏移量叠加层（底部滑动条样式，模仿多选下载的圆角容器）
   Widget _buildAdjustOffsetOverlay() {
-    if (_overlayCurrentSong == null || 
-        _overlayPlayerProvider == null || 
+    if (_overlayCurrentSong == null ||
+        _overlayPlayerProvider == null ||
         _overlayPlayerProvider!.currentLyrics == null) {
       return const SizedBox.shrink();
     }
-    
-    return Positioned.fill(
-      child: GestureDetector(
-        onTap: _hideOverlay,
-        child: Container(
-          color: Colors.black54,
-          child: Center(
-            child: ScaleTransition(
-              scale: _dialogScaleAnimation,
-              child: FadeTransition(
-                opacity: _dialogOpacityAnimation,
-                child: GestureDetector(
-                  onTap: () {},
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(28),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                      child: Container(
-                        width: MediaQuery.of(context).size.width * 0.9,
-                        constraints: BoxConstraints(
-                          maxWidth: 500,
-                          maxHeight: MediaQuery.of(context).size.height * 0.7,
+
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 1),
+          end: Offset.zero,
+        ).animate(CurvedAnimation(
+          parent: _dialogOverlayController,
+          curve: Curves.easeOutCubic,
+        )),
+        child: FadeTransition(
+          opacity: _dialogOpacityAnimation,
+          child: _buildAdjustOffsetContent(),
+        ),
+      ),
+    );
+  }
+  
+  /// 构建调整偏移量的内容（底部滑动条样式，模仿多选下载的圆角容器）
+  Widget _buildAdjustOffsetContent() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.black.withOpacity(0.45)
+                    : Colors.white.withOpacity(0.85),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.18)
+                      : Colors.black.withOpacity(0.06),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.25),
+                    blurRadius: 18,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // 标题行
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '调整歌词偏移',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                      // 当前偏移量显示
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.black.withOpacity(0.55)
-                              : Colors.white.withOpacity(0.65),
-                          border: Border.all(
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white.withOpacity(0.1)
-                                : Colors.white.withOpacity(0.5),
-                            width: 1.5,
-                          ),
-                          borderRadius: BorderRadius.circular(28),
+                          color: isDark
+                              ? Colors.white.withOpacity(0.1)
+                              : Colors.black.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        child: _buildAdjustOffsetContent(),
+                        child: Text(
+                          _formatLyricOffset(_currentLyricOffset),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
                       ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 4),
+
+                  // 提示文字
+                  Text(
+                    _currentLyricOffset > 0
+                        ? '歌词提前显示'
+                        : _currentLyricOffset < 0
+                            ? '歌词延后显示'
+                            : '无偏移',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.colorScheme.onSurface.withOpacity(0.5),
                     ),
                   ),
-                ),
+
+                  const SizedBox(height: 12),
+
+                  // 滑动条区域
+                  Row(
+                    children: [
+                      Text(
+                        '-10s',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: theme.colorScheme.onSurface.withOpacity(0.5),
+                        ),
+                      ),
+                      Expanded(
+                        child: SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            activeTrackColor: theme.colorScheme.primary,
+                            inactiveTrackColor:
+                                theme.colorScheme.primary.withOpacity(0.2),
+                            thumbColor: theme.colorScheme.primary,
+                            overlayColor:
+                                theme.colorScheme.primary.withOpacity(0.1),
+                            trackHeight: 4,
+                            thumbShape: const RoundSliderThumbShape(
+                              enabledThumbRadius: 8,
+                            ),
+                          ),
+                          child: Slider(
+                            value: _currentLyricOffset.clamp(-10.0, 10.0),
+                            min: -10.0,
+                            max: 10.0,
+                            divisions: 200, // 0.1秒精度
+                            onChanged: (value) {
+                              setState(() {
+                                _currentLyricOffset = value;
+                              });
+                              // 实时预览歌词偏移
+                              _previewLyricOffset(value);
+                            },
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '+10s',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: theme.colorScheme.onSurface.withOpacity(0.5),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // 操作按钮行
+                  Row(
+                    children: [
+                      // 重置按钮
+                      Expanded(
+                        child: TextButton(
+                          onPressed:
+                              _currentLyricOffset != 0 ? _resetLyricOffset : null,
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: const Size(0, 36),
+                          ),
+                          child: const Text('重置'),
+                        ),
+                      ),
+                      // 取消按钮
+                      Expanded(
+                        child: TextButton(
+                          onPressed: _isSavingOffset ? null : _cancelLyricOffset,
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: const Size(0, 36),
+                          ),
+                          child: const Text('取消'),
+                        ),
+                      ),
+                      // 保存按钮
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: _isSavingOffset ? null : _saveLyricOffset,
+                          style: FilledButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: const Size(0, 36),
+                          ),
+                          child: _isSavingOffset
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text('保存'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
@@ -3466,212 +3640,14 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
     );
   }
   
-  /// 构建调整偏移量的内容（完全自定义UI）
-  Widget _buildAdjustOffsetContent() {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // 标题栏
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
-                  width: 1,
-                ),
-              ),
-            ),
-            child: Row(
-              children: [
-                Text(
-                  '调整歌词偏移量',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: _hideOverlay,
-                  tooltip: '关闭',
-                ),
-              ],
-            ),
-          ),
-          
-          // 内容区域
-          Flexible(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  // 说明文字
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: isDark ? Colors.grey[850] : Colors.blue[50],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          color: isDark ? Colors.blue[300] : Colors.blue[700],
-                          size: 20,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            '如果歌词与音乐不同步，可以调整偏移量',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: isDark ? Colors.blue[300] : Colors.blue[700],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 32),
-                  
-                  // 当前偏移量显示（大字体）
-                  Text(
-                    _formatLyricOffset(_currentLyricOffset),
-                    style: theme.textTheme.displaySmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 8),
-                  
-                  // 偏移状态说明
-                  Text(
-                    _currentLyricOffset > 0 
-                        ? '歌词提前显示' 
-                        : _currentLyricOffset < 0 
-                            ? '歌词延后显示' 
-                            : '无偏移',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.hintColor,
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 32),
-                  
-                  // 滑块调整
-                  Row(
-                    children: [
-                      Text(
-                        '-5s',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                      Expanded(
-                        child: Slider(
-                          value: _currentLyricOffset.clamp(-5.0, 5.0),
-                          min: -5.0,
-                          max: 5.0,
-                          divisions: 100,
-                          label: _formatLyricOffset(_currentLyricOffset),
-                          onChanged: (value) {
-                            setState(() {
-                              _currentLyricOffset = value;
-                            });
-                          },
-                        ),
-                      ),
-                      Text(
-                        '+5s',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // 精细调整按钮
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    alignment: WrapAlignment.center,
-                    children: [
-                      _buildOffsetAdjustButton('-0.5s', -0.5),
-                      _buildOffsetAdjustButton('-0.1s', -0.1),
-                      _buildOffsetAdjustButton('+0.1s', 0.1),
-                      _buildOffsetAdjustButton('+0.5s', 0.5),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // 重置按钮
-                  OutlinedButton.icon(
-                    onPressed: _currentLyricOffset != 0 ? _resetLyricOffset : null,
-                    icon: const Icon(Icons.restore),
-                    label: const Text('重置为0'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          
-          // 底部按钮栏
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(
-                  color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
-                  width: 1,
-                ),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: _isSavingOffset ? null : _hideOverlay,
-                  child: const Text('取消'),
-                ),
-                const SizedBox(width: 12),
-                ElevatedButton.icon(
-                  onPressed: _isSavingOffset ? null : _saveLyricOffset,
-                  icon: _isSavingOffset
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.save),
-                  label: const Text('保存'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-  
-  /// 构建偏移量调整按钮
+  /// 构建偏移量调整按钮（已弃用，新UI不再使用）
   Widget _buildOffsetAdjustButton(String label, double delta) {
     return OutlinedButton(
       onPressed: () {
         setState(() {
-          _currentLyricOffset = (_currentLyricOffset + delta).clamp(-5.0, 5.0);
+          _currentLyricOffset = (_currentLyricOffset + delta).clamp(-10.0, 10.0);
         });
+        _previewLyricOffset(_currentLyricOffset);
       },
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -3684,16 +3660,37 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
   /// 格式化偏移量显示
   String _formatLyricOffset(double offset) {
     final sign = offset >= 0 ? '+' : '';
-    return '$sign${offset.toStringAsFixed(2)}秒';
+    return '$sign${offset.toStringAsFixed(1)}s';
   }
-  
+
+  /// 原始偏移量（用于取消时恢复）
+  double _originalLyricOffset = 0.0;
+
+  /// 实时预览歌词偏移
+  void _previewLyricOffset(double offset) {
+    if (_overlayPlayerProvider == null ||
+        _overlayPlayerProvider!.currentLyrics == null) return;
+
+    final previewLyrics =
+        _overlayPlayerProvider!.currentLyrics!.copyWith(offset: offset);
+    _overlayPlayerProvider!.updateLyrics(previewLyrics);
+  }
+
   /// 重置偏移量为0
   void _resetLyricOffset() {
     setState(() {
       _currentLyricOffset = 0.0;
     });
+    _previewLyricOffset(0.0);
   }
-  
+
+  /// 取消偏移量调整（恢复原始值）
+  void _cancelLyricOffset() {
+    // 恢复原始偏移量
+    _previewLyricOffset(_originalLyricOffset);
+    _hideOverlay();
+  }
+
   /// 保存歌词偏移量
   Future<void> _saveLyricOffset() async {
     if (_overlayCurrentSong == null || _overlayPlayerProvider == null) return;

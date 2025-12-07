@@ -55,7 +55,13 @@ class _KaraokeLyricsViewState extends State<KaraokeLyricsView> {
   late ScrollController _scrollController;
   final Map<int, double> _lineHeights = {};
   bool _isHoveringLyrics = false;
-  final int _highlightLineOffsetIndex = 2; // 滚动到第3行
+
+  // 高亮行应该显示在歌词区域的什么位置（比例），0.4 表示偏上的位置
+  static const double _highlightPositionRatio = 0.4;
+
+  // 缓存每行歌词的字符宽度和偏移量，避免每帧重复计算
+  final Map<int, List<double>> _charWidthsCache = {};
+  final Map<int, List<double>> _charOffsetsCache = {};
 
   @override
   void initState() {
@@ -75,6 +81,10 @@ class _KaraokeLyricsViewState extends State<KaraokeLyricsView> {
     if (widget.currentPosition != oldWidget.currentPosition) {
       oldWidget.currentPosition.removeListener(_onPositionChanged);
       widget.currentPosition.addListener(_onPositionChanged);
+    }
+    // 偏移量变化时，立即更新当前行（不重新解析歌词）
+    if (widget.offsetInSeconds != oldWidget.offsetInSeconds) {
+      _updateCurrentLine(widget.currentPosition.value);
     }
   }
 
@@ -123,6 +133,9 @@ class _KaraokeLyricsViewState extends State<KaraokeLyricsView> {
         _lyricLines = parsed;
         _currentLineIndex = 0;
         _lineHeights.clear();
+        // 清除字符宽度缓存
+        _charWidthsCache.clear();
+        _charOffsetsCache.clear();
         if (_scrollController.hasClients) _scrollController.jumpTo(0);
       });
       // 解析完成后立即更新一次当前行
@@ -158,10 +171,16 @@ class _KaraokeLyricsViewState extends State<KaraokeLyricsView> {
 
     if (_isHoveringLyrics && !force) return;
 
+    // 计算当前行之前所有行的累计高度
     double offsetUpToCurrent = 0;
     for (int i = 0; i < _currentLineIndex; i++) {
       offsetUpToCurrent += _lineHeights[i] ?? 80.0;
     }
+
+    // 滚动目标：让当前行显示在顶部留白之后的位置
+    // 由于顶部留白 = viewportHeight * _highlightPositionRatio
+    // 当 scrollOffset = offsetUpToCurrent 时，当前行正好在顶部留白结束的位置
+    // 也就是屏幕的 1/3 处
     double targetOffset = offsetUpToCurrent;
     targetOffset = targetOffset.clamp(
       0.0,
@@ -175,9 +194,9 @@ class _KaraokeLyricsViewState extends State<KaraokeLyricsView> {
     );
   }
 
+
   @override
   Widget build(BuildContext context) {
-    final contentHeigt = MediaQuery.of(context).size.height;
     if (_lyricLines.isEmpty) {
       return const Center(
         child: Text(
@@ -191,26 +210,60 @@ class _KaraokeLyricsViewState extends State<KaraokeLyricsView> {
       );
     }
 
-    return ScrollConfiguration(
-      behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
-      child: SingleChildScrollView(
-        controller: _scrollController,
-        child: Column(
-          children: [
-            SizedBox(height: 160),
-            ..._lyricLines.asMap().entries.map((entry) {
-              int index = entry.key;
-              LyricLine line = entry.value;
-              bool isCurrentLine = index == _currentLineIndex;
-              return ValueListenableBuilder<Duration>(
-                valueListenable: widget.currentPosition,
-                builder: (context, position, child) {
+    // 使用 LayoutBuilder 获取歌词组件自身的可用高度
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 歌词显示区域的高度
+        final viewportHeight = constraints.maxHeight;
+
+        // 动态计算留白：让高亮行显示在歌词区域的中心
+        // 顶部留白 = 区域高度 * 0.5，确保第一行歌词能滚动到中心
+        // 底部留白 = 区域高度 * 0.5，确保最后一行也能滚动到中心
+        final topPadding = viewportHeight * _highlightPositionRatio;
+        final bottomPadding = viewportHeight * _highlightPositionRatio;
+
+        return ScrollConfiguration(
+          behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+          child: SingleChildScrollView(
+            controller: _scrollController,
+            child: Column(
+              children: [
+                SizedBox(height: topPadding),
+                ..._lyricLines.asMap().entries.map((entry) {
+                  int index = entry.key;
+                  LyricLine line = entry.value;
+                  bool isCurrentLine = index == _currentLineIndex;
+
+                  // 只有当前行需要监听位置变化实现逐字高亮
+                  if (isCurrentLine) {
+                    return ValueListenableBuilder<Duration>(
+                      valueListenable: widget.currentPosition,
+                      builder: (context, position, child) {
+                        return HoverableLyricLine(
+                          isCurrent: true,
+                          onSizeChange: (size) {
+                            _lineHeights[index] = size.height;
+                          },
+                          child: _buildCurrentLyricLine(index, line, position),
+                          onHoverChanged: (hover) {
+                            _isHoveringLyrics = hover;
+                          },
+                          onTap: () {
+                            widget.onTapLine(line.startTime);
+                          },
+                        );
+                      },
+                    );
+                  }
+
+                  // 非当前行：静态渲染，不监听位置变化
+                  final isPast = widget.currentPosition.value > line.endTime;
                   return HoverableLyricLine(
-                    isCurrent: isCurrentLine,
+                    isCurrent: false,
                     onSizeChange: (size) {
                       _lineHeights[index] = size.height;
                     },
-                    child: _buildLyricLine(line, isCurrentLine, position),
+                    child: _buildStaticLyricLine(line, isPast),
                     onHoverChanged: (hover) {
                       _isHoveringLyrics = hover;
                     },
@@ -220,48 +273,48 @@ class _KaraokeLyricsViewState extends State<KaraokeLyricsView> {
                       _scrollToCurrentLine(force: true);
                     },
                   );
-                },
-              );
-            }),
-            SizedBox(height: contentHeigt - 320),
-          ],
-        ),
-      ),
+                }),
+                SizedBox(height: bottomPadding),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
-  // 在 karaoke_lyrics_view.dart 文件中
+  // 歌词文本样式
+  static const _textStyle = TextStyle(
+    fontSize: 32,
+    fontWeight: FontWeight.bold,
+    height: 1.4,
+  );
 
-  Widget _buildLyricLine(
-    LyricLine line,
-    bool isCurrentLine,
-    Duration position,
-  ) {
-    final textStyle = TextStyle(
-      fontSize: 32,
-      fontWeight: FontWeight.bold,
-      height: 1.4,
-      shadows: [Shadow(color: Colors.black.withOpacity(0.5), blurRadius: 4)],
-    );
-
-    // 顶部的非当前行处理逻辑保持不变
-    if (position < line.startTime || position > line.endTime) {
-      final color = (position > line.endTime) ? Colors.white : Colors.white70;
-      return Wrap(
-        children: line.chars
-            .map((c) => Text(c.char, style: textStyle.copyWith(color: color)))
-            .toList(),
+  TextStyle get _textStyleWithShadow => _textStyle.copyWith(
+        shadows: [Shadow(color: Colors.black.withOpacity(0.5), blurRadius: 4)],
       );
-    }
 
-    // --- 核心渲染逻辑重构 ---
+  /// 构建静态歌词行（非当前行，不需要逐字高亮）
+  Widget _buildStaticLyricLine(LyricLine line, bool isPast) {
+    final color = isPast ? Colors.white : Colors.white70;
+    final text = line.chars.map((c) => c.char).join();
+    return Text(
+      text,
+      style: _textStyleWithShadow.copyWith(color: color),
+    );
+  }
 
-    // 步骤 1: 预计算每个 LyricChar 的宽度和在一行中的起始偏移量
-    final List<double> charWidths = [], charOffsets = [];
+  /// 获取或计算字符宽度缓存
+  void _ensureCharWidthsCache(int lineIndex, LyricLine line) {
+    if (_charWidthsCache.containsKey(lineIndex)) return;
+
+    final List<double> charWidths = [];
+    final List<double> charOffsets = [];
     double currentOffset = 0.0;
+
     for (final lyricChar in line.chars) {
       final painter = TextPainter(
-        text: TextSpan(text: lyricChar.char, style: textStyle),
+        text: TextSpan(text: lyricChar.char, style: _textStyleWithShadow),
         textDirection: TextDirection.ltr,
       )..layout();
       charWidths.add(painter.width);
@@ -269,10 +322,20 @@ class _KaraokeLyricsViewState extends State<KaraokeLyricsView> {
       currentOffset += painter.width;
     }
 
-    // 步骤 2: 修正 progressInPixels 的计算方式
-    double progressInPixels = 0.0;
+    _charWidthsCache[lineIndex] = charWidths;
+    _charOffsetsCache[lineIndex] = charOffsets;
+  }
 
-    // 找到当前正在演唱的那个 LyricChar
+  /// 构建当前歌词行（带逐字高亮效果）
+  Widget _buildCurrentLyricLine(int lineIndex, LyricLine line, Duration position) {
+    // 确保缓存已计算
+    _ensureCharWidthsCache(lineIndex, line);
+
+    final charWidths = _charWidthsCache[lineIndex]!;
+    final charOffsets = _charOffsetsCache[lineIndex]!;
+
+    // 计算当前进度
+    double progressInPixels = 0.0;
     final currentCharIndex = line.chars.lastIndexWhere(
       (c) => position >= c.start,
     );
@@ -282,31 +345,30 @@ class _KaraokeLyricsViewState extends State<KaraokeLyricsView> {
       final charOffset = charOffsets[currentCharIndex];
       final charWidth = charWidths[currentCharIndex];
 
-      // 计算当前 LyricChar 内部的演唱进度 (0.0 to 1.0)
       double charProgress = 0.0;
       final duration = (currentChar.end - currentChar.start).inMilliseconds;
       if (duration > 0) {
         charProgress =
             (position.inMilliseconds - currentChar.start.inMilliseconds) /
-            duration;
-        charProgress = charProgress.clamp(0.0, 1.0); // 确保进度在0-1之间
+                duration;
+        charProgress = charProgress.clamp(0.0, 1.0);
       } else if (position >= currentChar.end) {
         charProgress = 1.0;
       }
 
-      // 关键：总的像素进度 = 当前词/字之前的总像素宽度 + 当前词/字内部的像素进度
       progressInPixels = charOffset + (charWidth * charProgress);
     }
 
-    // 步骤 3: 使用修正后的 progressInPixels 来渲染 ShaderMask (与之前的逻辑相同)
+    // 渲染逐字高亮
     final transitionWidthPixels = 20.0;
     final gradientStart = progressInPixels;
     final gradientEnd = progressInPixels + transitionWidthPixels;
 
     final charWidgets = <Widget>[];
     for (int i = 0; i < line.chars.length; i++) {
-      final charStartOffset = charOffsets[i],
-          charEndOffset = charStartOffset + charWidths[i];
+      final charStartOffset = charOffsets[i];
+      final charEndOffset = charStartOffset + charWidths[i];
+
       final shaderMaskedChar = ShaderMask(
         shaderCallback: (rect) {
           if (charEndOffset <= gradientStart) {
@@ -332,7 +394,7 @@ class _KaraokeLyricsViewState extends State<KaraokeLyricsView> {
         },
         child: Text(
           line.chars[i].char,
-          style: textStyle.copyWith(color: Colors.white),
+          style: _textStyleWithShadow.copyWith(color: Colors.white),
         ),
       );
       charWidgets.add(shaderMaskedChar);
