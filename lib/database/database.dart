@@ -154,6 +154,91 @@ class UserSettings extends Table {
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
 
+/// 播放列表表
+class Playlists extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get name => text()();
+  TextColumn get description => text().nullable()();
+  TextColumn get coverUrl => text().nullable()();
+  IntColumn get songCount => integer().withDefault(const Constant(0))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+  BoolColumn get isSystem => boolean().withDefault(const Constant(false))();
+  TextColumn get type => text().withDefault(const Constant('custom'))(); // custom | smart | system
+}
+
+/// 播放列表-歌曲关联表
+class PlaylistSongs extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get playlistId => integer().references(Playlists, #id, onDelete: KeyAction.cascade)();
+  IntColumn get songId => integer().references(Songs, #id, onDelete: KeyAction.cascade)();
+  IntColumn get position => integer()();
+  DateTimeColumn get addedAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {playlistId, songId},
+  ];
+}
+
+/// 歌词存储表 - 支持多版本/多来源
+///
+/// 统一存储所有歌词数据，支持：
+/// - 用户手动导入的歌词
+/// - 网络获取的歌词缓存
+/// - 多语言/多版本管理
+class SongLyrics extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  // ===== 歌曲关联 =====
+  /// 关联的歌曲ID（可为空，支持orphan歌词）
+  IntColumn get songId => integer().nullable()
+      .references(Songs, #id, onDelete: KeyAction.setNull)();
+
+  /// 歌词唯一键（与LyricService.generateUniqueKey 一致）
+  /// 用于无songId时的匹配恢复
+  TextColumn get uniqueKey => text()();
+
+  // ===== 歌词内容 =====
+  /// 原始歌词文本（LRC/TTML/纯文本）
+  TextColumn get content => text()();
+
+  /// 翻译歌词（可选）
+  TextColumn get translatedContent => text().nullable()();
+
+  // ===== 元数据 =====
+  /// 歌词格式：lrc | ttml | plain | enhanced_lrc
+  TextColumn get format => text().withDefault(const Constant('lrc'))();
+
+  /// 语言：zh-CN | ja | en | unknown
+  TextColumn get language => text().withDefault(const Constant('unknown'))();
+
+  /// 来源：local | netease | kugou | manual | embedded | bilibili
+  TextColumn get source => text().withDefault(const Constant('unknown'))();
+
+  /// 来源引用ID（如网易云歌曲ID，用于溯源）
+  TextColumn get sourceRef => text().nullable()();
+
+  /// 时间轴偏移（毫秒）
+  IntColumn get offsetMs => integer().withDefault(const Constant(0))();
+
+  // ===== 状态标记 =====
+  /// 是否为用户手动编辑（最高优先级，必须备份）
+  BoolColumn get isUserEdited => boolean().withDefault(const Constant(false))();
+
+  /// 是否为活跃版本（同一歌曲可能有多个歌词版本）
+  BoolColumn get isActive => boolean().withDefault(const Constant(true))();
+
+  // ===== 时间戳 =====
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {uniqueKey, source, language}, // 同一歌曲+来源+语言唯一
+  ];
+}
+
 @DriftDatabase(tables: [
   Songs,
   BilibiliVideos,
@@ -161,6 +246,9 @@ class UserSettings extends Table {
   BilibiliAudioCache,
   DownloadTasks,
   UserSettings,
+  Playlists,
+  PlaylistSongs,
+  SongLyrics,
 ])
 class MusicDatabase extends _$MusicDatabase {
   static late MusicDatabase _database;
@@ -178,7 +266,7 @@ class MusicDatabase extends _$MusicDatabase {
   }
 
   @override
-  int get schemaVersion => 9; // ⭐ 升级版本：添加响度均衡字段
+  int get schemaVersion => 11; // ⭐ 升级版本：添加歌词表
 
   @override
   MigrationStrategy get migration {
@@ -362,6 +450,70 @@ class MusicDatabase extends _$MusicDatabase {
           }
 
           print('✅ 响度均衡字段检查完成');
+        }
+
+        if (from < 10) {
+          // Schema version 9 -> 10: 添加播放列表表
+          await m.createTable(playlists);
+          await m.createTable(playlistSongs);
+          print('✅ 播放列表表创建完成');
+        }
+
+        if (from < 11) {
+          // Schema version 10 -> 11: 添加歌词表
+          await m.createTable(songLyrics);
+
+          // 迁移现有 Songs.lyrics 到新表
+          final songsWithLyrics = await customSelect(
+            '''
+            SELECT id, lyrics, title, artist, duration, source, bvid, cid
+            FROM songs
+            WHERE lyrics IS NOT NULL AND lyrics != ''
+            ''',
+            readsFrom: {songs},
+          ).get();
+
+          print('🎵 发现 ${songsWithLyrics.length} 首歌曲有歌词需要迁移');
+
+          for (final row in songsWithLyrics) {
+            final songId = row.read<int>('id');
+            final lyricsContent = row.read<String>('lyrics');
+            final title = row.read<String>('title');
+            final artist = row.read<String?>('artist') ?? '';
+            final duration = row.read<int?>('duration') ?? 0;
+            final source = row.read<String?>('source') ?? 'local';
+            final bvid = row.read<String?>('bvid');
+            final cid = row.read<int?>('cid');
+
+            // 生成 uniqueKey（与 LyricService 逻辑一致）
+            String uniqueKey;
+            if (source == 'bilibili' && bvid != null && cid != null) {
+              uniqueKey = 'bilibili_${bvid}_$cid';
+            } else if (title.isNotEmpty && artist.isNotEmpty && artist != '未知艺术家') {
+              uniqueKey = 'local_${title}_${artist}_$duration';
+            } else {
+              uniqueKey = 'legacy_song_$songId';
+            }
+
+            try {
+              await into(songLyrics).insert(
+                SongLyricsCompanion.insert(
+                  songId: Value(songId),
+                  uniqueKey: uniqueKey,
+                  content: lyricsContent,
+                  format: const Value('lrc'),
+                  language: const Value('unknown'),
+                  source: const Value('local'),
+                  isUserEdited: const Value(true), // 数据库中的歌词视为用户导入
+                  isActive: const Value(true),
+                ),
+              );
+            } catch (e) {
+              print('⚠️ 迁移歌词失败 (songId=$songId): $e');
+            }
+          }
+
+          print('✅ 歌词表创建完成，迁移了 ${songsWithLyrics.length} 条歌词');
         }
       },
     );

@@ -12,6 +12,7 @@ import 'services/bilibili/download_service.dart';
 import 'services/bilibili/cookie_manager.dart';
 import 'services/bilibili/api_client.dart';
 import 'services/bilibili/stream_service.dart';
+import 'services/playlist_service.dart';
 import 'database/database.dart';
 import './services/theme_provider.dart';
 import 'platform/desktop_manager.dart';
@@ -59,6 +60,11 @@ void main() async {
 
     // ⭐ 初始化缓存系统
     await CacheSystem.init();
+
+    // ⭐ 初始化系统播放列表
+    final playlistService = PlaylistService(musicDatabase);
+    await playlistService.initSystemPlaylists();
+    debugPrint('✅ 系统播放列表已初始化');
 
     // 创建 PlayerProvider 实例
     final playerProvider = PlayerProvider();

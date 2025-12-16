@@ -74,7 +74,6 @@ class StorageSettingPageState extends State<StorageSettingPage>
 
   Future<void> _loadBilibiliCacheSettings() async {
     final storage = await PlayerStateStorage.getInstance();
-    final playerProvider = Provider.of<PlayerProvider>(context, listen: false);
     
     setState(() {
       _cacheSizeGB = storage.bilibiliCacheSizeGB;
@@ -82,19 +81,14 @@ class StorageSettingPageState extends State<StorageSettingPage>
     });
     
     try {
-      final cacheService = playerProvider.audioLoaderService.cacheService;
-      if (cacheService != null) {
-        final stats = await cacheService.getCacheStatistics();
-        setState(() {
-          _cacheUsage = '${stats.formattedTotalSize} / ${stats.formattedMaxSize} (${stats.fileCount} 个文件)';
-          _isLoadingCache = false;
-        });
-      } else {
-        setState(() {
-          _cacheUsage = '缓存服务未初始化';
-          _isLoadingCache = false;
-        });
-      }
+      final playerProvider = Provider.of<PlayerProvider>(context, listen: false);
+      final stats = await playerProvider.getBilibiliAutoCacheStatistics();
+      setState(() {
+        _cacheUsage = stats != null
+            ? '${stats.formattedTotalSize} / ${stats.formattedMaxSize} (${stats.fileCount} 个文件)'
+            : '缓存服务未初始化';
+        _isLoadingCache = false;
+      });
     } catch (e) {
       setState(() {
         _cacheUsage = '加载失败';
@@ -169,16 +163,12 @@ class StorageSettingPageState extends State<StorageSettingPage>
       danger: true,
       onConfirm: () async {
         final playerProvider = Provider.of<PlayerProvider>(context, listen: false);
-        final cacheService = playerProvider.audioLoaderService.cacheService;
-        
-        if (cacheService != null) {
-          try {
-            await cacheService.clearAllCache();
-            MottoToast.show(context, '✓ 缓存已清空');
-            await _loadBilibiliCacheSettings();
-          } catch (e) {
-            MottoToast.show(context, '清空失败: $e');
-          }
+        try {
+          await playerProvider.clearBilibiliAutoCache();
+          MottoToast.show(context, '✓ 缓存已清空');
+          await _loadBilibiliCacheSettings();
+        } catch (e) {
+          MottoToast.show(context, '清空失败: $e');
         }
       },
       cancelText: '取消',
@@ -187,36 +177,34 @@ class StorageSettingPageState extends State<StorageSettingPage>
 
   Future<void> _openCacheDirectory() async {
     final playerProvider = Provider.of<PlayerProvider>(context, listen: false);
-    final cacheService = playerProvider.audioLoaderService.cacheService;
-    
-    if (cacheService != null) {
-      final cachePath = cacheService.cacheDirectoryPath;
-      
-      try {
-        // 桌面平台
-        if (Platform.isWindows) {
-          await Process.run('explorer', [cachePath]);
-        } else if (Platform.isMacOS) {
-          await Process.run('open', [cachePath]);
-        } else if (Platform.isLinux) {
-          await Process.run('xdg-open', [cachePath]);
-        } 
-        // 移动平台
-        else if (Platform.isAndroid) {
-          // Android 使用 Intent 打开文件管理器
-          // 注意：需要添加 android_intent_plus 依赖
-          // 这里先显示路径，让用户手动打开
-          await _showCachePathDialog(cachePath);
-        } else if (Platform.isIOS) {
-          // iOS 由于沙盒限制，无法直接打开文件管理器
-          // 显示路径信息
-          await _showCachePathDialog(cachePath);
-        } else {
-          MottoToast.show(context, '当前平台不支持打开目录');
-        }
-      } catch (e) {
-        MottoToast.show(context, '打开目录失败: $e');
+    final cachePath = await playerProvider.getBilibiliAutoCacheDirectory();
+    if (cachePath == null || cachePath.isEmpty) {
+      MottoToast.show(context, '缓存服务未初始化');
+      return;
+    }
+
+    try {
+      // 桌面平台
+      if (Platform.isWindows) {
+        await Process.run('explorer', [cachePath]);
+      } else if (Platform.isMacOS) {
+        await Process.run('open', [cachePath]);
+      } else if (Platform.isLinux) {
+        await Process.run('xdg-open', [cachePath]);
+      } 
+      // 移动平台
+      else if (Platform.isAndroid) {
+        // Android 使用 Intent 打开文件管理器
+        // 这里先显示路径，让用户手动打开
+        await _showCachePathDialog(cachePath);
+      } else if (Platform.isIOS) {
+        // iOS 由于沙盒限制，无法直接打开文件管理器
+        await _showCachePathDialog(cachePath);
+      } else {
+        MottoToast.show(context, '当前平台不支持打开目录');
       }
+    } catch (e) {
+      MottoToast.show(context, '打开目录失败: $e');
     }
   }
 

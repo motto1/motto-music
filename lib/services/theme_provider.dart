@@ -6,12 +6,21 @@ import 'package:flutter/services.dart';
 import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'dart:ui';
 
+/// 主题相关 SharedPreferences Key。
+class ThemePrefsKeys {
+  static const String themeMode = 'theme_mode';
+  static const String seedColor = 'theme_seed_color';
+  static const String seedAlpha = 'theme_seed_alpha';
+  static const String opacityTarget = 'theme_opacity_target';
+  static const String sidebarIsExtended = 'theme_sidebar_is_extended';
+}
+
 class AppThemeProvider extends ChangeNotifier {
-  static const String _themeKey = 'theme_mode';
-  static const String _seedColorKey = 'theme_seed_color';
-  static const String _seedAlphaKey = 'theme_seed_alpha';
-  static const String _opacityTargetKey = 'theme_opacity_target';
-  static const _sidebarIsExtendedKey = 'theme_sidebar_is_extended';
+  static const String _themeKey = ThemePrefsKeys.themeMode;
+  static const String _seedColorKey = ThemePrefsKeys.seedColor;
+  static const String _seedAlphaKey = ThemePrefsKeys.seedAlpha;
+  static const String _opacityTargetKey = ThemePrefsKeys.opacityTarget;
+  static const _sidebarIsExtendedKey = ThemePrefsKeys.sidebarIsExtended;
 
   ThemeMode _themeMode = ThemeMode.system;
   Color _seedColor = Colors.red; // 统一使用红色主题

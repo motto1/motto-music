@@ -15,6 +15,7 @@ import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:motto_music/widgets/apple_music_card.dart';
 import 'package:motto_music/services/cache/page_cache_service.dart';
+import 'package:motto_music/services/cache/album_art_cache_service.dart';
 
 /// 全局搜索结果页
 /// 
@@ -639,7 +640,15 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage> {
   /// 直接播放视频
   Future<void> _playVideo(BilibiliVideo video, int index) async {
     try {
-      // 创建当前视频的 Song 对象
+      // 为当前点击的视频封面优先获取本地缓存路径
+      final cookieManager = CookieManager();
+      final cookie = await cookieManager.getCookieString();
+      final localCoverPath = await AlbumArtCacheService.instance.ensureLocalPath(
+        video.pic,
+        cookie: cookie.isEmpty ? null : cookie,
+      );
+
+      // 创建当前视频的 Song 对象（封面路径优先使用本地缓存）
       final song = db.Song(
         id: -(index + 1), // 使用负数ID避免与数据库冲突
         title: video.title,
@@ -653,7 +662,7 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage> {
         bitrate: null,
         sampleRate: null,
         duration: video.duration,
-        albumArtPath: video.pic,
+        albumArtPath: localCoverPath ?? video.pic,
         dateAdded: DateTime.now(),
         isFavorite: false,
         lastPlayedTime: DateTime.now(),
@@ -666,34 +675,48 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage> {
       );
 
       // 创建播放列表（当前搜索结果的所有视频）
-      final playlist = _videos.asMap().entries.map((entry) {
+      final playlist = <db.Song>[];
+      for (final entry in _videos.asMap().entries) {
         final idx = entry.key;
         final v = entry.value;
-        return db.Song(
-          id: -(idx + 1),
-          title: v.title,
-          artist: v.owner.name,
-          album: '搜索结果',
-          filePath: buildBilibiliFilePath(
+
+        String? cachedPath;
+        try {
+          cachedPath = await AlbumArtCacheService.instance.ensureLocalPath(
+            v.pic,
+            cookie: cookie.isEmpty ? null : cookie,
+          );
+        } catch (_) {
+          // 静默降级，保留原始 URL
+        }
+
+        playlist.add(
+          db.Song(
+            id: -(idx + 1),
+            title: v.title,
+            artist: v.owner.name,
+            album: '搜索结果',
+            filePath: buildBilibiliFilePath(
+              bvid: v.bvid,
+              cid: null,
+            ),
+            lyrics: null,
+            bitrate: null,
+            sampleRate: null,
+            duration: v.duration,
+            albumArtPath: cachedPath ?? v.pic,
+            dateAdded: DateTime.now(),
+            isFavorite: false,
+            lastPlayedTime: DateTime.now(),
+            playedCount: 0,
+            source: 'bilibili',
             bvid: v.bvid,
             cid: null,
+            pageNumber: null,
+            bilibiliVideoId: null,
           ),
-          lyrics: null,
-          bitrate: null,
-          sampleRate: null,
-          duration: v.duration,
-          albumArtPath: v.pic,
-          dateAdded: DateTime.now(),
-          isFavorite: false,
-          lastPlayedTime: DateTime.now(),
-          playedCount: 0,
-          source: 'bilibili',
-          bvid: v.bvid,
-          cid: null,
-          pageNumber: null,
-          bilibiliVideoId: null,
         );
-      }).toList();
+      }
 
       if (mounted) {
         final playerProvider = context.read<PlayerProvider>();

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:audio_service/audio_service.dart';
 import 'dart:async';
 import 'dart:math' as math;
@@ -29,6 +30,7 @@ import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 
 /// 播放器状态管理
 /// 
@@ -53,10 +55,16 @@ class PlayerProvider with ChangeNotifier {
 
   PlayMode _playMode = PlayMode.loop;
 
-  List<Song> _playlist = [];
-  List<Song> _originalPlaylist = [];
-  List<Song> _shuffledPlaylist = [];
-  int _currentIndex = -1;
+  // 细粒度状态通知器（供 UI 精准监听）
+  final ValueNotifier<Song?> currentSongNotifier = ValueNotifier<Song?>(null);
+  final ValueNotifier<bool> isPlayingNotifier = ValueNotifier<bool>(false);
+  final ValueNotifier<List<Song>> playlistNotifier =
+      ValueNotifier<List<Song>>(<Song>[]);
+
+  // 索引映射架构：单一歌曲列表 + 播放顺序索引
+  List<Song> _songs = [];
+  List<int> _playOrder = [];
+  int _currentOrderIndex = 0;
 
   final math.Random _random = math.Random();
   final PageCacheService _pageCache = PageCacheService();
@@ -92,8 +100,22 @@ class PlayerProvider with ChangeNotifier {
   Duration get duration => _duration;
   PlayMode get playMode => _playMode;
   // 返回可修改的副本，避免外部直接修改内部状态
-  List<Song> get playlist => List.from(_playlist);
-  int get currentIndex => _currentIndex;
+  List<Song> get playlist {
+    if (_songs.isEmpty || _playOrder.isEmpty) {
+      return const [];
+    }
+    // 基于索引映射生成当前播放顺序视图
+    return _playOrder
+        .where((i) => i >= 0 && i < _songs.length)
+        .map((i) => _songs[i])
+        .toList();
+  }
+
+  /// 当前歌曲在播放队列中的索引（与 [playlist] 对齐）
+  int get currentIndex {
+    if (_playOrder.isEmpty) return -1;
+    return _currentOrderIndex.clamp(0, _playOrder.length - 1) as int;
+  }
   double get volume => _volume;
 
   // 最近一次播放失败信息（暂未在 UI 中使用，但用于后续扩展）
@@ -108,11 +130,32 @@ class PlayerProvider with ChangeNotifier {
   bool get lyricsNotificationEnabled => _lyricsNotificationEnabled;
   bool get lockScreenEnabled => _lockScreenEnabled;
 
-  bool get hasPrevious =>
-      playMode == PlayMode.shuffle ? true : _currentIndex > 0;
-  bool get hasNext => playMode == PlayMode.shuffle
-      ? true
-      : _currentIndex < _playlist.length - 1;
+  void _updateCurrentSongNotifier() {
+    currentSongNotifier.value = _currentSong;
+  }
+
+  void _updatePlaylistNotifier() {
+    // 为避免在语义树刷新过程中同步修改列表导致的断言问题，
+    // 将播放列表的可见更新推迟到当前帧结束后执行。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      playlistNotifier.value = List<Song>.from(playlist);
+      debugPrint(
+        '[PlayerProvider] 🎵 playlistNotifier 更新: 长度=${playlistNotifier.value.length}, '
+        '_songs=${_songs.length}, _playOrder=$_playOrder',
+      );
+    });
+  }
+
+  bool get hasPrevious {
+    if (_playMode == PlayMode.shuffle) return true;
+    return _playOrder.isNotEmpty && _currentOrderIndex > 0;
+  }
+
+  bool get hasNext {
+    if (_playMode == PlayMode.shuffle) return true;
+    return _playOrder.isNotEmpty &&
+        _currentOrderIndex < _playOrder.length - 1;
+  }
 
   static final Set<VoidCallback> _songChangeListeners = <VoidCallback>{};
 
@@ -213,16 +256,17 @@ class PlayerProvider with ChangeNotifier {
           playedCount: 0,
         );
 
+        final currentList = playlist;
         if (songId > 0) {
-          song = _playlist.firstWhere(
+          song = currentList.firstWhere(
             (s) => s.id == songId,
-            orElse: () => _playlist.firstWhere(
+            orElse: () => currentList.firstWhere(
               (s) => s.bvid == bvid && (s.cid == cid || cid == 0),
               orElse: () => fallbackSong,
             ),
           );
         } else {
-          song = _playlist.firstWhere(
+          song = currentList.firstWhere(
             (s) => s.bvid == bvid && (s.cid == cid || cid == 0),
             orElse: () => fallbackSong,
           );
@@ -279,6 +323,7 @@ class PlayerProvider with ChangeNotifier {
     // 监听播放状态变化
     _playbackStateSub = _audioHandler!.playbackState.listen((state) {
       _lyricsNotificationService.updatePlayState(state.playing);
+      isPlayingNotifier.value = state.playing;
       notifyListeners();
 
       // 检测播放完成
@@ -291,11 +336,16 @@ class PlayerProvider with ChangeNotifier {
   Future<void> _restoreState() async {
     playerState = await PlayerStateStorage.getInstance();
     _currentSong = playerState?.currentSong;
-    // 必须使用 List.from() 创建可修改的副本，因为 playerState.playlist 返回不可修改列表
     final restoredPlaylist = playerState?.playlist;
-    _playlist = restoredPlaylist != null ? List.from(restoredPlaylist) : [];
-    _originalPlaylist = restoredPlaylist != null ? List.from(restoredPlaylist) : [];
-    _shuffledPlaylist = restoredPlaylist != null ? List.from(restoredPlaylist) : [];
+    // 索引映射模式下，同步初始化 _songs/_playOrder/_currentOrderIndex
+    _songs = restoredPlaylist != null ? List.from(restoredPlaylist) : [];
+    _playOrder = List.generate(_songs.length, (i) => i);
+    if (_currentSong != null && _songs.isNotEmpty) {
+      final idx = _songs.indexWhere((s) => s.id == _currentSong!.id);
+      _currentOrderIndex = idx >= 0 ? idx : 0;
+    } else {
+      _currentOrderIndex = 0;
+    }
     _volume = playerState?.volume ?? 1.0;
     _playMode = playerState?.playMode ?? PlayMode.loop;
     _position.value = playerState?.position ?? Duration.zero;
@@ -306,10 +356,17 @@ class PlayerProvider with ChangeNotifier {
     await _lyricsNotificationService.setNotificationEnabled(_lyricsNotificationEnabled);
     await _lyricsNotificationService.setLockScreenEnabled(_lockScreenEnabled);
     
-    if (_currentSong != null && _playlist.isNotEmpty) {
-      _currentIndex = _playlist.indexWhere((s) => s.id == _currentSong!.id);
-      // 恢复播放列表而不自动播放
-      await _setPlaylistToHandler(_playlist, initialIndex: _currentIndex);
+    if (_currentSong != null && restoredPlaylist != null && restoredPlaylist.isNotEmpty) {
+      // 使用索引映射还原队列与当前索引
+      final playlistForHandler = _playOrder
+          .where((i) => i >= 0 && i < _songs.length)
+          .map((i) => _songs[i])
+          .toList(growable: false);
+      final initialIndex = _currentOrderIndex.clamp(
+        0,
+        playlistForHandler.isEmpty ? 0 : playlistForHandler.length - 1,
+      );
+      await _setPlaylistToHandler(playlistForHandler, initialIndex: initialIndex);
     }
     
     await _audioHandler?.setVolume(_volume);
@@ -319,6 +376,8 @@ class PlayerProvider with ChangeNotifier {
         artist: _currentSong!.artist,
       );
     }
+    _updateCurrentSongNotifier();
+    _updatePlaylistNotifier();
     notifyListeners();
   }
 
@@ -379,9 +438,10 @@ class PlayerProvider with ChangeNotifier {
     final extras = mediaItem.extras ?? const <String, dynamic>{};
     final songId = extras['songId'] as int?;
     if (songId != null && songId > 0) {
-      final index = _playlist.indexWhere((s) => s.id == songId);
+      final currentList = playlist;
+      final index = currentList.indexWhere((s) => s.id == songId);
       if (index != -1) {
-        song = _playlist[index];
+        song = currentList[index];
       } else if (_currentSong != null && _currentSong!.id == songId) {
         song = _currentSong;
       }
@@ -853,8 +913,16 @@ class PlayerProvider with ChangeNotifier {
       return song;
     }
 
-    final cookie =
-        artPath.contains('bilibili') ? await _cookieManager.getCookieString() : null;
+    // 仅在封面 URL 确认属于 B 站域名（bilibili.com / hdslb.com）时，才去取 Cookie，
+    // 避免对非 B 站封面做多余的 Cookie 获取。
+    String? cookie;
+    if (AlbumArtCacheService.isBilibiliImageUrl(artPath)) {
+      final rawCookie = await _cookieManager.getCookieString();
+      if (rawCookie.isNotEmpty) {
+        cookie = rawCookie;
+      }
+    }
+
     final localPath = await AlbumArtCacheService.instance
         .ensureLocalPath(artPath, cookie: cookie);
     if (localPath == null ||
@@ -873,12 +941,17 @@ class PlayerProvider with ChangeNotifier {
   }
 
   Future<void> _applyAlbumArtUpdate(Song original, Song updated) async {
-    _playlist = _replaceSongInList(_playlist, updated);
-    _originalPlaylist = _replaceSongInList(_originalPlaylist, updated);
-    _shuffledPlaylist = _replaceSongInList(_shuffledPlaylist, updated);
+    _songs = _replaceSongInList(_songs, updated);
 
     if (_currentSong?.id == updated.id) {
       _currentSong = updated;
+    }
+
+    // 同步更新持久化播放列表（如果存在）
+    if (_playOrder.isNotEmpty) {
+      final playlistForHandler =
+          _playOrder.map((i) => _songs[i]).toList(growable: false);
+      playerState?.setPlaylist(playlistForHandler);
     }
 
     if (original.id > 0 &&
@@ -998,88 +1071,19 @@ class PlayerProvider with ChangeNotifier {
     bool shuffle = true,
     bool playNow = true,
   }) async {
-    try {
-      debugPrint('[播放调试] ========== 开始播放 ==========');
-      debugPrint('[播放调试] 歌曲: ${song.title}');
-      debugPrint('[播放调试] 艺术家: ${song.artist ?? "未知"}');
-      debugPrint('[播放调试] 来源: ${song.source}');
-
-      _isLoading = true;
-      _errorMessage = null;
-      _currentSong = song;
-      notifyListeners();
-
-      // 处理播放列表逻辑
-      if (playlist != null) {
-        _originalPlaylist = List.from(playlist);
-
-        if (_playMode == PlayMode.shuffle && shuffle) {
-          _createShuffledPlaylist();
-          _playlist = List.from(_shuffledPlaylist);
-          _currentIndex = _shuffledPlaylist.indexWhere((s) => s.id == song.id);
-        } else {
-          _playlist = List.from(playlist);
-          _currentIndex = index ?? 0;
-          if (_playMode == PlayMode.shuffle) {
-            _createShuffledPlaylist();
-          }
-        }
-      } else if (_originalPlaylist.isEmpty ||
-          !_originalPlaylist.any((s) => s.id == song.id)) {
-        _originalPlaylist = [song];
-        _shuffledPlaylist = [song];
-        _playlist = [song];
-        _currentIndex = 0;
-      } else {
-        if (_playMode == PlayMode.shuffle) {
-          _currentIndex = _shuffledPlaylist.indexWhere((s) => s.id == song.id);
-          _playlist = List.from(_shuffledPlaylist);
-        } else {
-          _currentIndex = _originalPlaylist.indexWhere((s) => s.id == song.id);
-          _playlist = List.from(_originalPlaylist);
-        }
-      }
-
-      // 设置播放列表到 AudioHandler
-      debugPrint('[播放调试] 📋 设置播放列表，总数: ${_playlist.length}, 当前索引: $_currentIndex');
-      debugPrint('[播放调试] AudioHandler 状态: ${_audioHandler == null ? "❌ NULL" : "✅ 已初始化"}');
-      await _setPlaylistToHandler(_playlist, initialIndex: _currentIndex);
-
-      // 跳转到指定歌曲并播放
-      if (_currentIndex >= 0 && _audioHandler != null) {
-        debugPrint('[播放调试] 🎯 跳转到索引 $_currentIndex 并播放');
-        await _audioHandler!.skipToQueueItem(_currentIndex);
-        if (playNow) {
-          debugPrint('[播放调试] ▶️ 发送播放命令');
-          await _audioHandler!.play();
-        }
-      } else {
-        debugPrint('[播放调试] ❌ 无法播放: AudioHandler = ${_audioHandler == null ? "null" : "OK"}, index = $_currentIndex');
-      }
-
-      _isLoading = false;
-      notifyListeners();
-
-      // 更新数据库播放计数
-      await _updatePlayCount(song);
-
-      // 保存状态
-      playerState?.setCurrentSong(song);
-      playerState?.setPlaylist(_playlist);
-
-      // 自动加载歌词
-      print('[LyricsNotification] 🚀 准备调用loadLyrics()');
-      loadLyrics();
-    } catch (e) {
-      print('❌ 播放失败: $e');
-      _isLoading = false;
-      _errorMessage = '播放失败: ${e.toString()}';
-      notifyListeners();
-    }
+    await _playSongWithIndexMapping(
+      song,
+      playlist: playlist,
+      index: index,
+      shuffle: shuffle,
+      playNow: playNow,
+    );
   }
 
   Future<void> _updatePlayCount(Song song) async {
     try {
+      Song? updatedForQueue;
+
       if (song.id < 0) {
         // 临时Song对象（在线收藏夹）
         Song? existingSong;
@@ -1097,10 +1101,12 @@ class PlayerProvider with ChangeNotifier {
               playedCount: existingSong.playedCount + 1,
             ),
           );
-          _currentSong = existingSong.copyWith(
+          final updated = existingSong.copyWith(
             lastPlayedTime: DateTime.now(),
             playedCount: existingSong.playedCount + 1,
           );
+          _currentSong = updated;
+          updatedForQueue = updated;
         } else {
           final newId = await MusicDatabase.database.insertSong(
             song
@@ -1110,40 +1116,67 @@ class PlayerProvider with ChangeNotifier {
                 )
                 .toCompanion(false),
           );
-          _currentSong = song.copyWith(
+          final updated = song.copyWith(
             id: newId,
             lastPlayedTime: DateTime.now(),
             playedCount: 1,
           );
+          _currentSong = updated;
+          updatedForQueue = updated;
         }
       } else {
-        await MusicDatabase.database.updateSong(
-          song.copyWith(
-            lastPlayedTime: DateTime.now(),
-            playedCount: song.playedCount + 1,
-          ),
+        final updated = song.copyWith(
+          lastPlayedTime: DateTime.now(),
+          playedCount: song.playedCount + 1,
         );
+        await MusicDatabase.database.updateSong(updated);
+        _currentSong = updated;
+        updatedForQueue = updated;
       }
+
+      // 将最新的歌曲信息同步到当前队列中，避免当前播放歌曲只在数据库中更新而 playlist 里仍然是旧对象
+      if (updatedForQueue != null && _songs.isNotEmpty) {
+        final originalBvid = song.bvid;
+        final originalCid = song.cid;
+        final originalPage = song.pageNumber;
+
+        _songs = _songs.map((s) {
+          // 优先根据 id 匹配正式歌曲
+          if (song.id > 0 && s.id == song.id) {
+            return updatedForQueue!;
+          }
+
+          // 对于临时 Bilibili 歌曲，使用 bvid + cid/pageNumber 匹配
+          if (song.id < 0 &&
+              originalBvid != null &&
+              originalBvid.isNotEmpty &&
+              s.bvid == originalBvid) {
+            if (originalCid != null &&
+                originalCid > 0 &&
+                s.cid != null &&
+                s.cid! > 0 &&
+                s.cid == originalCid) {
+              return updatedForQueue!;
+            }
+            if (originalPage != null &&
+                originalPage > 0 &&
+                s.pageNumber != null &&
+                s.pageNumber! > 0 &&
+                s.pageNumber == originalPage) {
+              return updatedForQueue!;
+            }
+          }
+
+          return s;
+        }).toList(growable: false);
+
+        _updatePlaylistNotifier();
+      }
+
+      _updateCurrentSongNotifier();
       _notifySongChange();
     } catch (e) {
       print('⚠️ 数据库更新失败（不影响播放）: $e');
-    }
-  }
-
-  void _createShuffledPlaylist() {
-    if (_originalPlaylist.isEmpty) return;
-
-    _shuffledPlaylist = List.from(_originalPlaylist);
-
-    if (_currentSong != null) {
-      _shuffledPlaylist.removeWhere((song) => song.id == _currentSong!.id);
-      _shuffledPlaylist.insert(0, _currentSong!);
-    }
-
-    if (_shuffledPlaylist.length > 1) {
-      final songsToShuffle = _shuffledPlaylist.sublist(1);
-      songsToShuffle.shuffle(_random);
-      _shuffledPlaylist = [_shuffledPlaylist.first, ...songsToShuffle];
     }
   }
 
@@ -1161,6 +1194,8 @@ class PlayerProvider with ChangeNotifier {
     _currentSong = null;
     _position.value = Duration.zero;
     _errorMessage = null;
+    _updateCurrentSongNotifier();
+    isPlayingNotifier.value = false;
     notifyListeners();
   }
 
@@ -1168,14 +1203,30 @@ class PlayerProvider with ChangeNotifier {
     if (_audioHandler == null) return;
     await _audioHandler!.skipToPrevious();
     _updateCurrentSongFromHandler();
-    _notifySongChange();
+    // 将上一首歌计入最近播放
+    if (_currentSong != null) {
+      await _updatePlayCount(_currentSong!);
+    }
   }
 
   Future<void> next() async {
     if (_audioHandler == null) return;
+    final beforeIndex = _audioHandler!.currentQueueIndex;
+    debugPrint(
+      '[PlayerProvider] ⏭ next() 调用: '
+      'handlerIndex(before)=$beforeIndex, '
+      '_currentOrderIndex=$_currentOrderIndex, _playOrder=$_playOrder',
+    );
     await _audioHandler!.skipToNext();
+    final afterIndex = _audioHandler!.currentQueueIndex;
+    debugPrint(
+      '[PlayerProvider] ⏭ next() 完成: handlerIndex(after)=$afterIndex',
+    );
     _updateCurrentSongFromHandler();
-    _notifySongChange();
+    // 将下一首歌计入最近播放
+    if (_currentSong != null) {
+      await _updatePlayCount(_currentSong!);
+    }
   }
 
   Future<void> seekTo(Duration position) async {
@@ -1198,174 +1249,69 @@ class PlayerProvider with ChangeNotifier {
   }
 
   void setPlayMode(PlayMode mode) {
-    if (_playMode == mode) return;
-
-    final previousMode = _playMode;
-    _playMode = mode;
-    _handlePlayModeChange(previousMode, mode);
-    notifyListeners();
-    playerState?.setPlayMode(mode);
-  }
-
-  void _handlePlayModeChange(PlayMode previousMode, PlayMode newMode) {
-    if (previousMode == PlayMode.shuffle && newMode != PlayMode.shuffle) {
-      _restoreOriginalPlaylist();
-    } else if (previousMode != PlayMode.shuffle &&
-        newMode == PlayMode.shuffle) {
-      _switchToShuffleMode();
-    }
-  }
-
-  void _restoreOriginalPlaylist() {
-    if (_originalPlaylist.isEmpty) return;
-    _playlist = List.from(_originalPlaylist);
-    if (_currentSong != null) {
-      _currentIndex = _originalPlaylist.indexWhere(
-        (s) => s.id == _currentSong!.id,
-      );
-      if (_currentIndex == -1) _currentIndex = 0;
-    }
-  }
-
-  void _switchToShuffleMode() {
-    if (_originalPlaylist.isEmpty) return;
-    _createShuffledPlaylist();
-    _playlist = List.from(_shuffledPlaylist);
-    if (_currentSong != null) {
-      _currentIndex = _shuffledPlaylist.indexWhere(
-        (s) => s.id == _currentSong!.id,
-      );
-      if (_currentIndex == -1) _currentIndex = 0;
-    }
+    _setPlayModeWithIndexMapping(mode);
   }
 
   void setPlaylist(List<Song> songs, {int currentIndex = 0}) {
-    _originalPlaylist = List.from(songs);
-    _currentIndex = currentIndex.clamp(0, songs.length - 1);
+    // 将传入列表视为新的播放队列（顺序模式）
+    _songs = List.from(songs);
+    _playOrder = List.generate(_songs.length, (i) => i);
+    _currentOrderIndex =
+        _playOrder.isEmpty ? 0 : currentIndex.clamp(0, _playOrder.length - 1);
 
-    if (_playMode == PlayMode.shuffle) {
-      if (songs.isNotEmpty) {
-        _currentSong = songs[_currentIndex];
-        _createShuffledPlaylist();
-        _playlist = List.from(_shuffledPlaylist);
-        _currentIndex = _shuffledPlaylist.indexWhere(
-          (s) => s.id == _currentSong!.id,
-        );
-      }
+    if (_songs.isNotEmpty) {
+      _currentSong = _songs[_playOrder[_currentOrderIndex]];
     } else {
-      _playlist = List.from(songs);
+      _currentSong = null;
     }
 
-    if (songs.isNotEmpty) {
-      _currentSong = songs[currentIndex.clamp(0, songs.length - 1)];
-    }
+    final playlistForHandler =
+        _playOrder.map((i) => _songs[i]).toList(growable: false);
+    // 这里只负责内存和持久化，由调用方决定何时重建 AudioHandler 队列
+    playerState?.setPlaylist(playlistForHandler);
+    _updateCurrentSongNotifier();
+    _updatePlaylistNotifier();
     notifyListeners();
   }
 
-  void addToPlaylist(Song song) async {
-    _originalPlaylist.add(song);
-
-    if (_playMode == PlayMode.shuffle) {
-      if (_shuffledPlaylist.isEmpty) {
-        _shuffledPlaylist.add(song);
-      } else {
-        final randomIndex = _random.nextInt(_shuffledPlaylist.length + 1);
-        _shuffledPlaylist.insert(randomIndex, song);
-      }
-      _playlist = List.from(_shuffledPlaylist);
-    } else {
-      _playlist.add(song);
-    }
-
-    // 更新 AudioHandler 队列
-    if (_audioHandler != null) {
-      final mediaItem = await _convertSongToMediaItem(song);
-      await _audioHandler!.addQueueItem(mediaItem);
-    }
-
-    notifyListeners();
+  Future<void> addToPlaylist(Song song) async {
+    await _addToPlaylistWithIndexMapping(song);
   }
 
-  void removeFromPlaylist(int index) async {
-    if (index < 0 || index >= _playlist.length) return;
+  /// 插播：将歌曲插入到当前播放位置的下一首
+  Future<void> insertNext(Song song) async {
+    debugPrint(
+      '[PlayerProvider] ▶️ insertNext 调用: songId=${song.id}, title=${song.title}',
+    );
+    await _insertNextWithIndexMapping(song);
+  }
 
-    final removedSong = _playlist[index];
-    _playlist.removeAt(index);
-    _originalPlaylist.removeWhere((song) => song.id == removedSong.id);
-
-    if (_playMode == PlayMode.shuffle) {
-      _shuffledPlaylist.removeWhere((song) => song.id == removedSong.id);
-    }
-
-    // 更新 AudioHandler 队列
-    if (_audioHandler != null) {
-      final mediaItem = await _convertSongToMediaItem(removedSong);
-      await _audioHandler!.removeQueueItem(mediaItem);
-    }
-
-    if (index < _currentIndex) {
-      _currentIndex--;
-    } else if (index == _currentIndex) {
-      if (_currentIndex >= _playlist.length) {
-        _currentIndex = _playlist.length - 1;
-      }
-      if (_playlist.isEmpty) {
-        stop();
-      } else {
-        _currentSong = _playlist[_currentIndex];
-      }
-    }
-    notifyListeners();
+  Future<void> removeFromPlaylist(int index) async {
+    await _removeFromPlaylistWithIndexMapping(index);
   }
 
   void reorderPlaylist(int oldIndex, int newIndex) {
-    if (oldIndex < 0 || oldIndex >= _playlist.length) return;
-    // ReorderableListView 允许 newIndex == length，表示插入到末尾之后
-    if (newIndex < 0 || newIndex > _playlist.length) return;
-    if (oldIndex == newIndex) return;
-
-    // 保存原始索引用于 AudioHandler（它需要原始的 ReorderableListView 索引）
-    final originalOldIndex = oldIndex;
-    final originalNewIndex = newIndex;
-
-    if (newIndex > oldIndex) {
-      newIndex -= 1;
-    }
-
-    final movedSong = _playlist.removeAt(oldIndex);
-    _playlist.insert(newIndex, movedSong);
-
-    _originalPlaylist.clear();
-    _originalPlaylist.addAll(_playlist);
-
-    if (_currentSong != null) {
-      _currentIndex = _playlist.indexWhere((song) => song.id == _currentSong!.id);
-    }
-
-    // 同步更新底层 AudioHandler 队列顺序
-    // 注意：传递原始索引，让 AudioHandler 自己处理调整
-    if (_audioHandler != null) {
-      _audioHandler!.reorderQueue(originalOldIndex, originalNewIndex);
-    }
-
-    playerState?.setPlaylist(_playlist);
-
-    // 延迟通知，让 ReorderableListView 完成动画
-    Future.microtask(() => notifyListeners());
+    _reorderPlaylistWithIndexMapping(oldIndex, newIndex);
   }
 
+  /// 重新打乱当前播放列表（仅在随机模式下生效）
   void reshufflePlaylist() {
-    if (_playMode != PlayMode.shuffle || _originalPlaylist.isEmpty) return;
+    if (_playMode != PlayMode.shuffle || _songs.isEmpty) return;
 
-    _createShuffledPlaylist();
-    _playlist = List.from(_shuffledPlaylist);
+    final currentSongIndex =
+        _currentSong != null ? _findSongIndex(_currentSong!.id) : -1;
+    _playOrder = _generateShuffledOrder(
+      keepFirstIndex: currentSongIndex >= 0 ? currentSongIndex : null,
+    );
+    _currentOrderIndex = 0;
 
-    if (_currentSong != null) {
-      _currentIndex = _shuffledPlaylist.indexWhere(
-        (s) => s.id == _currentSong!.id,
-      );
-      if (_currentIndex == -1) _currentIndex = 0;
-    }
+    final playlistForHandler =
+        _playOrder.map((i) => _songs[i]).toList(growable: false);
+    final initialIndex =
+        _currentOrderIndex.clamp(0, _playOrder.length - 1);
+    _setPlaylistToHandler(playlistForHandler, initialIndex: initialIndex);
+    playerState?.setPlaylist(playlistForHandler);
+    _updatePlaylistNotifier();
     notifyListeners();
   }
 
@@ -1401,29 +1347,45 @@ class PlayerProvider with ChangeNotifier {
 
   void _updateCurrentSongFromHandler() {
     if (_audioHandler == null) return;
+
     final handlerIndex = _audioHandler!.currentQueueIndex;
-    if (handlerIndex < 0 || handlerIndex >= _audioHandler!.queueList.length) {
+    final queueLen = _audioHandler!.queueList.length;
+    if (handlerIndex < 0 || handlerIndex >= queueLen) {
+      debugPrint(
+        '[PlayerProvider] ⚠️ _updateCurrentSongFromHandler: '
+        'handlerIndex=$handlerIndex 越界, queueLen=$queueLen',
+      );
       return;
     }
 
-    final currentItem = _audioHandler!.queueList[handlerIndex].mediaItem;
-    final songId = int.tryParse(currentItem.id) ?? -1;
-
-    if (_playlist.isEmpty) return;
-
-    _currentSong = _playlist.firstWhere(
-      (s) => s.id == songId,
-      orElse: () => _playlist.first,
-    );
-
-    // 始终通过歌曲 ID 在当前播放列表中定位索引，确保与 UI 顺序一致
-    _currentIndex = _playlist.indexWhere((s) => s.id == _currentSong!.id);
-    if (_currentIndex < 0) {
-      _currentIndex = 0;
+    final currentList = playlist;
+    if (currentList.isEmpty) {
+      debugPrint(
+        '[PlayerProvider] ⚠️ _updateCurrentSongFromHandler: playlist 为空, 无法同步当前歌曲',
+      );
+      return;
     }
+
+    // 直接使用 AudioHandler 的队列索引与 playlist 对齐，避免通过 songId 搜索导致重复 id 时错位
+    int effectiveIndex = handlerIndex;
+    if (effectiveIndex < 0) {
+      effectiveIndex = 0;
+    } else if (effectiveIndex >= currentList.length) {
+      effectiveIndex = currentList.length - 1;
+    }
+
+    _currentSong = currentList[effectiveIndex];
+    _currentOrderIndex = effectiveIndex;
+
     _lyricsNotificationService.updateMetadata(
       title: _currentSong?.title,
       artist: _currentSong?.artist,
+    );
+    _updateCurrentSongNotifier();
+    debugPrint(
+      '[PlayerProvider] 🎧 _updateCurrentSongFromHandler: '
+      'handlerIndex=$handlerIndex, effectiveIndex=$effectiveIndex, '
+      'currentSongId=${_currentSong?.id}, title=${_currentSong?.title}',
     );
     notifyListeners();
   }
@@ -1432,6 +1394,9 @@ class PlayerProvider with ChangeNotifier {
   void dispose() {
     _positionSub?.cancel();
     _playbackStateSub?.cancel();
+    currentSongNotifier.dispose();
+    isPlayingNotifier.dispose();
+    playlistNotifier.dispose();
     super.dispose();
   }
 
@@ -1645,34 +1610,486 @@ class PlayerProvider with ChangeNotifier {
         print('⚠️ 更新歌曲失败: $e');
       }
 
-      final index = _playlist.indexWhere((s) => s.id == updatedSong.id);
-      if (index != -1) {
-        _playlist[index] = updatedSong;
+      // 更新内存中的歌曲列表
+      _songs = _replaceSongInList(_songs, updatedSong);
+
+      // 同步更新持久化播放列表（如果存在）
+      if (_playOrder.isNotEmpty) {
+        final playlistForHandler =
+            _playOrder.map((i) => _songs[i]).toList(growable: false);
+        playerState?.setPlaylist(playlistForHandler);
       }
 
-      final originalIndex =
-          _originalPlaylist.indexWhere((s) => s.id == updatedSong.id);
-      if (originalIndex != -1) {
-        _originalPlaylist[originalIndex] = updatedSong;
-      }
-
+      _updateCurrentSongNotifier();
+      _updatePlaylistNotifier();
       notifyListeners();
     }
   }
 
+  // ==================== 索引映射辅助方法 ====================
 
+  int _findSongIndex(int songId) {
+    return _songs.indexWhere((s) => s.id == songId);
+  }
+
+  /// 更健壮的查找逻辑：优先使用 id，其次使用 Bilibili 标识（bvid + cid / pageNumber）
+  int _findSongIndexForQueue(Song song) {
+    // 1. 数据库中的正式歌曲：直接用 id 匹配
+    if (song.id > 0) {
+      return _findSongIndex(song.id);
+    }
+
+    // 2. 临时 Bilibili 歌曲：使用 bvid + cid / pageNumber 组合匹配
+    if (song.bvid != null && song.bvid!.isNotEmpty) {
+      final targetBvid = song.bvid;
+      final targetCid = song.cid;
+      final targetPage = song.pageNumber;
+
+      return _songs.indexWhere((s) {
+        if (s.bvid != targetBvid) return false;
+
+        // 优先根据 cid 精确匹配
+        if (targetCid != null && targetCid > 0) {
+          if (s.cid != null && s.cid! > 0) {
+            return s.cid == targetCid;
+          }
+        }
+
+        // 其次根据 pageNumber 匹配
+        if (targetPage != null && targetPage > 0) {
+          if (s.pageNumber != null && s.pageNumber! > 0) {
+            return s.pageNumber == targetPage;
+          }
+        }
+
+        // 兜底：仅按 bvid 匹配
+        return true;
+      });
+    }
+
+    // 3. 没有可用标识，视为不存在
+    return -1;
+  }
+
+  List<int> _generateSequentialOrder() {
+    return List.generate(_songs.length, (i) => i);
+  }
+
+  List<int> _generateShuffledOrder({int? keepFirstIndex}) {
+    List<int> order = List.generate(_songs.length, (i) => i);
+    if (keepFirstIndex != null) {
+      order.removeAt(keepFirstIndex);
+      order.shuffle(_random);
+      order.insert(0, keepFirstIndex);
+    } else {
+      order.shuffle(_random);
+    }
+    return order;
+  }
+
+  // ==================== 索引映射版本的播放方法 ====================
+
+  Future<void> _playSongWithIndexMapping(
+    Song song, {
+    List<Song>? playlist,
+    int? index,
+    bool shuffle = true,
+    bool playNow = true,
+  }) async {
+    try {
+      _isLoading = true;
+      _errorMessage = null;
+      _currentSong = song;
+      notifyListeners();
+
+      if (playlist != null) {
+        _songs = List.from(playlist);
+        final songIndex = _findSongIndexForQueue(song);
+        
+        if (_playMode == PlayMode.shuffle && shuffle) {
+          _playOrder = _generateShuffledOrder(keepFirstIndex: songIndex);
+          _currentOrderIndex = 0;
+        } else {
+          _playOrder = _generateSequentialOrder();
+          _currentOrderIndex = songIndex >= 0 ? songIndex : (index ?? 0);
+        }
+      } else if (_songs.isEmpty || _findSongIndexForQueue(song) == -1) {
+        _songs = [song];
+        _playOrder = [0];
+        _currentOrderIndex = 0;
+      } else {
+        final songIndex = _findSongIndexForQueue(song);
+        if (songIndex != -1) {
+          _currentOrderIndex = _playOrder.indexWhere((i) => i == songIndex);
+        }
+        // 如果查找失败，使用调用方传入的 index 作为兜底
+        if (_currentOrderIndex == -1 || _currentOrderIndex < 0) {
+          if (index != null &&
+              index >= 0 &&
+              index < _playOrder.length) {
+            _currentOrderIndex = index;
+          } else {
+            _currentOrderIndex = 0;
+          }
+        }
+      }
+
+      final playlistForHandler =
+          _playOrder.map((i) => _songs[i]).toList(growable: false);
+      await _setPlaylistToHandler(playlistForHandler, initialIndex: _currentOrderIndex);
+
+      if (_currentOrderIndex >= 0 && _audioHandler != null) {
+        await _audioHandler!.skipToQueueItem(_currentOrderIndex);
+        if (playNow) await _audioHandler!.play();
+      }
+
+      _isLoading = false;
+      notifyListeners();
+      await _updatePlayCount(song);
+      playerState?.setCurrentSong(song);
+      playerState?.setPlaylist(playlistForHandler);
+      _updateCurrentSongNotifier();
+      _updatePlaylistNotifier();
+      loadLyrics();
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = '播放失败: ${e.toString()}';
+      notifyListeners();
+    }
+  }
+
+  Future<void> _addToPlaylistWithIndexMapping(Song song) async {
+    debugPrint(
+      '[PlayerProvider] ➕ addToPlaylist 开始: songId=${song.id}, title=${song.title}, '
+      '_songs.length=${_songs.length}, _playOrder=$_playOrder, '
+      'currentOrderIndex=$_currentOrderIndex',
+    );
+
+    // 记录当前播放状态，用于重建队列后恢复播放进度
+    final wasPlaying = _audioHandler?.playing ?? false;
+    final currentPosition = _audioHandler?.position ?? Duration.zero;
+    debugPrint(
+      '[PlayerProvider] ➕ addToPlaylist 状态: wasPlaying=$wasPlaying, '
+      'currentPosition=${currentPosition.inMilliseconds}ms',
+    );
+
+    // 没有任何队列时，等价于播放单曲但不强制播放
+    if (_songs.isEmpty || _playOrder.isEmpty) {
+      _songs = [song];
+      _playOrder = [0];
+      _currentOrderIndex = 0;
+      _currentSong ??= song;
+
+      final playlistForHandler = [song];
+      await _setPlaylistToHandler(playlistForHandler, initialIndex: 0);
+      playerState?.setPlaylist(playlistForHandler);
+      _updatePlaylistNotifier();
+      debugPrint(
+        '[PlayerProvider] ➕ addToPlaylist 结束(空队列分支): _songs.length=${_songs.length}, '
+        '_playOrder=$_playOrder, currentOrderIndex=$_currentOrderIndex',
+      );
+      notifyListeners();
+      return;
+    }
+
+    // 追加到当前播放队列的末尾（无论顺序/随机模式，一律追加到尾部）
+    int songIndex = _findSongIndexForQueue(song);
+    if (songIndex == -1) {
+      _songs.add(song);
+      songIndex = _songs.length - 1;
+    }
+
+    _playOrder.add(songIndex);
+
+    final playlistForHandler =
+        _playOrder.map((i) => _songs[i]).toList(growable: false);
+
+    // 更新持久化和 UI（当前播放索引保持不变）
+    playerState?.setPlaylist(playlistForHandler);
+    _updatePlaylistNotifier();
+
+    // 追加到 AudioHandler 队列尾部，避免重建整个队列导致卡顿
+    if (_audioHandler != null) {
+      final songForQueue = _songs[songIndex];
+      final mediaItem = _convertSongToMediaItemLazy(songForQueue);
+      await _audioHandler!.addQueueItem(mediaItem);
+    }
+
+    debugPrint(
+      '[PlayerProvider] ➕ addToPlaylist 结束: _songs.length=${_songs.length}, '
+      '_playOrder=$_playOrder, currentOrderIndex=$_currentOrderIndex',
+    );
+    notifyListeners();
+  }
+
+  Future<void> _insertNextWithIndexMapping(Song song) async {
+    debugPrint(
+      '[PlayerProvider] ⏭ 插播(insertNext) 开始: songId=${song.id}, title=${song.title}, '
+      '_songs.length=${_songs.length}, _playOrder=$_playOrder, '
+      'currentOrderIndex=$_currentOrderIndex',
+    );
+    if (_currentOrderIndex < 0 || _songs.isEmpty) {
+      _songs = [song];
+      _playOrder = [0];
+      _currentOrderIndex = 0;
+      final playlistForHandler = [song];
+      await _setPlaylistToHandler(playlistForHandler, initialIndex: 0);
+      playerState?.setPlaylist(playlistForHandler);
+      _updatePlaylistNotifier();
+      debugPrint(
+        '[PlayerProvider] ⏭ 插播结束(空队列分支): _songs.length=${_songs.length}, '
+        '_playOrder=$_playOrder, currentOrderIndex=$_currentOrderIndex',
+      );
+      notifyListeners();
+      return;
+    }
+
+    final wasPlaying = _audioHandler?.playing ?? false;
+    final currentPosition = _audioHandler?.position ?? Duration.zero;
+    debugPrint(
+      '[PlayerProvider] ⏭ 插播状态: wasPlaying=$wasPlaying, '
+      'currentPosition=${currentPosition.inMilliseconds}ms',
+    );
+
+    int songIndex = _findSongIndexForQueue(song);
+    if (songIndex == -1) {
+      _songs.add(song);
+      songIndex = _songs.length - 1;
+    }
+
+    // 1. 内存与持久化：在当前播放歌曲之后插入索引
+    _playOrder.insert(_currentOrderIndex + 1, songIndex);
+    final playlistForHandler =
+        _playOrder.map((i) => _songs[i]).toList(growable: false);
+    playerState?.setPlaylist(playlistForHandler);
+
+    // 2. 底层队列操作：追加 + 重排，避免整队重建导致当前歌曲顿一下
+    if (_audioHandler != null) {
+      final handlerIndex = _audioHandler!.currentQueueIndex;
+      final queueLenBefore = _audioHandler!.queueList.length;
+      debugPrint(
+        '[PlayerProvider] ⏭ 插播队列状态: handlerIndex=$handlerIndex, '
+        'queueLenBefore=$queueLenBefore',
+      );
+
+      // 先在队尾追加一条队列项
+      final songForQueue = _songs[songIndex];
+      final mediaItem = _convertSongToMediaItemLazy(songForQueue);
+      await _audioHandler!.addQueueItem(mediaItem);
+      final queueLenAfter = _audioHandler!.queueList.length;
+      final addedIndex = queueLenBefore; // 新条目总是先追加到末尾
+
+      // 目标位置：当前播放曲目的下一首
+      int targetIndex = handlerIndex + 1;
+      if (targetIndex < 0) {
+        targetIndex = 0;
+      } else if (targetIndex >= queueLenAfter) {
+        targetIndex = queueLenAfter - 1;
+      }
+
+      debugPrint(
+        '[PlayerProvider] ⏭ 插播队列重排: addedIndex=$addedIndex, '
+        'targetIndex=$targetIndex, queueLenAfter=$queueLenAfter',
+      );
+
+      if (addedIndex != targetIndex) {
+        await _audioHandler!.reorderQueue(addedIndex, targetIndex);
+      }
+    }
+
+    _updatePlaylistNotifier();
+    debugPrint(
+      '[PlayerProvider] ⏭ 插播结束: _songs.length=${_songs.length}, '
+      '_playOrder=$_playOrder, currentOrderIndex=$_currentOrderIndex, '
+      'currentSongId=${_currentSong?.id}',
+    );
+    notifyListeners();
+  }
+
+  Future<void> _removeFromPlaylistWithIndexMapping(int index) async {
+    if (index < 0 || index >= _playOrder.length) return;
+
+    final removedSongIndex = _playOrder[index];
+    final removedSong = _songs[removedSongIndex];
+    _playOrder.removeAt(index);
+
+    if (index < _currentOrderIndex) {
+      _currentOrderIndex--;
+    } else if (index == _currentOrderIndex) {
+      if (_playOrder.isEmpty) {
+        _currentOrderIndex = 0;
+        _currentSong = null;
+      } else {
+        if (_currentOrderIndex >= _playOrder.length) {
+          _currentOrderIndex = _playOrder.length - 1;
+        }
+        _currentSong = _songs[_playOrder[_currentOrderIndex]];
+      }
+    }
+
+    // 同步更新持久化和 UI
+    final playlistForHandler =
+        _playOrder.map((i) => _songs[i]).toList(growable: false);
+    playerState?.setPlaylist(playlistForHandler);
+    // ⚠️ 这里需要同步更新 playlistNotifier，以配合 Dismissible 的语义：
+    // 条目一旦被标记为 dismissed，下一帧构建时必须已经从列表中移除，
+    // 否则会触发 “A dismissed Dismissible widget is still part of the tree” 断言。
+    playlistNotifier.value = List<Song>.from(playlistForHandler);
+
+    // 底层队列：仅在有 AudioHandler 时调用 removeQueueItem，避免整队重建
+    if (_audioHandler != null) {
+      final mediaItem = _convertSongToMediaItemLazy(removedSong);
+      await _audioHandler!.removeQueueItem(mediaItem);
+    }
+
+    // 队列为空时停止播放
+    if (_playOrder.isEmpty) {
+      await stop();
+    }
+
+    notifyListeners();
+  }
+
+  void _reorderPlaylistWithIndexMapping(int oldIndex, int newIndex) {
+    if (oldIndex < 0 || oldIndex >= _playOrder.length) return;
+    if (newIndex < 0 || newIndex > _playOrder.length) return;
+    if (oldIndex == newIndex) return;
+
+    final originalOldIndex = oldIndex;
+    final originalNewIndex = newIndex;
+
+    if (newIndex > oldIndex) {
+      newIndex -= 1;
+    }
+
+    final movedIndex = _playOrder.removeAt(oldIndex);
+    _playOrder.insert(newIndex, movedIndex);
+
+    if (_currentSong != null) {
+      final currentSongIndex = _findSongIndex(_currentSong!.id);
+      _currentOrderIndex = _playOrder.indexWhere((i) => i == currentSongIndex);
+    }
+
+    if (_audioHandler != null) {
+      _audioHandler!.reorderQueue(originalOldIndex, originalNewIndex);
+    }
+
+    final playlistForHandler = _playOrder.map((i) => _songs[i]).toList();
+    playerState?.setPlaylist(playlistForHandler);
+
+    // 重排场景下直接同步更新，避免额外一帧的 post-frame 重建带来的“跳动”感
+    playlistNotifier.value = List<Song>.from(playlistForHandler);
+    Future.microtask(() => notifyListeners());
+  }
+
+  void _setPlayModeWithIndexMapping(PlayMode mode) {
+    if (_playMode == mode) return;
+
+    _playMode = mode;
+
+    if (_songs.isEmpty) {
+      notifyListeners();
+      playerState?.setPlayMode(mode);
+      return;
+    }
+
+    final currentSongIndex =
+        _currentSong != null ? _findSongIndexForQueue(_currentSong!) : -1;
+
+    if (mode == PlayMode.shuffle) {
+      _playOrder = _generateShuffledOrder(keepFirstIndex: currentSongIndex >= 0 ? currentSongIndex : null);
+      _currentOrderIndex = 0;
+    } else {
+      _playOrder = _generateSequentialOrder();
+      _currentOrderIndex = currentSongIndex >= 0 ? currentSongIndex : 0;
+    }
+
+    final playlistForHandler =
+        _playOrder.map((i) => _songs[i]).toList(growable: false);
+    final initialIndex = _currentOrderIndex.clamp(0, _playOrder.length - 1);
+    _setPlaylistToHandler(playlistForHandler, initialIndex: initialIndex);
+    playerState?.setPlaylist(playlistForHandler);
+
+    notifyListeners();
+    playerState?.setPlayMode(mode);
+    _updatePlaylistNotifier();
+  }
 
   // ==================== 保留兼容性 ====================
-  
+
   List<Song> currentPlaylists() {
-    return _playlist;
+    return List.from(playlist);
+  }
+
+  /// 判断两首歌曲在播放队列语义上是否相同（用于高亮/同步 UI）
+  bool isSameSongForDisplay(Song? current, Song song) {
+    if (current == null) return false;
+
+    // 1. 正式歌曲：优先使用 id
+    if (current.id > 0 && song.id > 0 && current.id == song.id) {
+      return true;
+    }
+
+    // 2. Bilibili 临时歌曲：bvid + cid / pageNumber
+    if (current.bvid != null &&
+        current.bvid!.isNotEmpty &&
+        song.bvid == current.bvid) {
+      final currentCid = current.cid ?? 0;
+      final songCid = song.cid ?? 0;
+      if (currentCid > 0 && songCid > 0 && currentCid == songCid) {
+        return true;
+      }
+
+      final currentPage = current.pageNumber ?? 0;
+      final songPage = song.pageNumber ?? 0;
+      if (currentPage > 0 && songPage > 0 && currentPage == songPage) {
+        return true;
+      }
+
+      // bvid 相同但 cid/pageNumber 都不匹配，视为不同分 P
+      return false;
+    }
+
+    // 3. 其他情况：退化为 id 对比
+    return current.id == song.id;
   }
   
-  // audioLoaderService 已废弃（新架构中不再需要）
-  dynamic get audioLoaderService => null;
-  
-  // 暂时保留,但实际不再使用  
-  dynamic get player => null;
+  /// Bilibili 自动缓存统计（供设置页使用）
+  Future<AutoCacheStatistics?> getBilibiliAutoCacheStatistics() async {
+    try {
+      return await _bilibiliAutoCacheService.getCacheStatistics();
+    } catch (e) {
+      debugPrint('[PlayerProvider] 获取自动缓存统计失败: $e');
+      return null;
+    }
+  }
+
+  /// 清空 Bilibili 自动缓存（供设置页使用）
+  Future<void> clearBilibiliAutoCache() async {
+    try {
+      await _bilibiliAutoCacheService.clearAllCache();
+    } catch (e) {
+      debugPrint('[PlayerProvider] 清空自动缓存失败: $e');
+      rethrow;
+    }
+  }
+
+  /// 获取 Bilibili 自动缓存目录（供设置页打开目录）
+  Future<String?> getBilibiliAutoCacheDirectory() async {
+    try {
+      // 通过一次统计或命中函数确保服务已初始化，并读取内部目录
+      final stats = await _bilibiliAutoCacheService.getCacheStatistics();
+      debugPrint('[PlayerProvider] 自动缓存统计: $stats');
+      // 目前 AutoCacheService 不暴露目录字段，这里复用一次 getCacheStatistics 仅为确保初始化。
+      // 目录路径由 AutoCacheService 内部按应用缓存目录 + /bilibili_auto 生成。
+      // 为避免重复逻辑，这里简单重新计算一次。
+      final cacheDir = await getApplicationCacheDirectory();
+      return p.join(cacheDir.path, 'bilibili_auto');
+    } catch (e) {
+      debugPrint('[PlayerProvider] 获取自动缓存目录失败: $e');
+      return null;
+    }
+  }
 }
 
 class _ResolvedAudioSource {

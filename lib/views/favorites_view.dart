@@ -578,20 +578,34 @@ class FavoritesViewState extends State<FavoritesView> with ShowAwarePage {
   }
 
   /// 插播
-  void _playNext(Song song) {
+  Future<void> _playNext(Song song) async {
     final playerProvider = Provider.of<PlayerProvider>(context, listen: false);
-    playerProvider.addToPlaylist(song);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('已添加到播放列表')),
+    debugPrint(
+      '[FavoritesView] ⏭ 插播请求: songId=${song.id}, title=${song.title}, '
+      'currentSongId=${playerProvider.currentSong?.id}, '
+      'playlistLength=${playerProvider.playlist.length}',
     );
+    await playerProvider.insertNext(song);
+    if (mounted) {
+      debugPrint(
+        '[FavoritesView] ⏭ 插播完成: currentSongId=${playerProvider.currentSong?.id}, '
+        'playlistLength=${playerProvider.playlist.length}',
+      );
+    }
   }
 
   /// 添加到播放列表
-  void _addToPlaylist(Song song) {
+  Future<void> _addToPlaylist(Song song) async {
     final playerProvider = Provider.of<PlayerProvider>(context, listen: false);
-    playerProvider.addToPlaylist(song);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('已添加到播放列表')),
+    debugPrint(
+      '[FavoritesView] ➕ 添加到播放列表请求: songId=${song.id}, title=${song.title}, '
+      'playlistLength=${playerProvider.playlist.length}',
     );
+    await playerProvider.addToPlaylist(song);
+    if (mounted) {
+      debugPrint(
+        '[FavoritesView] ➕ 添加到播放列表完成: playlistLength=${playerProvider.playlist.length}',
+      );
+    }
   }
 }

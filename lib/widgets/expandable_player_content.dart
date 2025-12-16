@@ -22,6 +22,8 @@ import 'package:motto_music/services/bilibili/stream_service.dart';
 import 'package:motto_music/services/bilibili/api_client.dart';
 import 'package:motto_music/services/bilibili/api_service.dart';
 import 'package:motto_music/services/bilibili/cookie_manager.dart';
+import 'package:motto_music/services/bilibili/favorite_sync_notifier.dart';
+import 'package:motto_music/utils/bilibili_song_utils.dart';
 import 'package:motto_music/storage/player_state_storage.dart';
 // 歌词服务和模型
 import 'package:motto_music/services/lyrics/lyric_service.dart';
@@ -2024,31 +2026,15 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
     );
   }
 
-  /// 构建专辑封面图片
+  /// 构建专辑封面图片（统一使用 UnifiedCoverImage）
   Widget _buildAlbumArt(String albumArtPath, {BoxFit? fit}) {
-    if (albumArtPath.isEmpty) {
-      return const Icon(Icons.music_note, size: 100, color: Colors.white38);
-    }
-    
-    if (albumArtPath.startsWith('http://') || albumArtPath.startsWith('https://')) {
-      return Image.network(
-        albumArtPath,
-        fit: fit ?? BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return const Icon(Icons.music_note, size: 100, color: Colors.white38);
-        },
-      );
-    } else {
-      final exists = File(albumArtPath).existsSync();
-      if (exists) {
-        return Image.file(
-          File(albumArtPath),
-          fit: fit ?? BoxFit.cover,
-        );
-      } else {
-        return const Icon(Icons.music_note, size: 100, color: Colors.white38);
-      }
-    }
+    return UnifiedCoverImage(
+      coverPath: albumArtPath,
+      width: double.infinity,
+      height: double.infinity,
+      borderRadius: 0,
+      fit: fit ?? BoxFit.cover,
+    );
   }
 
   // ========== 叠加层UI构建方法 ==========
@@ -2131,150 +2117,204 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
       ),
     );
   }
-  
+
+  /// 为播放列表项生成稳定且尽量唯一的 Key，避免 Dismissible 重复 key 导致渲染异常
+  Key _buildPlaylistItemKey(Song song) {
+    final components = <String>[
+      song.id.toString(),
+      song.bvid ?? '',
+      (song.cid ?? 0).toString(),
+      (song.pageNumber ?? 0).toString(),
+      (song.dateAdded?.millisecondsSinceEpoch ?? 0).toString(),
+    ];
+    return ValueKey<String>(components.join('_'));
+  }
+
   /// 构建播放列表内容
   Widget _buildPlaylistContent(PlayerProvider playerProvider) {
-    final currentSong = playerProvider.currentSong;
-    final playlist = playerProvider.playlist;
+    return ValueListenableBuilder<List<Song>>(
+      valueListenable: playerProvider.playlistNotifier,
+      builder: (context, playlist, _) {
+        return ValueListenableBuilder<Song?>(
+          valueListenable: playerProvider.currentSongNotifier,
+          builder: (context, currentSong, __) {
+            debugPrint(
+              '[PlaylistOverlay] 重建: length=${playlist.length}, '
+              'currentSongId=${currentSong?.id}, title=${currentSong?.title}',
+            );
 
-    return Column(
-      children: [
-        // 顶部拖拽指示器
-        Container(
-          margin: const EdgeInsets.only(top: 6, bottom: 2), // 🔧 减少留白
-          width: 36,
-          height: 4,
-          decoration: BoxDecoration(
-            color: Theme.of(context).dividerColor.withOpacity(0.5),
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-        
-        // 标题栏
-        SafeArea(
-          bottom: false,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8), // 🔧 减少垂直padding
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            return Column(
               children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.queue_music_rounded,
-                      color: Theme.of(context).iconTheme.color,
-                      size: 24,
+                // 顶部拖拽指示器
+                Container(
+                  margin: const EdgeInsets.only(top: 6, bottom: 2),
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).dividerColor.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+
+                // 标题栏
+                SafeArea(
+                  bottom: false,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 8,
                     ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          '播放列表',
-                          style: TextStyle(
-                            color: Theme.of(context).textTheme.bodyLarge?.color,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.queue_music_rounded,
+                              color: Theme.of(context).iconTheme.color,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 12),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '播放列表',
+                                  style: TextStyle(
+                                    color: Theme.of(context)
+                                        .textTheme
+                                        .bodyLarge
+                                        ?.color,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  '共 ${playlist.length} 首',
+                                  style: TextStyle(
+                                    color: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.color,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
-                        Text(
-                          '共 ${playlist.length} 首',
-                          style: TextStyle(
-                            color: Theme.of(context).textTheme.bodySmall?.color,
-                            fontSize: 12,
+                        IconButton(
+                          icon: Icon(
+                            Icons.close_rounded,
+                            color: Theme.of(context).iconTheme.color,
                           ),
+                          onPressed: _hideOverlay,
                         ),
                       ],
                     ),
-                  ],
-                ),
-                IconButton(
-                  icon: Icon(
-                    Icons.close_rounded,
-                    color: Theme.of(context).iconTheme.color,
                   ),
-                  onPressed: _hideOverlay,
+                ),
+
+                // 歌曲列表
+                Expanded(
+                  child: playlist.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.music_off_rounded,
+                                size: 64,
+                                color: Theme.of(context)
+                                    .iconTheme
+                                    .color
+                                    ?.withOpacity(0.3),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                '播放列表为空',
+                                style: TextStyle(
+                                  color: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.color
+                                      ?.withOpacity(0.5),
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ReorderableListView.builder(
+                          itemCount: playlist.length,
+                          padding: const EdgeInsets.only(bottom: 20),
+                          onReorder: (oldIndex, newIndex) {
+                            // 调用 PlayerProvider 的重排序方法
+                            playerProvider.reorderPlaylist(oldIndex, newIndex);
+                          },
+                          proxyDecorator: (child, index, animation) {
+                            // Apple Music 风格的拖动效果
+                            return AnimatedBuilder(
+                              animation: animation,
+                              builder: (context, child) {
+                                final double elevation = Tween<double>(
+                                  begin: 0.0,
+                                  end: 8.0,
+                                ).evaluate(animation);
+                                final double scale = Tween<double>(
+                                  begin: 1.0,
+                                  end: 1.03,
+                                ).evaluate(
+                                  CurvedAnimation(
+                                    parent: animation,
+                                    curve: Curves.easeInOut,
+                                  ),
+                                );
+                                return Transform.scale(
+                                  scale: scale,
+                                  child: Material(
+                                    elevation: elevation,
+                                    color: Colors.transparent,
+                                    shadowColor:
+                                        Colors.black.withOpacity(0.5),
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: child,
+                                  ),
+                                );
+                              },
+                              child: child,
+                            );
+                          },
+                          itemBuilder: (context, index) {
+                            final song = playlist[index];
+                            final currentIndex = playerProvider.currentIndex;
+                            final isPlaying =
+                                currentIndex >= 0 && index == currentIndex;
+
+                            if (index < 3) {
+                              debugPrint(
+                                '[PlaylistOverlay] item[$index]: '
+                                'songId=${song.id}, bvid=${song.bvid}, '
+                                'cid=${song.cid}, page=${song.pageNumber}, '
+                                'title=${song.title}, isPlaying=$isPlaying',
+                              );
+                            }
+
+                            return _buildPlaylistItem(
+                              context,
+                              song,
+                              index,
+                              isPlaying,
+                              playerProvider,
+                            );
+                          },
+                        ),
                 ),
               ],
-            ),
-          ),
-        ),
-        
-        // 歌曲列表
-        Expanded(
-          child: playlist.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.music_off_rounded,
-                        size: 64,
-                        color: Theme.of(context).iconTheme.color?.withOpacity(0.3),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        '播放列表为空',
-                        style: TextStyle(
-                          color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.5),
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              : ReorderableListView.builder(
-                  itemCount: playlist.length,
-                  padding: const EdgeInsets.only(bottom: 20),
-                  onReorder: (oldIndex, newIndex) {
-                    // 调用 PlayerProvider 的重排序方法
-                    playerProvider.reorderPlaylist(oldIndex, newIndex);
-                  },
-                  proxyDecorator: (child, index, animation) {
-                    // Apple Music 风格的拖动效果
-                    return AnimatedBuilder(
-                      animation: animation,
-                      builder: (context, child) {
-                        final double elevation = Tween<double>(
-                          begin: 0.0,
-                          end: 8.0,
-                        ).evaluate(animation);
-                        final double scale = Tween<double>(
-                          begin: 1.0,
-                          end: 1.03,
-                        ).evaluate(CurvedAnimation(
-                          parent: animation,
-                          curve: Curves.easeInOut,
-                        ));
-                        return Transform.scale(
-                          scale: scale,
-                          child: Material(
-                            elevation: elevation,
-                            color: Colors.transparent,
-                            shadowColor: Colors.black.withOpacity(0.5),
-                            borderRadius: BorderRadius.circular(12),
-                            child: child,
-                          ),
-                        );
-                      },
-                      child: child,
-                    );
-                  },
-                  itemBuilder: (context, index) {
-                    // 使用外层获取的 playlist 快照，保持与 itemCount 一致
-                    final song = playlist[index];
-                    final isPlaying = currentSong?.id == song.id;
-                    return _buildPlaylistItem(
-                      context,
-                      song,
-                      index,
-                      isPlaying,
-                      playerProvider,
-                    );
-                  },
-                ),
-        ),
-      ],
+            );
+          },
+        );
+      },
     );
   }
   
@@ -2287,7 +2327,7 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
     PlayerProvider playerProvider,
   ) {
     return Dismissible(
-      key: ValueKey(song.id), // 🔧 Dismissible 必需的唯一 key
+      key: _buildPlaylistItemKey(song), // 使用更稳定且唯一的 key，避免重复导致的渲染异常
       direction: DismissDirection.horizontal, // 🔧 支持左滑和右滑
       background: Container(
         // 🔧 左滑显示的背景（从左向右滑）
@@ -2344,12 +2384,14 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
           onTap: () {
             // 使用当前最新的播放列表和索引，避免使用过期快照
             final currentPlaylist = playerProvider.playlist;
-            final currentIndex = currentPlaylist.indexWhere((s) => s.id == song.id);
+            final currentIndex =
+                currentPlaylist.indexWhere((s) => s.id == song.id);
             final safeIndex = currentIndex >= 0 ? currentIndex : index;
+            // 直接在当前播放队列中跳转到该歌曲，避免重建/打乱播放列表
             playerProvider.playSong(
               song,
-              playlist: currentPlaylist,
               index: safeIndex,
+              shuffle: false,
             );
             _hideOverlay();
           },
@@ -4020,34 +4062,75 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
   Future<void> _addSongToFavorite(Song song, BilibiliFavorite favorite) async {
     try {
       final db = MusicDatabase.database;
-      
-      // 如果歌曲已存在于数据库中，更新其收藏夹ID
+      final isLocalFavorite = favorite.isLocal;
+
+      // 统一构造稳定的 filePath（避免 UNIQUE 约束冲突）
+      final filePath = song.filePath.isNotEmpty
+          ? song.filePath
+          : buildBilibiliFilePath(
+              bvid: song.bvid,
+              cid: song.cid,
+              pageNumber: song.pageNumber,
+            );
+
+      // 如果是在线收藏夹且为 Bilibili 歌曲，优先同步到远端收藏夹
+      if (!isLocalFavorite &&
+          song.source == 'bilibili' &&
+          song.bvid != null &&
+          song.bvid!.isNotEmpty) {
+        await _addSongToOnlineFavorite(song, favorite);
+      }
+
+      // 如果歌曲已存在于数据库中（本地正式记录）
       if (song.id > 0) {
-        final updatedSong = song.copyWith(bilibiliFavoriteId: Value(favorite.id));
+        final updatedSong =
+            song.copyWith(bilibiliFavoriteId: Value(favorite.id));
         await db.updateSong(updatedSong);
       } else {
-        // 如果是临时歌曲（id < 0），插入新歌曲
-        await db.insertSong(
-          SongsCompanion.insert(
-            title: song.title,
-            filePath: song.filePath,
-            source: Value(song.source),
-            artist: Value(song.artist),
-            album: Value(song.album),
-            duration: Value(song.duration),
-            albumArtPath: Value(song.albumArtPath),
-            dateAdded: Value(song.dateAdded),
-            isFavorite: Value(song.isFavorite),
-            bvid: Value(song.bvid),
-            cid: Value(song.cid),
-            lastPlayedTime: Value(song.lastPlayedTime),
-            playedCount: Value(song.playedCount),
+        // 临时歌曲：先检查数据库中是否已有同一音源
+        Song? existingSong = await db.getSongByPath(filePath);
+
+        if (existingSong == null &&
+            song.bvid != null &&
+            song.cid != null) {
+          existingSong =
+              await db.getSongByBvidAndCid(song.bvid!, song.cid!);
+        }
+
+        if (existingSong != null) {
+          // 已存在记录，只更新收藏夹 ID，避免重复插入触发 UNIQUE
+          final updatedExisting = existingSong.copyWith(
             bilibiliFavoriteId: Value(favorite.id),
-          ),
-        );
+          );
+          await db.updateSong(updatedExisting);
+        } else {
+          // 不存在记录，插入新歌曲，确保带上稳定的 filePath
+          await db.insertSong(
+            SongsCompanion.insert(
+              title: song.title,
+              filePath: filePath,
+              source: Value(song.source),
+              artist: Value(song.artist),
+              album: Value(song.album),
+              duration: Value(song.duration),
+              albumArtPath: Value(song.albumArtPath),
+              dateAdded: Value(song.dateAdded),
+              isFavorite: Value(song.isFavorite),
+              bvid: Value(song.bvid),
+              cid: Value(song.cid),
+              lastPlayedTime: Value(song.lastPlayedTime),
+              playedCount: Value(song.playedCount),
+              bilibiliFavoriteId: Value(favorite.id),
+            ),
+          );
+        }
       }
-      
+
       if (mounted) {
+        // 通知对应收藏夹需要刷新一次（收藏夹详情页会监听此事件）
+        FavoriteSyncNotifier.instance
+            .notifyFavoriteChanged(favorite.remoteId);
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('已添加到收藏夹「${favorite.title}」'),
@@ -4065,6 +4148,61 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
         );
       }
     }
+  }
+
+  /// 将 Bilibili 歌曲添加到在线收藏夹（同步到 B 站服务器）
+  Future<void> _addSongToOnlineFavorite(
+      Song song, BilibiliFavorite favorite) async {
+    // 解析出对应视频的 AV 号（mediaId）
+    final mediaId = await _resolveBilibiliMediaId(song);
+    if (mediaId == null) {
+      throw Exception('无法解析 B 站视频ID，添加到在线收藏夹失败');
+    }
+
+    final cookieManager = CookieManager();
+    final apiClient = BilibiliApiClient(cookieManager);
+    final apiService = BilibiliApiService(apiClient);
+
+    await apiService.addToFavorite(
+      mediaId: mediaId,
+      favoriteId: favorite.remoteId,
+    );
+  }
+
+  /// 根据当前歌曲解析对应的 Bilibili AV 号（优先使用本地缓存）
+  Future<int?> _resolveBilibiliMediaId(Song song) async {
+    final db = MusicDatabase.database;
+
+    // 1. 优先使用已关联的 bilibiliVideoId
+    if (song.bilibiliVideoId != null) {
+      final video =
+          await db.getBilibiliVideoById(song.bilibiliVideoId!);
+      if (video != null && video.aid > 0) {
+        return video.aid;
+      }
+    }
+
+    // 2. 通过 bvid 在本地视频表中查找
+    if (song.bvid != null && song.bvid!.isNotEmpty) {
+      final video =
+          await db.getBilibiliVideoByBvid(song.bvid!);
+      if (video != null && video.aid > 0) {
+        return video.aid;
+      }
+
+      // 3. 兜底：调用接口获取视频详情（不强制写回本地）
+      final cookieManager = CookieManager();
+      final apiClient = BilibiliApiClient(cookieManager);
+      final apiService = BilibiliApiService(apiClient);
+
+      final remoteVideo =
+          await apiService.getVideoDetails(song.bvid!);
+      if (remoteVideo.aid > 0) {
+        return remoteVideo.aid;
+      }
+    }
+
+    return null;
   }
 
   /// 查看制作人员（跳转到UP主页面）

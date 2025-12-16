@@ -375,6 +375,22 @@ class SettingsPageState extends State<SettingsPage> with ShowAwarePage {
           child: Column(
             children: [
               ListTile(
+                title: const Text('配置管理', style: TextStyle(fontWeight: FontWeight.w400)),
+                subtitle: Text(
+                  '备份、导入导出配置',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? Colors.white.withOpacity(0.5) : Colors.grey[600],
+                  ),
+                ),
+                trailing: Icon(CupertinoIcons.chevron_right, size: 18, color: Colors.grey[400]),
+                onTap: () {
+                  NestedNavigationHelper.push(context, "/settings/config");
+                },
+              ),
+              Divider(height: 1, indent: 16, endIndent: 0),
+
+              ListTile(
                 title: const Text('反馈建议', style: TextStyle(fontWeight: FontWeight.w400)),
                 subtitle: Text(
                   '发送反馈和建议',

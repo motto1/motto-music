@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:crypto/crypto.dart';
+import 'package:drift/drift.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:motto_music/models/lyrics/lyric_models.dart';
 import 'package:motto_music/services/lyrics/netease_api.dart';
@@ -8,14 +9,38 @@ import 'package:motto_music/database/database.dart';
 
 class LyricService {
   final NeteaseApi _neteaseApi;
+  final MusicDatabase _db;
 
-  LyricService(this._neteaseApi);
+  LyricService(this._neteaseApi, this._db);
 
   /// 生成歌曲的唯一标识（支持本地文件和 Bilibili 来源）
   ///
   /// ⭐ 公开方法，供外部调用以确保一致性
   String generateUniqueKey(Song track) {
     return _generateUniqueKey(track);
+  }
+
+  /// 生成未哈希的原始键（用于数据库存储，便于调试）
+  String generateRawKey(Song track) {
+    if (track.source == 'bilibili' && track.bvid != null) {
+      final bvid = track.bvid!;
+      final cid = track.cid ?? 0;
+      return 'bilibili_${bvid}_$cid';
+    }
+
+    final title = _normalizeText(track.title);
+    final artist = _normalizeText(track.artist ?? '未知艺术家');
+    final duration = track.duration ?? 0;
+
+    if (title.isNotEmpty && artist != '未知艺术家') {
+      return 'local_${title}_${artist}_$duration';
+    }
+
+    if (track.filePath.isNotEmpty) {
+      return 'file_${track.filePath}';
+    }
+
+    return 'fallback_${track.id}';
   }
 
   /// 内部实现：生成歌曲的唯一标识
@@ -116,49 +141,216 @@ class LyricService {
     return File('${lyricsDir.path}/$fileName.json');
   }
 
-  /// 智能获取歌词（优先从缓存读取）
+  /// 智能获取歌词（优先从数据库读取）
   Future<ParsedLrc> smartFetchLyrics(Song track) async {
     try {
-      // ⭐ 使用智能唯一键生成（支持 Bilibili 和本地文件）
-      final uniqueKey = _generateUniqueKey(track);
-      final cacheFile = await _getLyricCacheFile(uniqueKey);
+      // ⭐ 使用原始键（未哈希）存入数据库，便于调试
+      final rawKey = generateRawKey(track);
+      final hashedKey = _generateUniqueKey(track);
 
       // 调试日志：显示缓存键生成策略
-      _logCacheKeyInfo(track, uniqueKey);
+      _logCacheKeyInfo(track, hashedKey);
 
-      // 尝试从缓存读取
+      // 1. 优先从数据库读取
+      final dbLyric = await (_db.select(_db.songLyrics)
+            ..where((t) => t.uniqueKey.equals(rawKey))
+            ..where((t) => t.isActive.equals(true))
+            ..orderBy([
+              // 用户编辑的优先
+              (t) => OrderingTerm.desc(t.isUserEdited),
+              // 然后按更新时间
+              (t) => OrderingTerm.desc(t.updatedAt),
+            ])
+            ..limit(1))
+          .getSingleOrNull();
+
+      if (dbLyric != null) {
+        print('✅ 从数据库加载歌词: ${track.title}');
+        return _dbLyricToParsedLrc(dbLyric);
+      }
+
+      // 2. 兼容旧版：尝试从文件缓存读取
+      final cacheFile = await _getLyricCacheFile(hashedKey);
       if (await cacheFile.exists()) {
         try {
           final content = await cacheFile.readAsString();
           final json = jsonDecode(content) as Map<String, dynamic>;
           final cachedLyrics = ParsedLrc.fromJson(json);
 
-          print('✅ 从缓存加载歌词: ${track.title}');
+          print('✅ 从文件缓存加载歌词: ${track.title}');
 
-          // 标记为缓存来源（如果原始来源不是local或manual）
+          // 迁移到数据库
+          await _saveLyricsToDatabase(
+            track: track,
+            lyrics: cachedLyrics,
+            rawKey: rawKey,
+            isUserEdited: cachedLyrics.source == 'local' ||
+                          cachedLyrics.source == 'manual',
+          );
+
           if (cachedLyrics.source != 'local' && cachedLyrics.source != 'manual') {
             return cachedLyrics.copyWith(source: 'cache');
           }
           return cachedLyrics;
         } catch (e) {
           print('⚠️ 读取歌词缓存失败: $e');
-          // 缓存读取失败，继续获取新歌词
         }
       }
 
       print('🌐 从网络获取歌词: ${track.title}');
 
-      // 从网络获取歌词
+      // 3. 从网络获取歌词
       final lyrics = await getBestMatchedLyrics(track: track);
-      // 网络获取的歌词标记为 netease
-      final neteaseeLyrics = lyrics.copyWith(source: 'netease');
+      final neteaseLyrics = lyrics.copyWith(source: 'netease');
 
-      // 保存到缓存
-      await _saveLyricsToCache(uniqueKey, neteaseeLyrics);
+      // 保存到数据库
+      await _saveLyricsToDatabase(
+        track: track,
+        lyrics: neteaseLyrics,
+        rawKey: rawKey,
+        isUserEdited: false,
+      );
 
-      return neteaseeLyrics;
+      // 同时保存到文件缓存（兼容性）
+      await _saveLyricsToCache(hashedKey, neteaseLyrics);
+
+      return neteaseLyrics;
     } catch (e) {
       throw Exception('智能获取歌词失败: $e');
+    }
+  }
+
+  /// 将数据库歌词记录转换为 ParsedLrc
+  ParsedLrc _dbLyricToParsedLrc(SongLyric dbLyric) {
+    // 尝试解析 LRC 格式
+    try {
+      final parsed = _parseLrcContent(dbLyric.content);
+      return ParsedLrc(
+        tags: parsed.tags,
+        lyrics: parsed.lyrics,
+        rawOriginalLyrics: dbLyric.content,
+        rawTranslatedLyrics: dbLyric.translatedContent,
+        offset: dbLyric.offsetMs / 1000.0,
+        source: dbLyric.isUserEdited ? 'local' : dbLyric.source,
+      );
+    } catch (e) {
+      // 解析失败，返回原始内容
+      return ParsedLrc(
+        tags: const {},
+        lyrics: null,
+        rawOriginalLyrics: dbLyric.content,
+        rawTranslatedLyrics: dbLyric.translatedContent,
+        offset: dbLyric.offsetMs / 1000.0,
+        source: dbLyric.isUserEdited ? 'local' : dbLyric.source,
+      );
+    }
+  }
+
+  /// 解析 LRC 内容（简化版，复用现有逻辑）
+  ParsedLrc _parseLrcContent(String lrcString) {
+    if (lrcString.trim().isEmpty) {
+      return ParsedLrc(
+        tags: const {},
+        lyrics: null,
+        rawOriginalLyrics: lrcString,
+      );
+    }
+
+    final lines = lrcString.split('\n');
+    final tags = <String, String>{};
+    final lyrics = <LyricLine>[];
+
+    final tagRegex = RegExp(r'^\[([a-zA-Z0-9]+):(.+)\]$');
+    final timestampRegex = RegExp(r'\[(\d{2,}):(\d{2,})(?:[.:](\d{2,3}))?\]');
+
+    for (var line in lines) {
+      final trimmedLine = line.trim();
+      if (trimmedLine.isEmpty) continue;
+
+      // 解析标签
+      final tagMatch = tagRegex.firstMatch(trimmedLine);
+      if (tagMatch != null) {
+        tags[tagMatch.group(1)!] = tagMatch.group(2)!;
+        continue;
+      }
+
+      // 解析时间戳歌词
+      final timestampMatches = timestampRegex.allMatches(trimmedLine).toList();
+      if (timestampMatches.isNotEmpty) {
+        final lastTimestamp = timestampMatches.last;
+        final contentAfterTimestamp = trimmedLine.substring(lastTimestamp.end).trim();
+
+        if (contentAfterTimestamp.isEmpty) continue;
+
+        for (final match in timestampMatches) {
+          final minutes = int.parse(match.group(1)!);
+          final seconds = int.parse(match.group(2)!);
+          final fractionalPart = match.group(3) ?? '0';
+          final milliseconds = int.parse(fractionalPart.padRight(3, '0'));
+
+          final timestamp = minutes * 60.0 + seconds + milliseconds / 1000.0;
+
+          lyrics.add(LyricLine(
+            timestamp: timestamp,
+            text: contentAfterTimestamp,
+          ));
+        }
+      }
+    }
+
+    lyrics.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+    return ParsedLrc(
+      tags: tags,
+      lyrics: lyrics.isEmpty ? null : lyrics,
+      rawOriginalLyrics: lrcString,
+    );
+  }
+
+  /// 保存歌词到数据库
+  Future<void> _saveLyricsToDatabase({
+    required Song track,
+    required ParsedLrc lyrics,
+    required String rawKey,
+    required bool isUserEdited,
+  }) async {
+    try {
+      // 检查是否已存在
+      final existing = await (_db.select(_db.songLyrics)
+            ..where((t) => t.uniqueKey.equals(rawKey))
+            ..where((t) => t.source.equals(lyrics.source)))
+          .getSingleOrNull();
+
+      if (existing != null) {
+        // 更新现有记录
+        await (_db.update(_db.songLyrics)
+              ..where((t) => t.id.equals(existing.id)))
+            .write(SongLyricsCompanion(
+          content: Value(lyrics.rawOriginalLyrics),
+          translatedContent: Value(lyrics.rawTranslatedLyrics),
+          offsetMs: Value((lyrics.offset * 1000).round()),
+          isUserEdited: Value(isUserEdited),
+          updatedAt: Value(DateTime.now()),
+        ));
+      } else {
+        // 插入新记录
+        await _db.into(_db.songLyrics).insert(
+              SongLyricsCompanion.insert(
+                songId: Value(track.id > 0 ? track.id : null),
+                uniqueKey: rawKey,
+                content: lyrics.rawOriginalLyrics,
+                translatedContent: Value(lyrics.rawTranslatedLyrics),
+                format: const Value('lrc'),
+                language: const Value('unknown'),
+                source: Value(lyrics.source),
+                offsetMs: Value((lyrics.offset * 1000).round()),
+                isUserEdited: Value(isUserEdited),
+                isActive: const Value(true),
+              ),
+            );
+      }
+    } catch (e) {
+      print('⚠️ 保存歌词到数据库失败: $e');
     }
   }
 
@@ -277,7 +469,32 @@ class LyricService {
       return false;
     }
   }
+
+  /// 标记歌词为用户编辑
+  Future<void> markAsUserEdited(Song track) async {
+    final rawKey = generateRawKey(track);
+    try {
+      await (_db.update(_db.songLyrics)
+            ..where((t) => t.uniqueKey.equals(rawKey)))
+          .write(SongLyricsCompanion(
+        isUserEdited: const Value(true),
+        updatedAt: Value(DateTime.now()),
+      ));
+    } catch (e) {
+      print('⚠️ 标记用户编辑失败: $e');
+    }
+  }
 }
 
-// 全局单例
-final lyricService = LyricService(neteaseApi);
+// 全局单例 - 延迟初始化
+LyricService? _lyricServiceInstance;
+
+LyricService get lyricService {
+  _lyricServiceInstance ??= LyricService(neteaseApi, MusicDatabase.database);
+  return _lyricServiceInstance!;
+}
+
+/// 重新初始化 LyricService（用于数据库重建等场景）
+void reinitializeLyricService() {
+  _lyricServiceInstance = LyricService(neteaseApi, MusicDatabase.database);
+}

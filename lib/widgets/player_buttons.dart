@@ -170,7 +170,7 @@ class PlaylistBottomSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final currentSong = playerProvider.currentSong;
     final playlist = playerProvider.playlist;
-    
+
     return Container(
       height: MediaQuery.of(context).size.height * 0.6,
       decoration: BoxDecoration(
@@ -260,7 +260,10 @@ class PlaylistBottomSheet extends StatelessWidget {
                           context,
                           playlist[index],
                           index,
-                          currentSong?.id == playlist[index].id,
+                          playerProvider.isSameSongForDisplay(
+                            currentSong,
+                            playlist[index],
+                          ),
                           playlist,
                         ),
                       ),
@@ -283,7 +286,12 @@ class PlaylistBottomSheet extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: () {
-          playerProvider.playSong(song, playlist: playlist, index: index);
+          // 在当前播放队列中跳转到对应歌曲，保持播放列表顺序不变
+          playerProvider.playSong(
+            song,
+            index: index,
+            shuffle: false,
+          );
           Navigator.pop(context);
         },
         child: Container(

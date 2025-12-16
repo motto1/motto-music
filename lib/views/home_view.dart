@@ -274,7 +274,12 @@ class HomeViewState extends State<HomeView> with ShowAwarePage {
             padding: const EdgeInsets.only(right: 16),
             child: InkWell(
               onTap: () {
-                playerProvider.playSong(song, playlist: recentSongs, index: index);
+                playerProvider.playSong(
+                  song,
+                  playlist: recentSongs,
+                  index: index,
+                  shuffle: false,
+                );
               },
               borderRadius: BorderRadius.circular(12),
               child: Container(

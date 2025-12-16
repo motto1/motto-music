@@ -14,11 +14,22 @@ class RecentlyPlayedDetailPage extends StatefulWidget {
 
 class _RecentlyPlayedDetailPageState extends State<RecentlyPlayedDetailPage> {
   List<Song> recentSongs = [];
+  late final VoidCallback _recentSongListener;
 
   @override
   void initState() {
     super.initState();
+    _recentSongListener = () {
+      _loadRecentSongs();
+    };
+    PlayerProvider.addSongChangeListener(_recentSongListener);
     _loadRecentSongs();
+  }
+
+  @override
+  void dispose() {
+    PlayerProvider.removeSongChangeListener(_recentSongListener);
+    super.dispose();
   }
 
   Future<void> _loadRecentSongs() async {
@@ -29,6 +40,7 @@ class _RecentlyPlayedDetailPageState extends State<RecentlyPlayedDetailPage> {
         orderDirection: 'DESC',
         isLastPlayed: true,
       );
+      if (!mounted) return;
       setState(() {
         recentSongs = songs;
       });
@@ -114,7 +126,12 @@ class _RecentlyPlayedDetailPageState extends State<RecentlyPlayedDetailPage> {
 
             return InkWell(
               onTap: () {
-                playerProvider.playSong(song, playlist: recentSongs, index: index);
+                playerProvider.playSong(
+                  song,
+                  playlist: recentSongs,
+                  index: index,
+                  shuffle: false,
+                );
               },
               borderRadius: BorderRadius.circular(12),
               child: Column(

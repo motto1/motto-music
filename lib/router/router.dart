@@ -6,6 +6,7 @@ import '../storage/player_state_storage.dart';
 import '../widgets/show_aware_page.dart';
 import '../views/settings/settings_page.dart';
 import '../views/settings/storage_setting_page.dart';
+import '../views/settings/config_management_page.dart';
 import '../animations/page_transitions.dart';
 
 /// 单个菜单项
@@ -137,6 +138,12 @@ class MenuManager {
         title: '存储设置',
         builder: () => const StorageSettingPage(),
         icon: Icons.storage,
+      ),
+      MenuSubItem(
+        routeName: '/settings/config',
+        title: '配置管理',
+        builder: () => const ConfigManagementPage(),
+        icon: Icons.backup_rounded,
       ),
     ];
   }

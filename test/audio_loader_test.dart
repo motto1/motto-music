@@ -3,6 +3,7 @@ import 'package:motto_music/database/database.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:matcher/matcher.dart' as matcher;
+import 'package:motto_music/utils/bilibili_song_utils.dart';
 
 void main() {
   late MusicDatabase db;
@@ -39,7 +40,12 @@ void main() {
       await db.insertSong(
         SongsCompanion.insert(
           title: 'Bilibili 歌曲',
-          filePath: '', // Bilibili 歌曲不需要文件路径
+          // 使用虚拟 filePath 满足唯一约束
+          filePath: buildBilibiliFilePath(
+            bvid: 'BV1xx411c7mD',
+            cid: 123456,
+            pageNumber: 1,
+          ),
           source: const Value('bilibili'),
           bvid: const Value('BV1xx411c7mD'),
           cid: const Value(123456),
@@ -78,7 +84,11 @@ void main() {
       await db.insertSongs([
         SongsCompanion.insert(
           title: '多P视频 - P1',
-          filePath: '',
+          filePath: buildBilibiliFilePath(
+            bvid: 'BV_multi_page',
+            cid: 111,
+            pageNumber: 1,
+          ),
           source: const Value('bilibili'),
           bvid: const Value('BV_multi_page'),
           cid: const Value(111),
@@ -87,7 +97,11 @@ void main() {
         ),
         SongsCompanion.insert(
           title: '多P视频 - P2',
-          filePath: '',
+          filePath: buildBilibiliFilePath(
+            bvid: 'BV_multi_page',
+            cid: 222,
+            pageNumber: 2,
+          ),
           source: const Value('bilibili'),
           bvid: const Value('BV_multi_page'),
           cid: const Value(222),
@@ -96,7 +110,11 @@ void main() {
         ),
         SongsCompanion.insert(
           title: '多P视频 - P3',
-          filePath: '',
+          filePath: buildBilibiliFilePath(
+            bvid: 'BV_multi_page',
+            cid: 333,
+            pageNumber: 3,
+          ),
           source: const Value('bilibili'),
           bvid: const Value('BV_multi_page'),
           cid: const Value(333),
@@ -142,14 +160,20 @@ void main() {
       await db.insertSongs([
         SongsCompanion.insert(
           title: 'Bilibili 歌曲1',
-          filePath: '',
+          filePath: buildBilibiliFilePath(
+            bvid: 'BV1',
+            cid: 1,
+          ),
           source: const Value('bilibili'),
           bvid: const Value('BV1'),
           cid: const Value(1),
         ),
         SongsCompanion.insert(
           title: 'Bilibili 歌曲2',
-          filePath: '',
+          filePath: buildBilibiliFilePath(
+            bvid: 'BV2',
+            cid: 2,
+          ),
           source: const Value('bilibili'),
           bvid: const Value('BV2'),
           cid: const Value(2),
@@ -176,7 +200,10 @@ void main() {
         ),
         SongsCompanion.insert(
           title: 'Bilibili歌曲B',
-          filePath: '',
+          filePath: buildBilibiliFilePath(
+            bvid: 'BV_B',
+            cid: 100,
+          ),
           source: const Value('bilibili'),
           bvid: const Value('BV_B'),
           cid: const Value(100),
@@ -187,7 +214,10 @@ void main() {
         ),
         SongsCompanion.insert(
           title: 'Bilibili歌曲D',
-          filePath: '',
+          filePath: buildBilibiliFilePath(
+            bvid: 'BV_D',
+            cid: 200,
+          ),
           source: const Value('bilibili'),
           bvid: const Value('BV_D'),
           cid: const Value(200),
@@ -213,14 +243,20 @@ void main() {
         ),
         SongsCompanion.insert(
           title: 'Bilibili歌曲1',
-          filePath: '',
+          filePath: buildBilibiliFilePath(
+            bvid: 'BV1',
+            cid: 1,
+          ),
           source: const Value('bilibili'),
           bvid: const Value('BV1'),
           cid: const Value(1),
         ),
         SongsCompanion.insert(
           title: 'Bilibili歌曲2',
-          filePath: '',
+          filePath: buildBilibiliFilePath(
+            bvid: 'BV2',
+            cid: 2,
+          ),
           source: const Value('bilibili'),
           bvid: const Value('BV2'),
           cid: const Value(2),

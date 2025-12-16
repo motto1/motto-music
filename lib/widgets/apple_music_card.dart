@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'animated_widgets.dart';
 import 'dart:ui';
+import 'animated_widgets.dart';
+import 'unified_cover_image.dart';
 
 /// Apple Music 风格的卡片组件（液态玻璃效果）
 class AppleMusicCard extends StatefulWidget {
@@ -204,36 +204,12 @@ class _AppleMusicCardState extends State<AppleMusicCard> {
         ],
       ),
       child: widget.coverUrl != null
-          ? ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: CachedNetworkImage(
-                imageUrl: widget.coverUrl!,
-                fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  color: isDark
-                      ? const Color(0xFF3A3A3C)
-                      : const Color(0xFFFFFFFF),
-                  child: Center(
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: isDark
-                            ? Colors.white.withOpacity(0.3)
-                            : Colors.black.withOpacity(0.3),
-                      ),
-                    ),
-                  ),
-                ),
-                errorWidget: (context, url, error) => Icon(
-                  Icons.folder_outlined,
-                  size: 32,
-                  color: isDark
-                      ? Colors.white.withOpacity(0.3)
-                      : Colors.black.withOpacity(0.3),
-                ),
-              ),
+          ? UnifiedCoverImage(
+              coverPath: widget.coverUrl,
+              width: 70,
+              height: 70,
+              borderRadius: 8,
+              isDark: isDark,
             )
           : Icon(
               Icons.folder_outlined,

@@ -12,6 +12,17 @@ class AlbumArtCacheService {
 
   static final AlbumArtCacheService instance = AlbumArtCacheService._();
 
+   /// 判断给定 URL 是否为需要携带 B 站 Header（包括 Cookie）的图片地址。
+   ///
+   /// 目前规则与内部 _needsBilibiliHeaders 保持一致：凡 host 命中 bilibili.com / hdslb.com
+   /// 的图片地址，都会被认为需要附加 B 站特有的请求头。
+   static bool isBilibiliImageUrl(String? url) {
+     if (url == null || url.isEmpty) return false;
+     final uri = Uri.tryParse(url);
+     if (uri == null) return false;
+     return instance._needsBilibiliHeaders(uri.host);
+   }
+
   Directory? _cacheDir;
 
   /// 确保传入的封面路径可在离线环境使用：

@@ -8,6 +8,8 @@ import 'package:motto_music/database/database.dart';
 import 'package:motto_music/models/bilibili/audio_quality.dart';
 import 'package:motto_music/models/download_progress_event.dart';
 import 'package:motto_music/services/bilibili/download_service.dart';
+import 'package:motto_music/services/bilibili/cookie_manager.dart';
+import 'package:motto_music/services/cache/album_art_cache_service.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -240,6 +242,9 @@ class DownloadManager with ChangeNotifier {
             ? BilibiliAudioQuality.fromId(_userSettings!.defaultDownloadQuality)
             : BilibiliAudioQuality.flac);
 
+    // 统一封面来源：在添加下载任务前，尽量将 Song 的封面转换为本地路径
+    final coverPathForTask = await _ensureLocalAlbumArtForSong(song);
+
     try {
       await _downloadService.addDownloadTask(
         bvid: song.bvid!,
@@ -247,7 +252,7 @@ class DownloadManager with ChangeNotifier {
         title: song.title,
         quality: downloadQuality,
         artist: song.artist,
-        coverUrl: song.albumArtPath,
+        coverUrl: coverPathForTask,
         duration: song.duration,
       );
 
@@ -282,13 +287,15 @@ class DownloadManager with ChangeNotifier {
       }
 
       try {
+        final coverPathForTask = await _ensureLocalAlbumArtForSong(song);
+
         await _downloadService.addDownloadTask(
           bvid: song.bvid!,
           cid: song.cid!,
           title: song.title,
           quality: quality,
           artist: song.artist,
-          coverUrl: song.albumArtPath,
+          coverUrl: coverPathForTask,
           duration: song.duration,
         );
         successCount++;
@@ -553,5 +560,43 @@ class DownloadManager with ChangeNotifier {
   void dispose() {
     _progressSubscription?.cancel();
     super.dispose();
+  }
+
+  /// 确保歌曲封面尽可能指向本地缓存文件，并在适当时更新数据库。
+  ///
+  /// 返回用于下载任务的封面路径：
+  /// - 原路径为空 → 返回 null
+  /// - 原路径已为本地路径 → 直接返回
+  /// - 原路径为远程 URL → 通过 AlbumArtCacheService 下载到本地，并在 Song 已持久化时同步更新数据库
+  Future<String?> _ensureLocalAlbumArtForSong(Song song) async {
+    final originalPath = song.albumArtPath;
+    if (originalPath == null || originalPath.isEmpty) return null;
+
+    final isRemote =
+        originalPath.startsWith('http://') || originalPath.startsWith('https://');
+    if (!isRemote) return originalPath;
+
+    try {
+      final cookieManager = CookieManager();
+      final cookie = await cookieManager.getCookieString();
+
+      final localPath = await AlbumArtCacheService.instance.ensureLocalPath(
+        originalPath,
+        cookie: cookie.isEmpty ? null : cookie,
+      );
+
+      if (localPath != null &&
+          localPath.isNotEmpty &&
+          localPath != originalPath &&
+          song.id > 0) {
+        final updated = song.copyWith(albumArtPath: Value(localPath));
+        await _database.updateSong(updated);
+      }
+
+      return localPath ?? originalPath;
+    } catch (e) {
+      debugPrint('[DownloadManager] 尝试缓存封面失败: $e');
+      return originalPath;
+    }
   }
 }

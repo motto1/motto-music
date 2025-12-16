@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:motto_music/widgets/themed_background.dart';
-import 'dart:io';
 import '../database/database.dart';
 import '../services/player_provider.dart';
 import 'motto_toast.dart';
@@ -8,6 +7,7 @@ import '../widgets/song_action_menu.dart';
 import '../utils/common_utils.dart' show CommonUtils;
 import '../utils/platform_utils.dart';
 import '../services/music_import_service.dart';
+import '../widgets/unified_cover_image.dart';
 
 class MusicListView extends StatefulWidget {
   final List<Song> songs;
@@ -19,6 +19,8 @@ class MusicListView extends StatefulWidget {
   final void Function(Song song, int? index)? onSongUpdated;
   final Function(Song, List<Song>, int)? onSongPlay;
   final Function(int, bool)? onCheckboxChanged;
+  /// 如果不为 null，表示这是“当前播放队列”视图，使用队列索引高亮
+  final int? queueHighlightIndex;
 
   const MusicListView({
     super.key,
@@ -31,6 +33,7 @@ class MusicListView extends StatefulWidget {
     this.onSongUpdated,
     this.onSongPlay,
     this.onCheckboxChanged,
+    this.queueHighlightIndex,
   });
 
   @override
@@ -154,8 +157,11 @@ class _MusicListViewState extends State<MusicListView> {
                 delegate: SliverChildBuilderDelegate((context, index) {
                   final song = widget.songs[index];
                   final isHovered = !_isScrolling && _hoveredIndex == index;
-                  final isSelected =
-                      widget.playerProvider.currentSong?.id == song.id;
+                  final isSelected = widget.playerProvider
+                      .isSameSongForDisplay(
+                        widget.playerProvider.currentSong,
+                        song,
+                      );
 
                   return LayoutBuilder(
                     builder: (context, constraints) {
@@ -199,44 +205,12 @@ class _MusicListViewState extends State<MusicListView> {
                                     padding: const EdgeInsets.all(8),
                                     child: Row(
                                       children: [
-                                        // 专辑封面
-                                        Container(
+                                        // 专辑封面（统一通过 UnifiedCoverImage 渲染）
+                                        UnifiedCoverImage(
+                                          coverPath: song.albumArtPath,
                                           width: 50,
                                           height: 50,
-                                          decoration: BoxDecoration(
-                                            borderRadius: BorderRadius.circular(
-                                              4,
-                                            ),
-                                          ),
-                                          child: song.albumArtPath != null
-                                              ? ClipRRect(
-                                                  borderRadius:
-                                                      BorderRadius.circular(4),
-                                                  child: (song.albumArtPath!.startsWith('http://') ||
-                                                          song.albumArtPath!.startsWith('https://'))
-                                                      ? Image.network(
-                                                          song.albumArtPath!,
-                                                          width: 50,
-                                                          height: 50,
-                                                          fit: BoxFit.cover,
-                                                          cacheWidth: 150,
-                                                          cacheHeight: 150,
-                                                          errorBuilder: (context, error, stackTrace) {
-                                                            return const Icon(Icons.music_note_rounded);
-                                                          },
-                                                        )
-                                                      : Image.file(
-                                                          File(song.albumArtPath!),
-                                                          width: 50,
-                                                          height: 50,
-                                                          fit: BoxFit.cover,
-                                                          cacheWidth: 150,
-                                                          cacheHeight: 150,
-                                                        ),
-                                                )
-                                              : const Icon(
-                                                  Icons.music_note_rounded,
-                                                ),
+                                          borderRadius: 4,
                                         ),
                                         const SizedBox(width: 10),
                                         // 歌曲信息

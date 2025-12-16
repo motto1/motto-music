@@ -71,7 +71,19 @@ class PlayerStateStorage {
     final state = PlayerStateStorage._();
 
     state._isPlaying = prefs.getBool(_isPlayingKey) ?? false;
-    state._position = Duration(seconds: prefs.getInt(_positionKey) ?? 0);
+
+    // 兼容旧版本：历史数据以「秒」为单位存储，从 1.0 开始改为毫秒。
+    // 为避免老数据恢复错误，这里根据数值大小做一次智能判定：
+    // - 小于 100000 时按秒处理（约 < 27 小时）
+    // - 否则按毫秒处理
+    final rawPosition = prefs.getInt(_positionKey) ?? 0;
+    if (rawPosition <= 0) {
+      state._position = Duration.zero;
+    } else if (rawPosition < 100000) {
+      state._position = Duration(seconds: rawPosition);
+    } else {
+      state._position = Duration(milliseconds: rawPosition);
+    }
 
     // 尝试加载当前歌曲，如果失败则清空（兼容旧版本数据）
     final songJson = prefs.getString(_songKey);
@@ -138,7 +150,8 @@ class PlayerStateStorage {
   Future<void> _savePlaybackState() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_isPlayingKey, _isPlaying);
-    await prefs.setInt(_positionKey, _position.inSeconds);
+    // 从 1.0 开始按毫秒保存播放位置，恢复时会自动兼容旧版本的秒级数据。
+    await prefs.setInt(_positionKey, _position.inMilliseconds);
     if (_currentSong != null) {
       await prefs.setString(_songKey, jsonEncode(_currentSong!.toJson()));
     }
@@ -250,10 +263,9 @@ extension PlayerStateSetters on PlayerStateStorage {
   SortState getPageSort(String page) => _pageSortStates[page] ?? SortState();
 
   Future<void> setBilibiliCacheSize(int sizeGB) async {
-    if (sizeGB < 1 || sizeGB > 50) {
-      throw ArgumentError('缓存大小必须在 1GB 到 50GB 之间');
-    }
-    _bilibiliCacheSizeGB = sizeGB;
+    // 为避免设置页错误导致崩溃，这里做安全收敛。
+    final clamped = sizeGB.clamp(1, 50);
+    _bilibiliCacheSizeGB = clamped;
     await _saveBilibiliCacheSize();
   }
 

@@ -9,6 +9,7 @@ import 'package:motto_music/services/bilibili/api_client.dart';
 import 'package:motto_music/services/bilibili/cookie_manager.dart';
 import 'package:motto_music/services/player_provider.dart';
 import 'package:motto_music/services/cache/page_cache_service.dart';
+import 'package:motto_music/services/cache/album_art_cache_service.dart';
 import 'package:motto_music/database/database.dart' as db;
 import 'package:motto_music/utils/theme_utils.dart';
 import 'package:motto_music/utils/bilibili_song_utils.dart';
@@ -319,45 +320,82 @@ class _VideoDetailPageState extends State<VideoDetailPage> with ShowAwarePage {
           const SnackBar(content: Text('正在创建收藏夹...')),
         );
       }
-      
+
       final database = db.MusicDatabase.database;
-      
-      // 创建本地收藏夹（使用视频封面）
+
+      // 统一封面来源：优先将视频封面缓存到本地
+      String? coverPath = _video?.pic;
+      if (coverPath != null && coverPath.isNotEmpty) {
+        try {
+          final cookieManager = CookieManager();
+          final cookie = await cookieManager.getCookieString();
+          final localCover = await AlbumArtCacheService.instance.ensureLocalPath(
+            coverPath,
+            cookie: cookie.isEmpty ? null : cookie,
+          );
+          if (localCover != null && localCover.isNotEmpty) {
+            coverPath = localCover;
+          }
+        } catch (e) {
+          debugPrint('[VideoDetailPage] 缓存封面失败: $e');
+        }
+      }
+
+      // 创建本地收藏夹（封面优先使用本地缓存路径）
       final favoriteId = await database.into(database.bilibiliFavorites).insert(
         db.BilibiliFavoritesCompanion.insert(
           remoteId: DateTime.now().millisecondsSinceEpoch,
           title: title,
           description: Value(introController.text.trim()),
-          coverUrl: Value(_video!.pic),
+          coverUrl: Value(coverPath ?? _video!.pic),
           mediaCount: Value(_pages?.length ?? 1),
           syncedAt: DateTime.now(),
           isAddedToLibrary: const Value(true),
           isLocal: const Value(true),
         ),
       );
-      
+
       // 获取所有分P并添加到收藏夹
       final pages = _pages ?? [];
       for (final page in pages) {
-        await database.into(database.songs).insert(
-          db.SongsCompanion.insert(
-            title: page.part,
-            artist: Value(_video!.owner.name),
-            album: Value(_video!.title),
-            filePath: buildBilibiliFilePath(
-              bvid: _video!.bvid,
-              cid: page.cid,
-              pageNumber: page.page,
-            ),
-            duration: Value(page.duration),
-            albumArtPath: Value(_video!.pic),
-            source: const Value('bilibili'),
-            bvid: Value(_video!.bvid),
-            cid: Value(page.cid),
-            pageNumber: Value(page.page),
-            bilibiliFavoriteId: Value(favoriteId),
-          ),
+        final filePath = buildBilibiliFilePath(
+          bvid: _video!.bvid,
+          cid: page.cid,
+          pageNumber: page.page,
         );
+
+        // 先检查是否已存在同一音源的歌曲，避免 UNIQUE(file_path) 冲突
+        db.Song? existingSong = await database.getSongByPath(filePath);
+
+        if (existingSong == null) {
+          existingSong = await database.getSongByBvidAndCid(
+            _video!.bvid,
+            page.cid,
+          );
+        }
+
+        if (existingSong != null) {
+          final updated = existingSong.copyWith(
+            bilibiliFavoriteId: Value(favoriteId),
+          );
+          await database.updateSong(updated);
+        } else {
+          await database.into(database.songs).insert(
+            db.SongsCompanion.insert(
+              title: page.part,
+              artist: Value(_video!.owner.name),
+              album: Value(_video!.title),
+              filePath: filePath,
+              duration: Value(page.duration),
+              albumArtPath: Value(coverPath ?? _video!.pic),
+              source: const Value('bilibili'),
+              bvid: Value(_video!.bvid),
+              cid: Value(page.cid),
+              pageNumber: Value(page.page),
+              bilibiliFavoriteId: Value(favoriteId),
+            ),
+          );
+        }
       }
       
       if (mounted) {

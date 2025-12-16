@@ -28,6 +28,7 @@ import 'package:motto_music/views/bilibili/bilibili_settings_page.dart';
 import 'package:motto_music/services/bilibili/download_manager.dart';
 import 'package:motto_music/widgets/unified_cover_image.dart';
 import 'package:motto_music/models/bilibili/audio_quality.dart';
+import 'package:motto_music/widgets/audio_quality_section.dart';
 
 /// Bilibili 收藏夹列表页面
 class BilibiliFavoritesPage extends StatefulWidget {
@@ -52,6 +53,9 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
   String? _userAvatarUrl;
   bool _isSelectionMode = false;
   final Set<int> _selectedFavoriteIds = <int>{};
+
+  /// 搜索结果 Future 缓存，避免因 rebuild（如键盘弹出/收起）导致重复搜索
+  Future<List<db.Song>>? _searchFuture;
 
   @override
   void initState() {
@@ -163,6 +167,7 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
   Future<void> _filterFavorites(String query) async {
     setState(() {
       _searchQuery = query;
+      _searchFuture = null; // 关键词变更时重置 Future，下次构建时重新搜索
       if (query.isEmpty) {
         _filteredFavorites = _favorites;
       }
@@ -407,119 +412,161 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
     }
   }
 
-  /// 显示搜索结果的歌曲菜单
+  /// 显示搜索结果的歌曲菜单（样式对齐收藏夹详情页的 3 点菜单）
   Future<void> _showSearchResultSongMenu(db.Song song) async {
+    final currentSong = song;
+
     await showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // 顶部把手
-            Container(
-              margin: const EdgeInsets.only(top: 12, bottom: 8),
-              width: 40,
-              height: 4,
+      barrierColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (context, scrollController) => ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+            child: Container(
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(2),
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.black.withOpacity(0.3)
+                    : Colors.white.withOpacity(0.5),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                border: Border.all(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white.withOpacity(0.2)
+                      : Colors.white.withOpacity(0.6),
+                  width: 1.5,
+                ),
               ),
-            ),
-            // 歌曲信息
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
+              child: ListView(
+                controller: scrollController,
                 children: [
-                  UnifiedCoverImage(
-                    coverPath: song.albumArtPath,
-                    width: 56,
-                    height: 56,
-                    borderRadius: 8,
+                  // 顶部拖动把手
+                  Center(
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 12, bottom: 8),
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white.withOpacity(0.2)
+                            : Colors.black.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(2.5),
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+
+                  // 歌曲信息
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
                       children: [
-                        Text(
-                          song.title,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        UnifiedCoverImage(
+                          coverPath: currentSong.albumArtPath,
+                          width: 56,
+                          height: 56,
+                          borderRadius: 8,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          song.artist ?? '',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                currentSong.title,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                currentSong.artist ?? '',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withOpacity(0.6),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
                   ),
+                  const Divider(height: 1),
+
+                  // 与收藏夹详情页对齐的菜单项
+                  if (currentSong.bilibiliFavoriteId != null)
+                    ListTile(
+                      leading: const Icon(Icons.remove_circle_outline),
+                      title: const Text('从收藏夹移除'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _removeSearchSongFromFavorite(currentSong);
+                      },
+                    ),
+                  ListTile(
+                    leading: Icon(
+                      currentSong.isFavorite
+                          ? Icons.favorite
+                          : Icons.favorite_border,
+                    ),
+                    title: Text(currentSong.isFavorite ? '取消喜欢' : '喜欢'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _toggleSearchSongFavorite(currentSong);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.play_circle_outline),
+                    title: const Text('插播'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _playSearchSongNext(currentSong);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.playlist_add),
+                    title: const Text('添加到播放列表'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _addSearchSongToPlaylist(currentSong);
+                    },
+                  ),
+
+                  // Bilibili 音质与下载区域（与收藏夹详情页保持一致）
+                  if (currentSong.source == 'bilibili' && currentSong.bvid != null)
+                    AudioQualitySection(song: currentSong),
+
+                  if (currentSong.artist != null && currentSong.artist!.isNotEmpty)
+                    ListTile(
+                      leading: const Icon(Icons.person_outline),
+                      title: const Text('查看制作人员'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _viewSearchSongCreator(currentSong);
+                      },
+                    ),
+
+                  // 底部留白
+                  SizedBox(
+                    height: MediaQuery.of(context).padding.bottom + 20,
+                  ),
                 ],
               ),
             ),
-            const Divider(height: 1),
-            // 菜单项
-            if (song.bilibiliFavoriteId != null) ...[
-              ListTile(
-                leading: const Icon(Icons.remove_circle_outline),
-                title: const Text('从收藏夹移除'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _removeSearchSongFromFavorite(song);
-                },
-              ),
-            ],
-            ListTile(
-              leading: Icon(
-                song.isFavorite ? Icons.favorite : Icons.favorite_border,
-              ),
-              title: Text(song.isFavorite ? '取消喜欢' : '喜欢'),
-              onTap: () {
-                Navigator.pop(context);
-                _toggleSearchSongFavorite(song);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.play_circle_outline),
-              title: const Text('插播'),
-              onTap: () {
-                Navigator.pop(context);
-                _playSearchSongNext(song);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.playlist_add),
-              title: const Text('添加到播放列表'),
-              onTap: () {
-                Navigator.pop(context);
-                _addSearchSongToPlaylist(song);
-              },
-            ),
-            if (song.artist != null && song.artist!.isNotEmpty)
-              ListTile(
-                leading: const Icon(Icons.person_outline),
-                title: const Text('查看制作人员'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _viewSearchSongCreator(song);
-                },
-              ),
-            SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
-          ],
+          ),
         ),
       ),
     );
@@ -601,11 +648,17 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
   Future<void> _playSearchSongNext(db.Song song) async {
     try {
       final playerProvider = Provider.of<PlayerProvider>(context, listen: false);
-      playerProvider.addToPlaylist(song);
-      
+      debugPrint(
+        '[BilibiliFavoritesPage] ⏭ 插播搜索结果请求: songId=${song.id}, '
+        'title=${song.title}, currentSongId=${playerProvider.currentSong?.id}, '
+        'playlistLength=${playerProvider.playlist.length}',
+      );
+      await playerProvider.insertNext(song);
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('已添加到播放列表')),
+        debugPrint(
+          '[BilibiliFavoritesPage] ⏭ 插播搜索结果完成: currentSongId=${playerProvider.currentSong?.id}, '
+          'playlistLength=${playerProvider.playlist.length}',
         );
       }
     } catch (e) {
@@ -621,11 +674,11 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
   Future<void> _addSearchSongToPlaylist(db.Song song) async {
     try {
       final playerProvider = Provider.of<PlayerProvider>(context, listen: false);
-      playerProvider.addToPlaylist(song);
+      await playerProvider.addToPlaylist(song);
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('已添加到播放列表')),
+        debugPrint(
+          '[BilibiliFavoritesPage] ➕ 添加搜索结果到播放列表完成: songId=${song.id}, title=${song.title}',
         );
       }
     } catch (e) {
@@ -968,7 +1021,8 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
                                 child: Center(
                                   child: TextField(
                                     controller: _searchController,
-                                    onChanged: (query) => _filterFavorites(query),
+                                    textInputAction: TextInputAction.search,
+                                    onSubmitted: (query) => _filterFavorites(query),
                                     style: TextStyle(
                                       fontSize: 17,
                                       color: isDark ? Colors.white : Colors.black,
@@ -1316,146 +1370,156 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
     );
   }
 
-  /// 构建搜索结果（显示匹配的歌曲）
+  /// 构建搜索结果（显示匹配的歌曲），支持下拉刷新
   Widget _buildSearchResults() {
+    // 仅在查询变更或手动重置时重建 Future，避免键盘弹出/收起等 layout 变更导致重复搜索
+    _searchFuture ??= _searchSongsInFavorites(_searchQuery);
+
     return FutureBuilder<List<db.Song>>(
-      future: _searchSongsInFavorites(_searchQuery),
+      future: _searchFuture,
       builder: (context, snapshot) {
+        // 统一用 RefreshIndicator 包裹，确保向下滑动可以触发刷新
+        Widget buildScrollable(Widget child) {
+          return RefreshIndicator(
+            onRefresh: _refreshFavorites,
+            child: _wrapWithoutStretch(
+              ListView(
+                padding: EdgeInsets.zero,
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: [child],
+              ),
+            ),
+          );
+        }
+
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return buildScrollable(
+            const Center(child: Padding(
+              padding: EdgeInsets.all(24.0),
+              child: CircularProgressIndicator(),
+            )),
+          );
         }
         
         final songs = snapshot.data ?? [];
         
         if (songs.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.search_off,
-                    size: 64,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    '未找到匹配的歌曲',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+          return buildScrollable(
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.search_off,
+                      size: 64,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                    Text(
+                      '未找到匹配的歌曲',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
         }
         
-        return _wrapWithoutStretch(
-          ListView.builder(
-            padding: EdgeInsets.zero,
-            itemCount: songs.length,
-            itemBuilder: (context, index) {
-              final song = songs[index];
-              return Column(
-                children: [
-                  InkWell(
-                    onTap: () async {
-                      final playerProvider = context.read<PlayerProvider>();
-                      await playerProvider.playSong(song, playlist: songs, index: index);
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      child: Row(
-                        children: [
-                          // 封面
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(6),
-                            child: song.albumArtPath != null
-                                ? CachedNetworkImage(
-                                    imageUrl: song.albumArtPath!,
-                                    width: 64,
-                                    height: 64,
-                                    fit: BoxFit.cover,
-                                    placeholder: (context, url) => Container(
-                                      width: 64,
-                                      height: 64,
-                                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        return RefreshIndicator(
+          onRefresh: _refreshFavorites,
+          child: _wrapWithoutStretch(
+            ListView.builder(
+              padding: EdgeInsets.zero,
+              itemCount: songs.length,
+              itemBuilder: (context, index) {
+                final song = songs[index];
+                return Column(
+                  children: [
+                    InkWell(
+                      onTap: () async {
+                        final playerProvider = context.read<PlayerProvider>();
+                        await playerProvider.playSong(
+                          song,
+                          playlist: songs,
+                          index: index,
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        child: Row(
+                          children: [
+                            // 封面（统一使用 UnifiedCoverImage，兼容本地/网络路径）
+                            UnifiedCoverImage(
+                              coverPath: song.albumArtPath,
+                              width: 64,
+                              height: 64,
+                              borderRadius: 6,
+                            ),
+                            const SizedBox(width: 16),
+                            // 信息
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    song.title,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                      height: 1.3,
                                     ),
-                                    errorWidget: (context, url, error) => Container(
-                                      width: 64,
-                                      height: 64,
-                                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                                      child: const Icon(Icons.music_note, size: 28),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    song.artist ?? '',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                                      height: 1.2,
                                     ),
-                                  )
-                                : Container(
-                                    width: 64,
-                                    height: 64,
-                                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                                    child: const Icon(Icons.music_note, size: 28),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                          ),
-                          const SizedBox(width: 16),
-                          // 信息
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  song.title,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                    height: 1.3,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  song.artist ?? '',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                                    height: 1.2,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                          // 三点菜单
-                          IconButton(
-                            icon: Icon(
-                              Icons.more_vert,
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                              size: 20,
+                            // 三点菜单
+                            IconButton(
+                              icon: Icon(
+                                Icons.more_vert,
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                                size: 20,
+                              ),
+                              onPressed: () => _showSearchResultSongMenu(song),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(
+                                minWidth: 40,
+                                minHeight: 40,
+                              ),
                             ),
-                            onPressed: () => _showSearchResultSongMenu(song),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(
-                              minWidth: 40,
-                              minHeight: 40,
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  // 分隔线
-                  Divider(
-                    height: 1,
-                    thickness: 0.5,
-                    indent: 96,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
-                  ),
-                ],
-              );
-            },
+                    // 分隔线
+                    Divider(
+                      height: 1,
+                      thickness: 0.5,
+                      indent: 96,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
         );
       },

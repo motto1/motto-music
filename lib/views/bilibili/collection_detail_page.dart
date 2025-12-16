@@ -15,6 +15,7 @@ import 'dart:ui';
 import 'package:motto_music/widgets/apple_music_card.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:motto_music/services/cache/page_cache_service.dart';
+import 'package:motto_music/services/cache/album_art_cache_service.dart';
 
 /// 合集详情页面（参考视频详情页设计）
 class CollectionDetailPage extends StatefulWidget {
@@ -193,8 +194,22 @@ class _CollectionDetailPageState extends State<CollectionDetailPage> with ShowAw
 
       final List<db.Song> playlist = [];
 
+      final cookieManager = CookieManager();
+      final cookie = await cookieManager.getCookieString();
+
       for (int i = 0; i < _videos!.length; i++) {
         final item = _videos![i];
+
+        String? cachedCover;
+        try {
+          cachedCover = await AlbumArtCacheService.instance.ensureLocalPath(
+            item.cover,
+            cookie: cookie.isEmpty ? null : cookie,
+          );
+        } catch (_) {
+          // 降级为使用远程 URL
+        }
+
         final tempSong = db.Song(
           id: -(item.aid),
           title: item.title,
@@ -208,7 +223,7 @@ class _CollectionDetailPageState extends State<CollectionDetailPage> with ShowAw
           bitrate: null,
           sampleRate: null,
           duration: item.duration,
-          albumArtPath: item.cover,
+          albumArtPath: cachedCover ?? item.cover,
           dateAdded: DateTime.now(),
           isFavorite: false,
           lastPlayedTime: DateTime.now(),
@@ -955,43 +970,99 @@ class _CollectionDetailPageState extends State<CollectionDetailPage> with ShowAw
           const SnackBar(content: Text('正在创建收藏夹...')),
         );
       }
-      
+
       final database = db.MusicDatabase.database;
-      
-      // 创建本地收藏夹（使用合集封面）
+
+      // 统一封面来源：优先将合集封面缓存到本地
+      String? coverPath = _collectionInfo?.cover;
+      if (coverPath != null && coverPath.isNotEmpty) {
+        try {
+          final cookieManager = CookieManager();
+          final cookie = await cookieManager.getCookieString();
+          final localCover = await AlbumArtCacheService.instance.ensureLocalPath(
+            coverPath,
+            cookie: cookie.isEmpty ? null : cookie,
+          );
+          if (localCover != null && localCover.isNotEmpty) {
+            coverPath = localCover;
+          }
+        } catch (e) {
+          debugPrint('[CollectionDetailPage] 缓存合集封面失败: $e');
+        }
+      }
+
+      // 创建本地收藏夹（封面优先使用本地缓存路径）
       final favoriteId = await database.into(database.bilibiliFavorites).insert(
         db.BilibiliFavoritesCompanion.insert(
           remoteId: DateTime.now().millisecondsSinceEpoch,
           title: title,
           description: drift.Value(introController.text.trim()),
-          coverUrl: drift.Value(_collectionInfo?.cover ?? ''),
+          coverUrl: drift.Value(coverPath ?? (_collectionInfo?.cover ?? '')),
           mediaCount: drift.Value(_videos?.length ?? 0),
           syncedAt: DateTime.now(),
           isAddedToLibrary: const drift.Value(true),
           isLocal: const drift.Value(true),
         ),
       );
-      
+
       // 获取所有视频并添加到收藏夹
       final videos = _videos ?? [];
       for (final video in videos) {
-        await database.into(database.songs).insert(
-          db.SongsCompanion.insert(
-            title: video.title,
-            artist: drift.Value(video.upName),
-            album: drift.Value(_collectionInfo?.title ?? '合集'),
-            filePath: buildBilibiliFilePath(
-              bvid: video.bvid,
-              cid: video.cid,
-            ),
-            duration: drift.Value(video.duration),
-            albumArtPath: drift.Value(video.cover),
-            source: const drift.Value('bilibili'),
-            bvid: drift.Value(video.bvid),
-            cid: drift.Value(video.cid),
-            bilibiliFavoriteId: drift.Value(favoriteId),
-          ),
+        final filePath = buildBilibiliFilePath(
+          bvid: video.bvid,
+          cid: video.cid,
         );
+
+        // 先检查是否已存在同一音源的歌曲，避免 UNIQUE(file_path) 冲突
+        db.Song? existingSong = await database.getSongByPath(filePath);
+
+        if (existingSong == null &&
+            video.bvid.isNotEmpty &&
+            video.cid != null) {
+          existingSong =
+              await database.getSongByBvidAndCid(video.bvid, video.cid!);
+        }
+
+        if (existingSong != null) {
+          final updated = existingSong.copyWith(
+            bilibiliFavoriteId: drift.Value(favoriteId),
+          );
+          await database.updateSong(updated);
+        } else {
+          // 为每个视频封面尝试获取本地缓存路径
+          String? songCoverPath = video.cover;
+          if (songCoverPath != null && songCoverPath.isNotEmpty) {
+            try {
+              final cookieManager = CookieManager();
+              final cookie = await cookieManager.getCookieString();
+              final localCover =
+                  await AlbumArtCacheService.instance.ensureLocalPath(
+                songCoverPath,
+                cookie: cookie.isEmpty ? null : cookie,
+              );
+              if (localCover != null && localCover.isNotEmpty) {
+                songCoverPath = localCover;
+              }
+            } catch (e) {
+              debugPrint('[CollectionDetailPage] 缓存歌曲封面失败: $e');
+            }
+          }
+
+          await database.into(database.songs).insert(
+            db.SongsCompanion.insert(
+              title: video.title,
+              artist: drift.Value(video.upName),
+              album: drift.Value(_collectionInfo?.title ?? '合集'),
+              filePath: filePath,
+              duration: drift.Value(video.duration),
+              albumArtPath: drift.Value(songCoverPath ?? video.cover),
+              source: const drift.Value('bilibili'),
+              bvid: drift.Value(video.bvid),
+              cid: drift.Value(video.cid),
+              bilibiliFavoriteId: drift.Value(favoriteId),
+            ),
+          );
+        }
       }
       
       if (mounted) {
@@ -1023,25 +1094,62 @@ class _CollectionDetailPageState extends State<CollectionDetailPage> with ShowAw
         return;
       }
       
-      // 添加所有视频到收藏夹
+      // 添加所有视频到收藏夹（先查再插，避免 UNIQUE(file_path) 冲突）
       for (final video in videos) {
-        await database.into(database.songs).insert(
-          db.SongsCompanion.insert(
-            title: video.title,
-            artist: drift.Value(video.upName),
-            album: drift.Value(_collectionInfo?.title ?? '合集'),
-            filePath: buildBilibiliFilePath(
-              bvid: video.bvid,
-              cid: video.cid,
-            ),
-            duration: drift.Value(video.duration),
-            albumArtPath: drift.Value(video.cover),
-            source: const drift.Value('bilibili'),
-            bvid: drift.Value(video.bvid),
-            cid: drift.Value(video.cid),
-            bilibiliFavoriteId: drift.Value(favorite.id),
-          ),
+        final filePath = buildBilibiliFilePath(
+          bvid: video.bvid,
+          cid: video.cid,
         );
+
+        db.Song? existingSong = await database.getSongByPath(filePath);
+
+        if (existingSong == null &&
+            video.bvid.isNotEmpty &&
+            video.cid != null) {
+          existingSong =
+              await database.getSongByBvidAndCid(video.bvid, video.cid!);
+        }
+
+        if (existingSong != null) {
+          final updated = existingSong.copyWith(
+            bilibiliFavoriteId: drift.Value(favorite.id),
+          );
+          await database.updateSong(updated);
+        } else {
+          // 为每个视频封面尝试获取本地缓存路径
+          String? songCoverPath = video.cover;
+          if (songCoverPath != null && songCoverPath.isNotEmpty) {
+            try {
+              final cookieManager = CookieManager();
+              final cookie = await cookieManager.getCookieString();
+              final localCover =
+                  await AlbumArtCacheService.instance.ensureLocalPath(
+                songCoverPath,
+                cookie: cookie.isEmpty ? null : cookie,
+              );
+              if (localCover != null && localCover.isNotEmpty) {
+                songCoverPath = localCover;
+              }
+            } catch (e) {
+              debugPrint('[CollectionDetailPage] 缓存歌曲封面失败: $e');
+            }
+          }
+
+          await database.into(database.songs).insert(
+            db.SongsCompanion.insert(
+              title: video.title,
+              artist: drift.Value(video.upName),
+              album: drift.Value(_collectionInfo?.title ?? '合集'),
+              filePath: filePath,
+              duration: drift.Value(video.duration),
+              albumArtPath: drift.Value(songCoverPath ?? video.cover),
+              source: const drift.Value('bilibili'),
+              bvid: drift.Value(video.bvid),
+              cid: drift.Value(video.cid),
+              bilibiliFavoriteId: drift.Value(favorite.id),
+            ),
+          );
+        }
       }
       
       if (mounted) {

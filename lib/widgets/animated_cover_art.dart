@@ -1,7 +1,7 @@
-import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:motto_music/database/database.dart';
+import 'package:motto_music/widgets/unified_cover_image.dart';
 
 /// 可动画的封面组件
 /// 
@@ -165,56 +165,12 @@ class AnimatedCoverArt extends StatelessWidget {
 
   /// 构建封面图片
   Widget _buildCoverImage(BuildContext context) {
-    final albumArtPath = currentSong?.albumArtPath;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final placeholderBg = isDark ? Colors.grey[800]! : Colors.grey[200]!;
-    final placeholderIcon = isDark ? Colors.white38 : Colors.black26;
-
-    if (albumArtPath == null || albumArtPath.isEmpty) {
-      return Container(
-        color: placeholderBg,
-        child: Icon(
-          Icons.music_note,
-          size: 80,
-          color: placeholderIcon,
-        ),
-      );
-    }
-
-    // 判断是网络 URL 还是本地文件
-    if (albumArtPath.startsWith('http://') || albumArtPath.startsWith('https://')) {
-      return Image.network(
-        albumArtPath,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return Container(
-            color: placeholderBg,
-            child: Icon(
-              Icons.music_note,
-              size: 80,
-              color: placeholderIcon,
-            ),
-          );
-        },
-      );
-    } else {
-      // 本地文件
-      if (File(albumArtPath).existsSync()) {
-        return Image.file(
-          File(albumArtPath),
-          fit: BoxFit.cover,
-        );
-      } else {
-        return Container(
-          color: placeholderBg,
-          child: Icon(
-            Icons.music_note,
-            size: 80,
-            color: placeholderIcon,
-          ),
-        );
-      }
-    }
+    return UnifiedCoverImage(
+      coverPath: currentSong?.albumArtPath,
+      width: double.infinity,
+      height: double.infinity,
+      borderRadius: 0, // 已由外层 AnimatedContainer 控制圆角
+    );
   }
 }
 

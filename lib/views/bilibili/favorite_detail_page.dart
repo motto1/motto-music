@@ -9,10 +9,12 @@ import 'package:motto_music/services/bilibili/cookie_manager.dart';
 import 'package:motto_music/services/player_provider.dart';
 import 'package:motto_music/services/cache/page_cache_service.dart';
 import 'package:motto_music/services/bilibili/download_manager.dart';
+import 'package:motto_music/services/bilibili/favorite_sync_notifier.dart';
 import 'package:motto_music/widgets/frosted_container.dart';
 import 'package:motto_music/utils/theme_utils.dart';
 import 'package:motto_music/utils/bilibili_song_utils.dart';
 import 'package:motto_music/views/bilibili/user_videos_page.dart';
+import 'package:motto_music/services/cache/album_art_cache_service.dart';
 import 'package:motto_music/router/router.dart';
 import 'package:motto_music/widgets/show_aware_page.dart';
 import 'package:motto_music/contants/app_contants.dart';
@@ -68,6 +70,26 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
     final cookieManager = CookieManager();
     final apiClient = BilibiliApiClient(cookieManager);
     _apiService = BilibiliApiService(apiClient);
+
+    // 监听全局收藏夹变更事件（例如播放器中添加到收藏夹）
+    FavoriteSyncNotifier.instance.addListener(_onFavoriteMutated);
+  }
+
+  @override
+  void dispose() {
+    FavoriteSyncNotifier.instance.removeListener(_onFavoriteMutated);
+    super.dispose();
+  }
+
+  /// 当全局标记某个收藏夹发生变更时，如果是当前收藏夹则自动刷新
+  void _onFavoriteMutated() {
+    final changedId =
+        FavoriteSyncNotifier.instance.lastChangedRemoteFavoriteId;
+    if (changedId == null) return;
+    if (changedId != widget.favoriteId) return;
+
+    // 重新检查本地/在线状态并加载内容（此处为变更场景，强制刷新）
+    _checkIfLocalAndLoad(forceRefresh: true);
   }
 
   @override
@@ -87,7 +109,10 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
   }
 
   /// 检查是否为本地收藏夹
-  Future<void> _checkIfLocalAndLoad() async {
+  ///
+  /// [forceRefresh] 为 true 时强制刷新（在线收藏夹会跳过缓存），
+  /// 为 false 时允许使用缓存以支持离线浏览。
+  Future<void> _checkIfLocalAndLoad({bool forceRefresh = false}) async {
     print('_checkIfLocalAndLoad called with favoriteId: ${widget.favoriteId}');
     try {
       final favorite = await _db.getBilibiliFavoriteByRemoteId(widget.favoriteId);
@@ -97,10 +122,10 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
       } else {
         print('No favorite found with remoteId: ${widget.favoriteId}');
       }
-      await _loadVideos();
+      await _loadVideos(forceRefresh: forceRefresh);
     } catch (e) {
       print('Error in _checkIfLocalAndLoad: $e');
-      await _loadVideos();
+      await _loadVideos(forceRefresh: forceRefresh);
     }
   }
 
@@ -162,9 +187,13 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
   }
 
   /// 加载视频列表
-  Future<void> _loadVideos({bool loadMore = false}) async {
-    print('_loadVideos called: loadMore=$loadMore, _isLoading=$_isLoading, _hasMore=$_hasMore');
-    if (_isLoading || (!loadMore && !_hasMore)) return;
+  ///
+  /// [loadMore] 为 true 时表示分页加载更多；
+  /// [forceRefresh] 为 true 时会忽略 `_hasMore` 限制，强制重新加载当前收藏夹。
+  Future<void> _loadVideos({bool loadMore = false, bool forceRefresh = false}) async {
+    print(
+        '_loadVideos called: loadMore=$loadMore, forceRefresh=$forceRefresh, _isLoading=$_isLoading, _hasMore=$_hasMore');
+    if (!forceRefresh && (_isLoading || (!loadMore && !_hasMore))) return;
 
     setState(() {
       _isLoading = true;
@@ -179,8 +208,8 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
         return;
       }
 
-      // 在线收藏夹：先尝试从缓存读取
-      if (!loadMore) {
+      // 在线收藏夹：先尝试从缓存读取（非强制刷新时）
+      if (!loadMore && !forceRefresh) {
         final cachedVideos = await _pageCache.getCachedFavoriteDetail(widget.favoriteId);
         if (cachedVideos != null && cachedVideos.isNotEmpty) {
           debugPrint('🎯 收藏夹详情缓存命中: ${cachedVideos.length} 个视频');
@@ -277,6 +306,25 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
     }
   }
 
+  /// 手动下拉刷新当前收藏夹的视频列表
+  Future<void> _refreshVideos() async {
+    // 清理收藏夹相关缓存，确保从最新数据加载
+    try {
+      await _pageCache.clearFavoritesCache();
+    } catch (e) {
+      debugPrint('清理收藏夹缓存失败(忽略): $e');
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _currentPage = 1;
+      _hasMore = true;
+      _videos = null;
+    });
+
+    await _loadVideos(forceRefresh: true);
+  }
+
   /// 后台刷新视频列表（静默更新缓存，不影响UI）
   Future<void> _refreshVideosInBackground() async {
     try {
@@ -364,9 +412,9 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
   /// 播放视频并设置播放列表（不添加到音乐库）
   Future<void> _playVideoAndSetPlaylist(
     BilibiliFavoriteItem clickedItem,
-    int clickedIndex,
-    {bool shuffle = false}
-  ) async {
+    int clickedIndex, {
+    bool shuffle = false,
+  }) async {
     if (_videos == null || _videos!.isEmpty) return;
 
     try {
@@ -392,13 +440,26 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
         return;
       }
       
-      // 在线收藏夹:将视频转换为临时 Song 列表
+      // 在线收藏夹: 将视频转换为临时 Song 列表，并统一通过 AlbumArtCacheService 处理封面
       final List<Song> playlist = [];
+
+      final cookieManager = CookieManager();
+      final cookie = await cookieManager.getCookieString();
 
       for (int i = 0; i < _videos!.length; i++) {
         final item = _videos![i];
 
-        // 创建临时 Song ��象（使用负数 ID 表示临时对象）
+        String? cachedCover;
+        try {
+          cachedCover = await AlbumArtCacheService.instance.ensureLocalPath(
+            item.cover,
+            cookie: cookie.isEmpty ? null : cookie,
+          );
+        } catch (_) {
+          // 保留原始 URL，播放路径会在懒加载阶段再做处理
+        }
+
+        // 创建临时 Song 对象（使用负数 ID 表示临时对象）
         final tempSong = Song(
           id: -(i + 1), // 使用负数避免与数据库 ID 冲突
           title: item.title,
@@ -412,7 +473,7 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
           bitrate: null,
           sampleRate: null,
           duration: item.duration,
-          albumArtPath: item.cover, // 使用 Bilibili 封面 URL
+          albumArtPath: cachedCover ?? item.cover,
           dateAdded: DateTime.now(),
           isFavorite: false,
           lastPlayedTime: DateTime.now(),
@@ -579,13 +640,16 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
     
     return Stack(
       children: [
-        Container(
-          // 统一的背景色，防止BackdropFilter模糊到不同颜色
-          color: isDark
-              ? ThemeUtils.backgroundColor(context)
-              : const Color(0xFFFFFFFF),
-          child: CustomScrollView(
-            slivers: [
+        RefreshIndicator(
+          onRefresh: _refreshVideos,
+          child: Container(
+            // 统一的背景色，防止BackdropFilter模糊到不同颜色
+            color: isDark
+                ? ThemeUtils.backgroundColor(context)
+                : const Color(0xFFFFFFFF),
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
               // 简洁的头部（移除固定的 AppBar）
               SliverToBoxAdapter(
                 child: _buildFavoriteHeader(),
@@ -596,14 +660,12 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
                     if (index == _videos!.length && _hasMore) {
-                      // 加载更多
+                      // 加载更多（保留功能，但不再使用底部圆圈加载动画，避免视觉上一直“在加载”的感觉）
                       if (!_isLoading) {
                         _loadVideos(loadMore: true);
                       }
-                      return const Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: Center(child: CircularProgressIndicator()),
-                      );
+                      // 保留一个轻微占位，避免列表突然收缩
+                      return const SizedBox(height: 24);
                     }
 
                     if (index >= _videos!.length) return null;
@@ -674,11 +736,12 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
                 ),
               ),
 
-              // 底部安全区域（避免被播放器遮挡）
-              SliverPadding(
-                padding: EdgeInsets.only(bottom: 180),
-              ),
-            ],
+                // 底部安全区域（避免被播放器遮挡）
+                SliverPadding(
+                  padding: EdgeInsets.only(bottom: 180),
+                ),
+              ],
+            ),
           ),
         ),
         if (_isSongSelectionMode)
@@ -786,7 +849,7 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
           
           const SizedBox(height: 16),
           
-          // Apple Music 风格的封面 - 带阴影
+          // Apple Music 风格的封面 - 带阴影（统一封面组件，支持本地/网络路径）
           Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
@@ -799,38 +862,11 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
                 ),
               ],
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: CachedNetworkImage(
-                imageUrl: info.cover,
-                width: MediaQuery.of(context).size.width * 0.6,
-                height: MediaQuery.of(context).size.width * 0.6,
-                fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  width: MediaQuery.of(context).size.width * 0.6,
-                  height: MediaQuery.of(context).size.width * 0.6,
-                  color: isDark
-                      ? const Color(0xFF3A3A3C)
-                      : const Color(0xFFE5E5EA),
-                  child: const Center(
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                ),
-                errorWidget: (context, url, error) => Container(
-                  width: MediaQuery.of(context).size.width * 0.6,
-                  height: MediaQuery.of(context).size.width * 0.6,
-                  color: isDark
-                      ? const Color(0xFF3A3A3C)
-                      : const Color(0xFFE5E5EA),
-                  child: Icon(
-                    Icons.folder_outlined,
-                    size: 64,
-                    color: isDark
-                        ? Colors.white.withOpacity(0.3)
-                        : Colors.black.withOpacity(0.3),
-                  ),
-                ),
-              ),
+            child: UnifiedCoverImage(
+              coverPath: info.cover,
+              width: MediaQuery.of(context).size.width * 0.6,
+              height: MediaQuery.of(context).size.width * 0.6,
+              borderRadius: 8,
             ),
           ),
           
@@ -1892,7 +1928,7 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
       await (_db.delete(_db.songs)..where((s) => s.id.equals(song.id))).go();
       
       // 重新加载
-      await _loadVideos();
+      await _loadVideos(forceRefresh: true);
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1917,7 +1953,7 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
       );
 
       // 重新加载当前收藏夹内容，确保与远端同步
-      await _loadVideos();
+      await _loadVideos(forceRefresh: true);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1997,7 +2033,7 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
         );
         setState(() {
           if (_isLocalFavorite && _videos != null) {
-            _loadVideos();
+            _loadVideos(forceRefresh: true);
           }
         });
       }
@@ -2016,12 +2052,12 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
   Future<void> _playNext(Song song) async {
     try {
       final playerProvider = Provider.of<PlayerProvider>(context, listen: false);
-      // 使用addToPlaylist添加到播放列表
-      playerProvider.addToPlaylist(song);
-      
+      // 使用insertNext插入到下一首
+      await playerProvider.insertNext(song);
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('已添加到播放列表')),
+        debugPrint(
+          '[FavoriteDetailPage] ⏭ 插播完成: songId=${song.id}, title=${song.title}',
         );
       }
     } catch (e) {
@@ -2037,11 +2073,11 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
   Future<void> _addToPlaylist(Song song) async {
     try {
       final playerProvider = Provider.of<PlayerProvider>(context, listen: false);
-      playerProvider.addToPlaylist(song);
-      
+      await playerProvider.addToPlaylist(song);
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('已添加到播放列表')),
+        debugPrint(
+          '[FavoriteDetailPage] ➕ 添加到播放列表完成: songId=${song.id}, title=${song.title}',
         );
       }
     } catch (e) {
@@ -2076,26 +2112,12 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // 方形封面
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: CachedNetworkImage(
-                    imageUrl: video.cover,
-                    width: 56,
-                    height: 56,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
-                      width: 56,
-                      height: 56,
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    ),
-                    errorWidget: (context, url, error) => Container(
-                      width: 56,
-                      height: 56,
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                      child: const Icon(Icons.music_note, size: 24),
-                    ),
-                  ),
+                // 方形封面（统一使用 UnifiedCoverImage，支持本地/网络路径）
+                UnifiedCoverImage(
+                  coverPath: video.cover,
+                  width: 56,
+                  height: 56,
+                  borderRadius: 6,
                 ),
                 
                 const SizedBox(width: 16),
@@ -2266,6 +2288,24 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
       await _db.updateSong(updatedSong);
     } else {
       // 新歌曲，使用 Companion.insert 让数据库自动生成 ID
+      // 统一封面来源：优先将视频封面缓存到本地
+      String? coverPath = video.cover;
+      if (coverPath != null && coverPath.isNotEmpty) {
+        try {
+          final cookieManager = CookieManager();
+          final cookie = await cookieManager.getCookieString();
+          final localCover = await AlbumArtCacheService.instance.ensureLocalPath(
+            coverPath,
+            cookie: cookie.isEmpty ? null : cookie,
+          );
+          if (localCover != null && localCover.isNotEmpty) {
+            coverPath = localCover;
+          }
+        } catch (e) {
+          debugPrint('[FavoriteDetailPage] 缓存视频封面失败: $e');
+        }
+      }
+
       await _db.insertSong(
         SongsCompanion.insert(
           title: video.title,
@@ -2274,7 +2314,7 @@ class _FavoriteDetailPageState extends State<FavoriteDetailPage> with ShowAwareP
           artist: drift.Value(video.upper?.name),
           album: const drift.Value(null),
           duration: drift.Value(video.duration),
-          albumArtPath: drift.Value(video.cover),
+          albumArtPath: drift.Value(coverPath ?? video.cover),
           dateAdded: drift.Value(DateTime.now()),
           isFavorite: drift.Value(targetStatus),
           bvid: drift.Value(video.bvid),

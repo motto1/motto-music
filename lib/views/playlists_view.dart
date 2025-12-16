@@ -22,19 +22,15 @@ class PlaylistsViewState extends State<PlaylistsView> with ShowAwarePage {
   final ScrollController _scrollController = ScrollController();
   late MusicDatabase database = MusicDatabase.database;
   late MusicImportService importService;
-  List<Song> songs = [];
-  String? orderField = null;
-  String? orderDirection = null;
-  String? searchKeyword = null;
 
+  @override
   void onPageShow() {
-    _loadSongs();
+    // 页面显示时不需要手动加载，Consumer会自动更新
   }
 
   @override
   void initState() {
     super.initState();
-    
 
     _scrollController.addListener(() {
       if (!_isScrolling &&
@@ -59,25 +55,6 @@ class PlaylistsViewState extends State<PlaylistsView> with ShowAwarePage {
     });
   }
 
-  // 在你的 StatefulWidget 中更新这个方法
-  Future<void> _loadSongs() async {
-    final playerProvider = context.read<PlayerProvider>();
-    try {
-      List<Song> loadedSongs;
-      loadedSongs = playerProvider.currentPlaylists();
-      setState(() {
-        songs = loadedSongs;
-      });
-      print('加载了 ${loadedSongs.length} 首歌曲');
-    } catch (e) {
-      print('加载歌曲失败: $e');
-      // 可以显示错误信息给用户
-      setState(() {
-        songs = [];
-      });
-    }
-  }
-
   @override
   void dispose() {
     _scrollTimer?.cancel();
@@ -90,42 +67,56 @@ class PlaylistsViewState extends State<PlaylistsView> with ShowAwarePage {
   Widget build(BuildContext context) {
     return Consumer<PlayerProvider>(
       builder: (context, playerProvider, child) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 0), // 左上右16，底部0
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              PageHeader(title: '', songs: songs,showImport: false,showSearch: false,),
-              const SizedBox(height: 24),
-              MusicListHeader(
-                songs: songs,
-                allowReorder: false, // 播放列表页面不允许重排列
+        return ValueListenableBuilder<List<Song>>(
+          valueListenable: playerProvider.playlistNotifier,
+          builder: (context, songs, _) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  16.0, 16.0, 16.0, 0), // 左上右16，底部0
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  PageHeader(
+                    title: '',
+                    songs: songs,
+                    showImport: false,
+                    showSearch: false,
+                  ),
+                  const SizedBox(height: 24),
+                  MusicListHeader(
+                    songs: songs,
+                    allowReorder: false, // 播放列表页面不允许重排列
+                  ),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: MusicListView(
+                      songs: songs,
+                      scrollController: _scrollController,
+                      playerProvider: playerProvider,
+                      showCheckbox: false, // 播放列表页面不显示复选框
+                      checkedIds: const [],
+                      onSongDeleted: () {
+                        // 删除后会自动触发 notifyListeners，ValueListenableBuilder 会自动更新
+                      },
+                      onSongUpdated: (_, __) {
+                        // 更新后会自动触发 notifyListeners，ValueListenableBuilder 会自动更新
+                      },
+                      onSongPlay: (song, playlist, index) {
+                        playerProvider.playSong(
+                          song,
+                          playlist: playlist,
+                          index: index,
+                        );
+                      },
+                      onCheckboxChanged: (songId, isChecked) {
+                        // 不使用复选框
+                      },
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: MusicListView(
-                  songs: songs,
-                  scrollController: _scrollController,
-                  playerProvider: playerProvider,
-                  showCheckbox: false, // 播放列表页面不显示复选框
-                  checkedIds: const [],
-                  onSongDeleted: _loadSongs,
-                  onSongUpdated: (_,__) {
-                    setState(() {
-                      // 重新加载歌曲列表
-                      _loadSongs();
-                    });
-                  },
-                  onSongPlay: (song, playlist, index) {
-                    playerProvider.playSong(song, playlist: playlist, index: index);
-                  },
-                  onCheckboxChanged: (songId, isChecked) {
-                    // 不使用复选框
-                  },
-                ),
-              ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
