@@ -63,3 +63,13 @@ android/verify_icons.ps1
 
 # Gradle 缓存
 gradle-*.zip
+
+# 临时文件和备份
+*.txt
+motto-music-backup-*.json
+
+# 工作流临时文件
+.workflow/
+
+# 临时截图
+QQ*.png
