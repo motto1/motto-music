@@ -71,5 +71,14 @@ motto-music-backup-*.json
 # 工作流临时文件
 .workflow/
 
-# 临时截图
+# 临时截图和图片
 QQ*.png
+Screenshot_*.jpg
+*.png
+!android/**/*.png
+!ios/**/*.png
+!linux/**/*.png
+!macos/**/*.png
+!web/**/*.png
+!screenshots/*.jpg
+!rounded_cover.png
