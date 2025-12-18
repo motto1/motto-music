@@ -20,6 +20,13 @@ BilibiliVideo _$BilibiliVideoFromJson(Map<String, dynamic> json) =>
       pages: (json['pages'] as List<dynamic>?)
           ?.map((e) => BilibiliVideoPage.fromJson(e as Map<String, dynamic>))
           .toList(),
+      view: (json['view'] as num?)?.toInt(),
+      danmaku: (json['danmaku'] as num?)?.toInt(),
+      reply: (json['reply'] as num?)?.toInt(),
+      favorite: (json['favorite'] as num?)?.toInt(),
+      coin: (json['coin'] as num?)?.toInt(),
+      share: (json['share'] as num?)?.toInt(),
+      like: (json['like'] as num?)?.toInt(),
     );
 
 Map<String, dynamic> _$BilibiliVideoToJson(BilibiliVideo instance) =>
@@ -34,6 +41,13 @@ Map<String, dynamic> _$BilibiliVideoToJson(BilibiliVideo instance) =>
       'cid': instance.cid,
       'pubdate': instance.pubdate,
       'pages': instance.pages,
+      'view': instance.view,
+      'danmaku': instance.danmaku,
+      'reply': instance.reply,
+      'favorite': instance.favorite,
+      'coin': instance.coin,
+      'share': instance.share,
+      'like': instance.like,
     };
 
 BilibiliUploader _$BilibiliUploaderFromJson(Map<String, dynamic> json) =>
