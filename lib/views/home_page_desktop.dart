@@ -31,10 +31,12 @@ class _HomePageDesktopState extends State<HomePageDesktop> {
   }
 
   void _onTabChanged(int newIndex) {
-    menuManager.setPage(
-      PlayerPage.values[newIndex],
-      context: context,
-    );
+    if (newIndex >= 0 && newIndex < menuManager.items.length) {
+      menuManager.setPage(
+        menuManager.items[newIndex].key,
+        context: context,
+      );
+    }
   }
 
   @override
@@ -104,7 +106,7 @@ class _HomePageDesktopState extends State<HomePageDesktop> {
                                 itemCount: menuManager.items.length,
                                 itemBuilder: (context, index) {
                                   final item = menuManager.items[index];
-                                  final isSelected = index == currentPage.index;
+                                  final isSelected = item.key == currentPage;
                                   final isHovered =
                                       index == menuManager.hoverIndex.value;
 
@@ -239,8 +241,9 @@ class _HomePageDesktopState extends State<HomePageDesktop> {
                           child: ValueListenableBuilder<PlayerPage>(
                             valueListenable: menuManager.currentPage,
                             builder: (context, currentPage, _) {
+                              final pageIndex = menuManager.items.indexWhere((item) => item.key == currentPage);
                               return IndexedStack(
-                                index: currentPage.index,
+                                index: pageIndex != -1 ? pageIndex : 0,
                                 children: menuManager.pages,
                               );
                             },

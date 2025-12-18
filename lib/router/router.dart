@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../contants/app_contants.dart';
 import '../views/home_view.dart';
 import '../views/favorites_view.dart';
+import '../views/bilibili/music_ranking_page.dart';
 import '../storage/player_state_storage.dart';
 import '../widgets/show_aware_page.dart';
 import '../views/settings/settings_page.dart';
@@ -70,7 +71,7 @@ class MenuManager {
   /// 导航器 Key（供需要嵌套导航的页面使用）
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-  /// 所有菜单项（只包含底部导航栏的三个核心页面）
+  /// 所有菜单项（底部导航栏的核心页面）
   late final List<MenuItem> items = [
     MenuItem(
       icon: Icons.home_rounded,
@@ -79,6 +80,14 @@ class MenuManager {
       key: PlayerPage.home,
       pageKey: GlobalKey<HomeViewState>(),
       builder: (key) => HomeView(key: key),
+    ),
+    MenuItem(
+      icon: Icons.trending_up_rounded,
+      iconSize: 22.0,
+      label: '排行榜',
+      key: PlayerPage.musicRanking,
+      pageKey: GlobalKey(),
+      builder: (key) => MusicRankingPage(key: key),
     ),
     MenuItem(
       icon: Icons.favorite_rounded,
@@ -91,7 +100,7 @@ class MenuManager {
     MenuItem(
       icon: Icons.settings_rounded,
       iconSize: 22.0,
-      label: '系统设置',
+      label: '设置',
       key: PlayerPage.settings,
       pageKey: GlobalKey<NestedNavigatorWrapperState>(),
       builder: (key) => NestedNavigatorWrapper(
@@ -114,13 +123,16 @@ class MenuManager {
     required GlobalKey<NavigatorState> navigatorKey,
     List<MenuSubItem>? subMenuItems, // 可选参数，允许从外部传入
   }) async {
-    
+
 
     final playerState = await PlayerStateStorage.getInstance();
     currentPage.value = playerState.currentPage;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _notifyPageShow(items[currentPage.value.index].pageKey);
+      final itemIndex = items.indexWhere((item) => item.key == currentPage.value);
+      if (itemIndex != -1) {
+        _notifyPageShow(items[itemIndex].pageKey);
+      }
     });
   }
 
@@ -176,17 +188,25 @@ class MenuManager {
           .popUntil((route) => route.isFirst);
     }
 
-    final oldItem = items[oldPage.index];
-    if (oldItem.pageKey.currentState is NestedNavigatorWrapperState) {
-      (oldItem.pageKey.currentState as NestedNavigatorWrapperState)
-          .navigatorKey
-          .currentState
-          ?.popUntil((r) => r.isFirst);
+    // 根据key查找旧页面项
+    final oldItemIndex = items.indexWhere((item) => item.key == oldPage);
+    if (oldItemIndex != -1) {
+      final oldItem = items[oldItemIndex];
+      if (oldItem.pageKey.currentState is NestedNavigatorWrapperState) {
+        (oldItem.pageKey.currentState as NestedNavigatorWrapperState)
+            .navigatorKey
+            .currentState
+            ?.popUntil((r) => r.isFirst);
+      }
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _notifyPageShow(items[page.index].pageKey);
-    });
+    // 根据key查找新页面项
+    final newItemIndex = items.indexWhere((item) => item.key == page);
+    if (newItemIndex != -1) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _notifyPageShow(items[newItemIndex].pageKey);
+      });
+    }
   }
 
   void _notifyPageShow(GlobalKey key) {
