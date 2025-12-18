@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter/physics.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:motto_music/models/bilibili/video.dart';
 import 'package:motto_music/services/bilibili/api_service.dart';
@@ -40,8 +39,8 @@ class SnappingScrollPhysics extends ScrollPhysics {
 
   @override
   Simulation? createBallisticSimulation(ScrollMetrics position, double velocity) {
-    // 如果已经在吸附点且速度很小，不需要模拟
-    final double target = _getTargetPixels(position, tolerance, velocity);
+    final currentTolerance = toleranceFor(position);
+    final double target = _getTargetPixels(position, currentTolerance, velocity);
     if (target == position.pixels) {
       return null;
     }
@@ -50,7 +49,7 @@ class SnappingScrollPhysics extends ScrollPhysics {
       position.pixels,
       target,
       velocity,
-      tolerance: tolerance,
+      tolerance: currentTolerance,
     );
   }
 }
@@ -292,7 +291,7 @@ class _RankingCarouselState extends State<RankingCarousel> {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: borderColor.withValues(alpha: 0.6),
-            width: 1.5,
+            width: 0.8,
           ),
           boxShadow: [
             BoxShadow(
@@ -328,7 +327,7 @@ class _RankingCarouselState extends State<RankingCarousel> {
                       left: 0,
                       right: 0,
                       bottom: 0,
-                      height: 20,
+                      height: 6,
                       child: Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
