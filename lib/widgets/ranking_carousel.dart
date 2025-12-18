@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:motto_music/models/bilibili/video.dart';
 import 'package:motto_music/services/bilibili/api_service.dart';
@@ -9,6 +10,50 @@ import 'package:motto_music/services/bilibili/cookie_manager.dart';
 import 'package:motto_music/animations/page_transitions.dart';
 import 'package:motto_music/views/bilibili/video_detail_page.dart';
 import 'package:http/http.dart' as http;
+
+/// 自定义吸附滚动物理效果
+class SnappingScrollPhysics extends ScrollPhysics {
+  final double itemExtent;
+
+  const SnappingScrollPhysics({required this.itemExtent, super.parent});
+
+  @override
+  SnappingScrollPhysics applyTo(ScrollPhysics? ancestor) {
+    return SnappingScrollPhysics(
+      itemExtent: itemExtent,
+      parent: buildParent(ancestor),
+    );
+  }
+
+  double _getTargetPixels(ScrollMetrics position, Tolerance tolerance, double velocity) {
+    double page = position.pixels / itemExtent;
+    if (velocity < -tolerance.velocity) {
+      page -= 0.5;
+    } else if (velocity > tolerance.velocity) {
+      page += 0.5;
+    }
+    return (page.roundToDouble() * itemExtent).clamp(
+      position.minScrollExtent,
+      position.maxScrollExtent,
+    );
+  }
+
+  @override
+  Simulation? createBallisticSimulation(ScrollMetrics position, double velocity) {
+    // 如果已经在吸附点且速度很小，不需要模拟
+    final double target = _getTargetPixels(position, tolerance, velocity);
+    if (target == position.pixels) {
+      return null;
+    }
+    return ScrollSpringSimulation(
+      spring,
+      position.pixels,
+      target,
+      velocity,
+      tolerance: tolerance,
+    );
+  }
+}
 
 /// Apple Music风格的排行榜卡片轮播
 class RankingCarousel extends StatefulWidget {
@@ -32,8 +77,6 @@ class _RankingCarouselState extends State<RankingCarousel> {
   static const double _horizontalPadding = 20.0;
   static const double _cardSpacing = 12.0;
 
-  double _cardWidth = 0;
-
   @override
   void initState() {
     super.initState();
@@ -43,12 +86,6 @@ class _RankingCarouselState extends State<RankingCarousel> {
     _scrollController = ScrollController();
 
     _loadRanking();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _cardWidth = _getCardWidth(context);
   }
 
   @override
@@ -97,7 +134,6 @@ class _RankingCarouselState extends State<RankingCarousel> {
         final frame = await codec.getNextFrame();
         final image = frame.image;
 
-        // 取图片底部中间区域的像素来获取颜色
         final byteData = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
         if (byteData != null) {
           final width = image.width;
@@ -146,12 +182,11 @@ class _RankingCarouselState extends State<RankingCarousel> {
     return _colorCache[imageUrl] ?? Colors.black;
   }
 
-  // 获取边框颜色（比主色深一点）
+  // 获取边框颜色（比主色深一点，降低20%亮度）
   Color _getBorderColor(String imageUrl) {
     final baseColor = _getGradientColor(imageUrl);
-    // 将颜色变暗
     final hsl = HSLColor.fromColor(baseColor);
-    return hsl.withLightness((hsl.lightness * 0.6).clamp(0.0, 1.0)).toColor();
+    return hsl.withLightness((hsl.lightness * 0.8).clamp(0.0, 1.0)).toColor();
   }
 
   @override
@@ -216,46 +251,24 @@ class _RankingCarouselState extends State<RankingCarousel> {
           ),
         ),
         const SizedBox(height: 12),
-        // 卡片列表 - 使用ListView + 自定义吸附
+        // 卡片列表 - 使用自定义吸附物理效果
         SizedBox(
           height: _cardHeight,
-          child: NotificationListener<ScrollEndNotification>(
-            onNotification: (notification) {
-              _snapToCard(itemExtent);
-              return true;
+          child: ListView.builder(
+            controller: _scrollController,
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.only(left: _horizontalPadding, right: _horizontalPadding),
+            physics: SnappingScrollPhysics(itemExtent: itemExtent),
+            itemCount: _videos.length,
+            itemBuilder: (context, index) {
+              return Padding(
+                padding: EdgeInsets.only(right: _cardSpacing),
+                child: _buildCard(_videos[index], index, cardWidth),
+              );
             },
-            child: ListView.builder(
-              controller: _scrollController,
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.only(left: _horizontalPadding, right: _horizontalPadding),
-              physics: const BouncingScrollPhysics(),
-              itemCount: _videos.length,
-              itemBuilder: (context, index) {
-                return Padding(
-                  padding: EdgeInsets.only(right: _cardSpacing),
-                  child: _buildCard(_videos[index], index, cardWidth),
-                );
-              },
-            ),
           ),
         ),
       ],
-    );
-  }
-
-  // 吸附到最近的卡片
-  void _snapToCard(double itemExtent) {
-    final offset = _scrollController.offset;
-    final index = (offset / itemExtent).round();
-    final targetOffset = (index * itemExtent).clamp(
-      0.0,
-      _scrollController.position.maxScrollExtent,
-    );
-
-    _scrollController.animateTo(
-      targetOffset,
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOut,
     );
   }
 
@@ -305,7 +318,7 @@ class _RankingCarouselState extends State<RankingCarousel> {
                   child: const Icon(Icons.music_note, color: Colors.white54, size: 48),
                 ),
               ),
-              // 底部渐变遮罩 - 使用封面颜色
+              // 底部渐变遮罩 - 从透明到纯色
               Positioned(
                 left: 0,
                 right: 0,
@@ -317,16 +330,14 @@ class _RankingCarouselState extends State<RankingCarousel> {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Colors.transparent,
-                        gradientColor.withValues(alpha: 0.85),
+                        gradientColor.withValues(alpha: 0.0),
                         gradientColor,
                       ],
-                      stops: const [0.0, 0.6, 1.0],
                     ),
                   ),
                 ),
               ),
-              // 排名数字 - 更小的字号
+              // 排名数字
               Positioned(
                 top: 10,
                 left: 12,
