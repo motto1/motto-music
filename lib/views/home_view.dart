@@ -13,6 +13,7 @@ import '../animations/page_transitions.dart';
 import '../views/recently_played_detail_page.dart';
 import '../views/library_view.dart';
 import '../views/bilibili/favorites_page.dart';
+import '../views/bilibili/music_ranking_page.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -184,6 +185,21 @@ class HomeViewState extends State<HomeView> with ShowAwarePage {
               Navigator.of(context).push(
                 NamidaPageRoute(
                   page: const BilibiliFavoritesPage(),
+                  type: PageTransitionType.slideUp,
+                ),
+              );
+            },
+          ),
+          const SizedBox(width: 12),
+          _buildLibraryCard(
+            context,
+            title: '音乐排行榜',
+            icon: Icons.trending_up_rounded,
+            colors: [Color(0xFFFF6B35), Color(0xFFFF8E53)],
+            onTap: () {
+              Navigator.of(context).push(
+                NamidaPageRoute(
+                  page: const MusicRankingPage(),
                   type: PageTransitionType.slideUp,
                 ),
               );

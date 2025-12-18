@@ -79,6 +79,7 @@ class PlayerProvider with ChangeNotifier {
   int _currentLyricLineIndex = -1;  // 当前歌词行索引
   bool _lyricsNotificationEnabled = false;
   bool _lockScreenEnabled = false;
+  int _lyricsLoadGeneration = 0; // 用于取消旧歌词请求回流
 
   StreamSubscription? _positionSub;
   StreamSubscription? _playbackStateSub;
@@ -90,6 +91,24 @@ class PlayerProvider with ChangeNotifier {
 
   // 通知栏歌词服务
   final LyricsNotificationService _lyricsNotificationService = LyricsNotificationService();
+
+  String _trackKeyForSong(Song? song) {
+    if (song == null) return '';
+    // 数据库正式歌曲：id 稳定且唯一
+    if (song.id > 0) return song.id.toString();
+    // 临时/在线歌曲：使用 bvid + cid/pageNumber 组合兜底
+    final bvid = song.bvid;
+    if (bvid != null && bvid.isNotEmpty) {
+      final cidPart =
+          (song.cid != null && song.cid! > 0) ? song.cid.toString() : '0';
+      final pagePart = (song.pageNumber != null && song.pageNumber! > 0)
+          ? song.pageNumber.toString()
+          : '0';
+      return 'bilibili:$bvid:$cidPart:$pagePart';
+    }
+    // 最后兜底：保持与现有逻辑兼容（可能为负数）
+    return song.id.toString();
+  }
 
   // Getters
   Song? get currentSong => _currentSong;
@@ -374,6 +393,7 @@ class PlayerProvider with ChangeNotifier {
       _lyricsNotificationService.updateMetadata(
         title: _currentSong!.title,
         artist: _currentSong!.artist,
+        songId: _trackKeyForSong(_currentSong),
       );
     }
     _updateCurrentSongNotifier();
@@ -399,10 +419,41 @@ class PlayerProvider with ChangeNotifier {
       await playerState!.setLockScreenEnabled(enabled);
     }
     if (enabled) {
+      final trackKey = _trackKeyForSong(_currentSong);
       _lyricsNotificationService.updateMetadata(
         title: _currentSong?.title,
         artist: _currentSong?.artist,
+        songId: trackKey.isEmpty ? null : trackKey,
       );
+      // 若已有歌词，立刻下发全量歌词，避免锁屏首次进入为空
+      final lyricsLines = _currentLyrics?.lyrics;
+      if (lyricsLines != null) {
+        final allLyricsData = lyricsLines.map((line) {
+          List<Map<String, dynamic>>? charTimestampsMap;
+          if (line.charTimestamps != null) {
+            charTimestampsMap = line.charTimestamps!.map((ct) {
+              return {
+                'char': ct.char,
+                'startMs': ct.startMs.toInt(),
+                'endMs': ct.endMs.toInt(),
+              };
+            }).toList();
+          }
+
+          return {
+            'text': line.text,
+            'startMs': (line.timestamp * 1000).toInt(),
+            'endMs': (line.timestamp * 1000 + 5000).toInt(),
+            'charTimestamps': charTimestampsMap,
+          };
+        }).toList();
+
+        await _lyricsNotificationService.updateAllLyrics(
+          lyrics: allLyricsData,
+          currentIndex: -1,
+          songId: trackKey.isEmpty ? null : trackKey,
+        );
+      }
       _currentLyricLineIndex = -1;
       _updateNotificationLyrics(_position.value);
     }
@@ -1192,6 +1243,11 @@ class PlayerProvider with ChangeNotifier {
   Future<void> stop() async {
     await _audioHandler?.stop();
     _currentSong = null;
+    _currentLyrics = null;
+    _lyricsError = null;
+    _currentLyricLineIndex = -1;
+    _lyricsLoadGeneration++;
+    await _lyricsNotificationService.clearLyrics();
     _position.value = Duration.zero;
     _errorMessage = null;
     _updateCurrentSongNotifier();
@@ -1348,6 +1404,7 @@ class PlayerProvider with ChangeNotifier {
   void _updateCurrentSongFromHandler() {
     if (_audioHandler == null) return;
 
+    final previousTrackKey = _trackKeyForSong(_currentSong);
     final handlerIndex = _audioHandler!.currentQueueIndex;
     final queueLen = _audioHandler!.queueList.length;
     if (handlerIndex < 0 || handlerIndex >= queueLen) {
@@ -1377,10 +1434,20 @@ class PlayerProvider with ChangeNotifier {
     _currentSong = currentList[effectiveIndex];
     _currentOrderIndex = effectiveIndex;
 
+    final trackKey = _trackKeyForSong(_currentSong);
     _lyricsNotificationService.updateMetadata(
       title: _currentSong?.title,
       artist: _currentSong?.artist,
+      songId: trackKey.isEmpty ? null : trackKey,
     );
+
+    if (trackKey != previousTrackKey) {
+      _currentLyrics = null;
+      _lyricsError = null;
+      _currentLyricLineIndex = -1;
+      _lyricsLoadGeneration++;
+      unawaited(loadLyrics());
+    }
     _updateCurrentSongNotifier();
     debugPrint(
       '[PlayerProvider] 🎧 _updateCurrentSongFromHandler: '
@@ -1403,33 +1470,48 @@ class PlayerProvider with ChangeNotifier {
   // ==================== 歌词相关方法 ====================
 
   Future<void> loadLyrics({bool forceRefresh = false}) async {
-    print('[LyricsNotification] 🎯 loadLyrics() 被调用 (song: ${_currentSong?.title})');
+    final songSnapshot = _currentSong;
+    final requestGeneration = ++_lyricsLoadGeneration;
+    final trackKeySnapshot = _trackKeyForSong(songSnapshot);
+    print('[LyricsNotification] 🎯 loadLyrics() 被调用 (song: ${songSnapshot?.title})');
 
-    if (_currentSong == null) {
+    bool isStillCurrent() {
+      return requestGeneration == _lyricsLoadGeneration &&
+          _trackKeyForSong(_currentSong) == trackKeySnapshot;
+    }
+
+    if (songSnapshot == null) {
       print('[LyricsNotification] ⚠️ _currentSong为null，跳过加载');
       _currentLyrics = null;
       _lyricsError = null;
-      notifyListeners();
+      if (isStillCurrent()) {
+        notifyListeners();
+      }
       return;
     }
 
     _isLoadingLyrics = true;
     _lyricsError = null;
-    notifyListeners();
+    if (isStillCurrent()) {
+      notifyListeners();
+    }
 
     try {
-      print('📝 开始加载歌词: ${_currentSong!.title}');
+      print('📝 开始加载歌词: ${songSnapshot.title}');
 
       // 优先使用数据库中的本地歌词
       if (!forceRefresh &&
-          _currentSong!.lyrics != null &&
-          _currentSong!.lyrics!.trim().isNotEmpty) {
+          songSnapshot.lyrics != null &&
+          songSnapshot.lyrics!.trim().isNotEmpty) {
         try {
-          final parsedLyrics = LyricParser.parseLrc(_currentSong!.lyrics!);
-          _currentLyrics = parsedLyrics.copyWith(source: 'local');
-          _lyricsError = null;
-          _isLoadingLyrics = false;
-          notifyListeners();
+          final parsedLyrics = LyricParser.parseLrc(songSnapshot.lyrics!);
+          if (isStillCurrent()) {
+            _currentLyrics = parsedLyrics.copyWith(source: 'local');
+            _lyricsError = null;
+            _currentLyricLineIndex = -1;
+            _isLoadingLyrics = false;
+            notifyListeners();
+          }
           return;
         } catch (e) {
           print('⚠️ 本地歌词解析失败: $e');
@@ -1437,9 +1519,9 @@ class PlayerProvider with ChangeNotifier {
       }
 
       // 尝试从网络获取歌词
-      final lyrics = await lyricService.smartFetchLyrics(_currentSong!);
+      final lyrics = await lyricService.smartFetchLyrics(songSnapshot);
 
-      if (lyrics != null) {
+      if (lyrics != null && isStillCurrent()) {
         _currentLyrics = lyrics;
         _lyricsError = null;
         _currentLyricLineIndex = -1;  // 重置歌词行索引
@@ -1469,12 +1551,13 @@ class PlayerProvider with ChangeNotifier {
           await _lyricsNotificationService.updateAllLyrics(
             lyrics: allLyricsData,
             currentIndex: -1,
+            songId: trackKeySnapshot.isEmpty ? null : trackKeySnapshot,
           );
         }
         
         // 立即触发首次通知栏更新
         _updateNotificationLyrics(_position.value);
-      } else {
+      } else if (isStillCurrent()) {
         _currentLyrics = null;
         _lyricsError = '未找到歌词';
         // 清除通知栏歌词
@@ -1482,13 +1565,17 @@ class PlayerProvider with ChangeNotifier {
       }
     } catch (e) {
       print('❌ 加载歌词失败: $e');
-      _currentLyrics = null;
-      _lyricsError = '加载歌词失败: ${e.toString()}';
-      // 清除通知栏歌词
-      await _lyricsNotificationService.clearLyrics();
+      if (isStillCurrent()) {
+        _currentLyrics = null;
+        _lyricsError = '加载歌词失败: ${e.toString()}';
+        // 清除通知栏歌词
+        await _lyricsNotificationService.clearLyrics();
+      }
     } finally {
-      _isLoadingLyrics = false;
-      notifyListeners();
+      if (isStillCurrent()) {
+        _isLoadingLyrics = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -1570,31 +1657,12 @@ class PlayerProvider with ChangeNotifier {
         charTimestamps: charTimestampsMap,
       );
       
-      // 更新锁屏界面的当前行索引
-      if (_lockScreenEnabled && _currentLyrics?.lyrics != null) {
-        final allLyricsData = _currentLyrics!.lyrics!.map((line) {
-          List<Map<String, dynamic>>? charTimestampsMap;
-          if (line.charTimestamps != null) {
-            charTimestampsMap = line.charTimestamps!.map((ct) {
-              return {
-                'char': ct.char,
-                'startMs': ct.startMs.toInt(),
-                'endMs': ct.endMs.toInt(),
-              };
-            }).toList();
-          }
-          
-          return {
-            'text': line.text,
-            'startMs': (line.timestamp * 1000).toInt(),
-            'endMs': (line.timestamp * 1000 + 5000).toInt(),
-            'charTimestamps': charTimestampsMap,
-          };
-        }).toList();
-        
-        _lyricsNotificationService.updateAllLyrics(
-          lyrics: allLyricsData,
+      // 锁屏：仅更新行索引（全量歌词在 loadLyrics()/启用锁屏时下发）
+      if (_lockScreenEnabled) {
+        final trackKey = _trackKeyForSong(_currentSong);
+        _lyricsNotificationService.updateLyricIndex(
           currentIndex: currentLineIndex,
+          songId: trackKey.isEmpty ? null : trackKey,
         );
       }
     }

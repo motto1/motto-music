@@ -134,6 +134,8 @@ class MottoAudioHandler extends BasicAudioHandler<TrackItem> {
   void onNotificationPositionUpdate(int positionMs) {
     // 调用通知栏歌词服务更新播放位置（用于逐字高亮）
     _lyricsService.updatePosition(positionMs);
+    // 同步刷新 MediaSession 的 updatePosition/lastPositionUpdateTime，避免锁屏进度条推算漂移
+    _broadcastState(currentIndex.value);
   }
 
   // ========== 初始化 ==========
@@ -272,6 +274,17 @@ class MottoAudioHandler extends BasicAudioHandler<TrackItem> {
     await _audioSession?.setActive(false);
   }
 
+  // ========== seek 覆盖：完成后广播状态刷新时间戳 ==========
+
+  @override
+  Future<void> seek(Duration position) async {
+    await super.seek(position);
+    // ⭐ 关键：seek完成后广播状态，刷新lastPositionUpdateTime
+    // 解决锁屏进度条在seek后跳回的问题
+    _broadcastState(currentIndex.value);
+    print('[AudioHandler] 🔍 seek完成，已广播状态更新');
+  }
+
   // ========== 播放项管理（namida 模式）==========
 
   @override
@@ -378,7 +391,10 @@ class MottoAudioHandler extends BasicAudioHandler<TrackItem> {
       }
 
       // 更新媒体信息到通知栏
-      mediaItem.add(item.mediaItem);
+      final updatedMediaItem = item.mediaItem.duration == duration
+          ? item.mediaItem
+          : item.mediaItem.copyWith(duration: duration);
+      mediaItem.add(updatedMediaItem);
       _broadcastState(index);
 
       print('[AudioHandler] 🔍 playWhenReady: ${playWhenReady.value}');

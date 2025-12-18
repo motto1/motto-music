@@ -469,7 +469,7 @@ class BilibiliApiService {
   }
 
   /// 获取UP主视频列表（分页）
-  /// 
+  ///
   /// [mid] UP主ID
   /// [page] 页码（从1开始）
   /// [pageSize] 每页数量（默认30）
@@ -523,8 +523,8 @@ class BilibiliApiService {
         bvid: json['bvid'] as String,
         title: json['title'] as String,
         pic: json['pic'] as String,
-        duration: json['length'] is String 
-            ? _parseDuration(json['length']) 
+        duration: json['length'] is String
+            ? _parseDuration(json['length'])
             : (json['length'] as int? ?? 0),
         desc: json['description'] as String?,
         owner: BilibiliUploader(
@@ -534,6 +534,64 @@ class BilibiliApiService {
         ),
         cid: 0,
         pubdate: json['created'] as int? ?? 0,
+      );
+    }).toList();
+  }
+
+  /// 获取B站分区排行榜
+  ///
+  /// [rid] 分区ID，音乐主分区为3（旧版API）
+  /// [type] 排行类型：all（全部）、origin（原创）、rookie（新人）
+  ///
+  /// 返回排行榜视频列表（最多100个）
+  Future<List<BilibiliVideo>> getMusicRanking({
+    int rid = 3, // 音乐分区ID
+    String type = 'all',
+  }) async {
+    debugPrint('🔍 请求音乐排行榜: rid=$rid, type=$type');
+
+    final data = await _client.get<Map<String, dynamic>>(
+      '/x/web-interface/ranking/v2',
+      params: {
+        'rid': rid.toString(),
+        'type': type,
+      },
+    );
+
+    final list = data['list'] as List<dynamic>?;
+    if (list == null || list.isEmpty) {
+      debugPrint('⚠️ 排行榜列表为空');
+      return [];
+    }
+
+    debugPrint('✅ 获取到 ${list.length} 个排行榜视频');
+
+    return list.map((item) {
+      final json = item as Map<String, dynamic>;
+      final owner = json['owner'] as Map<String, dynamic>?;
+      final stat = json['stat'] as Map<String, dynamic>?;
+
+      return BilibiliVideo(
+        aid: json['aid'] as int? ?? 0,
+        bvid: json['bvid'] as String? ?? '',
+        title: json['title'] as String? ?? '',
+        pic: json['pic'] as String? ?? '',
+        duration: json['duration'] as int? ?? 0,
+        desc: json['desc'] as String?,
+        owner: BilibiliUploader(
+          mid: owner?['mid'] as int? ?? 0,
+          name: owner?['name'] as String? ?? '',
+          face: owner?['face'] as String?,
+        ),
+        cid: json['cid'] as int? ?? 0,
+        pubdate: json['pubdate'] as int? ?? 0,
+        view: stat?['view'] as int?,
+        danmaku: stat?['danmaku'] as int?,
+        reply: stat?['reply'] as int?,
+        favorite: stat?['favorite'] as int?,
+        coin: stat?['coin'] as int?,
+        share: stat?['share'] as int?,
+        like: stat?['like'] as int?,
       );
     }).toList();
   }

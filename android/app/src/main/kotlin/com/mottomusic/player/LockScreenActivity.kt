@@ -68,6 +68,16 @@ class LockScreenActivity : AppCompatActivity() {
     private var latestState: LockScreenState? = null
     private var currentHighlightEnd: Int = 0
     private var lastLineIndex: Int = -1
+    private var lastLyricsSongId: String? = null
+    private var lastLyricsSize: Int = 0
+
+    private val highlightHandler = Handler(Looper.getMainLooper())
+    private val highlightUpdater = object : Runnable {
+        override fun run() {
+            updateHighlightOnly(latestState ?: LockScreenStore.currentState())
+            highlightHandler.postDelayed(this, 50L)
+        }
+    }
 
     private var mediaBrowser: MediaBrowserCompat? = null
     private var mediaController: MediaControllerCompat? = null
@@ -80,15 +90,14 @@ class LockScreenActivity : AppCompatActivity() {
             progressHandler.postDelayed(this, 1000L)
         }
     }
-    
-    // 统一定时器：50ms更新状态和歌词
-    private val stateUpdateHandler = Handler(Looper.getMainLooper())
-    private val stateUpdater = object : Runnable {
-        override fun run() {
+
+    // 事件驱动模式：监听LockScreenStore状态变化（替代50ms轮询）
+    private val storeListener: () -> Unit = {
+        runOnUiThread {
             val state = LockScreenStore.currentState()
+            // 事件驱动更新：歌词与必要的可见性判定由 Store 驱动，封面/时长等由 MediaSession 驱动
             updateUi(state)
             updateLyrics(state)
-            stateUpdateHandler.postDelayed(this, 50L)
         }
     }
 
@@ -192,7 +201,7 @@ class LockScreenActivity : AppCompatActivity() {
         android.util.Log.d("LockScreenActivity", "onStart - isConnected: ${mediaBrowser?.isConnected}")
         
         updateUi(LockScreenStore.currentState())
-        stateUpdateHandler.post(stateUpdater)
+        LockScreenStore.addListener(storeListener)
         
         // 启动进度条更新
         updateProgress()
@@ -213,8 +222,9 @@ class LockScreenActivity : AppCompatActivity() {
         super.onStop()
         android.util.Log.d("LockScreenActivity", "onStop - finishing: $isFinishing")
         
-        stateUpdateHandler.removeCallbacks(stateUpdater)
+        LockScreenStore.removeListener(storeListener)
         progressHandler.removeCallbacks(progressUpdater)
+        stopHighlightUpdates()
         
         if (isFinishing) {
             mediaController?.unregisterCallback(controllerCallback)
@@ -236,8 +246,9 @@ class LockScreenActivity : AppCompatActivity() {
         super.onDestroy()
         android.util.Log.d("LockScreenActivity", "onDestroy")
         
-        stateUpdateHandler.removeCallbacks(stateUpdater)
+        LockScreenStore.removeListener(storeListener)
         progressHandler.removeCallbacks(progressUpdater)
+        stopHighlightUpdates()
         
         try {
             mediaController?.unregisterCallback(controllerCallback)
@@ -390,57 +401,83 @@ class LockScreenActivity : AppCompatActivity() {
     }
 
     private fun updateLyrics(state: LockScreenState) {
-        if (!isShowingLyrics || state.allLyrics.isEmpty()) return
+        if (!isShowingLyrics) return
+
+        // 歌曲/歌词列表变化时：无条件刷新列表，避免残留旧歌词
+        val songId = state.currentSongId
+        val lyricsChanged = songId != lastLyricsSongId || state.allLyrics.size != lastLyricsSize
+        if (lyricsChanged) {
+            lastLyricsSongId = songId
+            lastLyricsSize = state.allLyrics.size
+            lyricsAdapter.updateLyrics(state.allLyrics)
+            lastLineIndex = -1
+            currentHighlightEnd = 0
+        }
+
+        if (state.allLyrics.isEmpty()) return
 
         val currentIndex = state.currentLineIndex
         if (currentIndex < 0 || currentIndex >= state.allLyrics.size) return
-
-        // 首次加载歌词列表
-        if (lyricsAdapter.itemCount == 0) {
-            lyricsAdapter.updateLyrics(state.allLyrics)
-        }
 
         // 检测歌词行切换
         if (currentIndex != lastLineIndex) {
             lastLineIndex = currentIndex
             currentHighlightEnd = 0
-            
+
             // 平滑滚动到当前行
             val layoutManager = lyricsRecyclerView.layoutManager as? LinearLayoutManager
             if (layoutManager != null) {
-                val smoothScroller = object : androidx.recyclerview.widget.LinearSmoothScroller(lyricsRecyclerView.context) {
-                    override fun getVerticalSnapPreference(): Int = SNAP_TO_START
-                    override fun calculateTimeForScrolling(dx: Int): Int = 800
-                }
+                val smoothScroller =
+                    object : androidx.recyclerview.widget.LinearSmoothScroller(lyricsRecyclerView.context) {
+                        override fun getVerticalSnapPreference(): Int = SNAP_TO_START
+                        override fun calculateTimeForScrolling(dx: Int): Int = 800
+                    }
                 smoothScroller.targetPosition = currentIndex
                 layoutManager.startSmoothScroll(smoothScroller)
             }
         }
 
-        // 更新逐字高亮
+        updateHighlightOnly(state)
+    }
+
+    private fun updateHighlightOnly(state: LockScreenState) {
+        if (!isShowingLyrics) return
+        if (state.allLyrics.isEmpty()) return
+
+        val currentIndex = state.currentLineIndex
+        if (currentIndex < 0 || currentIndex >= state.allLyrics.size) return
+
         val currentLine = state.allLyrics[currentIndex]
         val timestamps = currentLine.charTimestamps
-        if (timestamps != null) {
-            val position = getCurrentPlaybackPosition().toInt()
-            var newHighlightEnd = 0
-            
-            timestamps.forEachIndexed { index, map ->
-                val start = (map["startMs"] as? Number)?.toInt() ?: return@forEachIndexed
-                if (position >= start) {
-                    newHighlightEnd = index + 1
-                }
-            }
-
-            // 单向递增：只在增加时更新
-            if (newHighlightEnd > currentHighlightEnd) {
-                currentHighlightEnd = newHighlightEnd
-                val spannable = buildHighlightedSpannable(currentLine.text, currentHighlightEnd)
-                lyricsAdapter.updateCurrentLine(currentIndex, spannable)
-            }
-        } else {
-            // 无逐字高亮，直接更新当前行
+        if (timestamps.isNullOrEmpty()) {
+            if (currentHighlightEnd != 0) currentHighlightEnd = 0
             lyricsAdapter.updateCurrentLine(currentIndex, null)
+            return
         }
+
+        val position = getCurrentPlaybackPosition().toInt()
+        var newHighlightEnd = 0
+        timestamps.forEachIndexed { index, map ->
+            val start = (map["startMs"] as? Number)?.toInt() ?: return@forEachIndexed
+            if (position >= start) {
+                newHighlightEnd = index + 1
+            }
+        }
+
+        if (newHighlightEnd != currentHighlightEnd) {
+            currentHighlightEnd = newHighlightEnd
+            val spannable = buildHighlightedSpannable(currentLine.text, currentHighlightEnd)
+            lyricsAdapter.updateCurrentLine(currentIndex, spannable)
+        }
+    }
+
+    private fun startHighlightUpdates() {
+        highlightHandler.removeCallbacks(highlightUpdater)
+        highlightHandler.post(highlightUpdater)
+    }
+
+    private fun stopHighlightUpdates() {
+        highlightHandler.removeCallbacks(highlightUpdater)
     }
 
     private fun buildHighlightedSpannable(text: String, highlightEnd: Int): SpannableString {
@@ -675,6 +712,7 @@ class LockScreenActivity : AppCompatActivity() {
                 fadeIn(coverImage) {
                     isShowingLyrics = false
                     isAnimating = false
+                    stopHighlightUpdates()
                     android.util.Log.d("LockScreenActivity", "Switched to cover view")
                 }
             }
@@ -688,6 +726,7 @@ class LockScreenActivity : AppCompatActivity() {
                     // 初始化歌词显示
                     lastLineIndex = -1
                     updateLyrics(latestState ?: LockScreenStore.currentState())
+                    startHighlightUpdates()
                 }
             }
         }

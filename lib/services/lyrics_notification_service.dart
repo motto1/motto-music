@@ -75,7 +75,8 @@ class LyricsNotificationService {
   /// [positionMs] 当前播放位置（毫秒）
   Future<void> updatePosition(int positionMs) async {
     if (!Platform.isAndroid) return;
-    if (!_notificationEnabled) return;
+    // 位置更新可能同时服务于通知栏与锁屏（锁屏可能独立开启）
+    if (!_notificationEnabled && !_lockScreenEnabled) return;
 
     try {
       await _channel.invokeMethod('updatePosition', {
@@ -86,20 +87,25 @@ class LyricsNotificationService {
     }
   }
 
+  /// 更新元数据（标题、艺术家、歌曲ID）
+  /// [songId] 用于锁屏歌词校验，确保歌词与歌曲匹配
   Future<void> updateMetadata({
     String? title,
     String? artist,
+    String? songId,
   }) async {
     if (!Platform.isAndroid || !_lockScreenEnabled) return;
 
     print('[LyricsNotification] ========== updateMetadata ==========');
     print('[LyricsNotification] title: $title');
     print('[LyricsNotification] artist: $artist');
+    print('[LyricsNotification] songId: $songId');
 
     try {
       await _channel.invokeMethod('updateMetadata', {
         'title': title,
         'artist': artist,
+        'songId': songId,
       });
       print('[LyricsNotification] ✅ 元数据已发送到原生层');
     } catch (e) {
@@ -122,15 +128,33 @@ class LyricsNotificationService {
   Future<void> updateAllLyrics({
     required List<Map<String, dynamic>> lyrics,
     required int currentIndex,
+    String? songId,
   }) async {
     if (!Platform.isAndroid || !_lockScreenEnabled) return;
     try {
       await _channel.invokeMethod('updateAllLyrics', {
         'lyrics': lyrics,
         'currentIndex': currentIndex,
+        'songId': songId,
       });
     } catch (e) {
       print('[LyricsNotification] ❌ 更新完整歌词失败: $e');
+    }
+  }
+
+  /// 仅更新锁屏歌词行索引（避免频繁发送全量歌词）
+  Future<void> updateLyricIndex({
+    required int currentIndex,
+    String? songId,
+  }) async {
+    if (!Platform.isAndroid || !_lockScreenEnabled) return;
+    try {
+      await _channel.invokeMethod('updateLyricIndex', {
+        'currentIndex': currentIndex,
+        'songId': songId,
+      });
+    } catch (e) {
+      // 索引更新高频调用，失败不打印日志避免刷屏
     }
   }
 

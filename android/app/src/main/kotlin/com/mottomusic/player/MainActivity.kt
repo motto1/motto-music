@@ -49,6 +49,7 @@ class MainActivity: FlutterActivity() {
                     val currentLineStartMs = call.argument<Int>("currentLineStartMs") ?: 0
                     val currentLineEndMs = call.argument<Int>("currentLineEndMs") ?: 0
                     val charTimestamps = call.argument<List<Map<String, Any>>?>("charTimestamps")
+                    val songId = call.argument<String?>("songId")
 
                     lyricsManager.updateLyrics(
                         currentLine,
@@ -62,7 +63,8 @@ class MainActivity: FlutterActivity() {
                         nextLine,
                         currentLineStartMs,
                         currentLineEndMs,
-                        charTimestamps
+                        charTimestamps,
+                        songId
                     )
                     result.success(null)
                 }
@@ -102,12 +104,14 @@ class MainActivity: FlutterActivity() {
                 "updateMetadata" -> {
                     val title = call.argument<String>("title")
                     val artist = call.argument<String>("artist")
-                    LockScreenController.updateMetadata(title, artist)
+                    val songId = call.argument<String>("songId")  // 新增：歌曲ID用于校验
+                    LockScreenController.updateMetadata(title, artist, songId)
                     result.success(null)
                 }
                 "updateAllLyrics" -> {
                     val lyricsData = call.argument<List<Map<String, Any>>>("lyrics")
                     val currentIndex = call.argument<Int>("currentIndex") ?: -1
+                    val songId = call.argument<String?>("songId")
                     
                     if (lyricsData != null) {
                         val lyrics = lyricsData.map { lyricMap ->
@@ -118,8 +122,14 @@ class MainActivity: FlutterActivity() {
                                 charTimestamps = lyricMap["charTimestamps"] as? List<Map<String, Any>>
                             )
                         }
-                        LockScreenController.updateAllLyrics(lyrics, currentIndex)
+                        LockScreenController.updateAllLyrics(lyrics, currentIndex, songId)
                     }
+                    result.success(null)
+                }
+                "updateLyricIndex" -> {
+                    val currentIndex = call.argument<Int>("currentIndex") ?: -1
+                    val songId = call.argument<String?>("songId")
+                    LockScreenController.updateLyricIndex(currentIndex, songId)
                     result.success(null)
                 }
                 "updatePlayState" -> {

@@ -421,7 +421,7 @@ class SettingsPageState extends State<SettingsPage> with ShowAwarePage {
               ListTile(
                 title: const Text('关于应用', style: TextStyle(fontWeight: FontWeight.w400)),
                 subtitle: Text(
-                  '版本 0.1.4',
+                  '版本 0.2.0',
                   style: TextStyle(
                     fontSize: 13,
                     color: isDark ? Colors.white.withOpacity(0.5) : Colors.grey[600],
@@ -705,7 +705,7 @@ class SettingsPageState extends State<SettingsPage> with ShowAwarePage {
                                 ),
                                 SizedBox(height: 8),
                                 Text(
-                                  '版本: 0.1.4',
+                                  '版本: 0.2.0',
                                   style: TextStyle(fontSize: 14, color: Colors.grey),
                                 ),
                                 SizedBox(height: 4),

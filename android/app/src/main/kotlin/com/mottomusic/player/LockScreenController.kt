@@ -38,12 +38,13 @@ object LockScreenController {
         }
     }
 
-    fun updateMetadata(title: String?, artist: String?) {
+    fun updateMetadata(title: String?, artist: String?, songId: String? = null) {
         android.util.Log.d("LockScreenController", "========== updateMetadata ==========")
         android.util.Log.d("LockScreenController", "title: $title")
         android.util.Log.d("LockScreenController", "artist: $artist")
+        android.util.Log.d("LockScreenController", "songId: $songId")
 
-        LockScreenStore.updateMetadata(title, artist)
+        LockScreenStore.updateMetadata(title, artist, songId)
     }
 
     fun updatePlayState(playing: Boolean) {
@@ -55,14 +56,16 @@ object LockScreenController {
         nextLine: String?,
         currentLineStartMs: Int,
         currentLineEndMs: Int,
-        charTimestamps: List<Map<String, Any>>?
+        charTimestamps: List<Map<String, Any>>?,
+        songId: String? = null
     ) {
         LockScreenStore.updateLyrics(
             currentLine,
             nextLine,
             currentLineStartMs,
             currentLineEndMs,
-            charTimestamps
+            charTimestamps,
+            songId
         )
     }
 
@@ -70,8 +73,12 @@ object LockScreenController {
         LockScreenStore.updatePosition(positionMs)
     }
 
-    fun updateAllLyrics(lyrics: List<LyricLine>, currentIndex: Int) {
-        LockScreenStore.updateAllLyrics(lyrics, currentIndex)
+    fun updateAllLyrics(lyrics: List<LyricLine>, currentIndex: Int, songId: String? = null) {
+        LockScreenStore.updateAllLyrics(lyrics, currentIndex, songId)
+    }
+
+    fun updateLyricIndex(currentIndex: Int, songId: String? = null) {
+        LockScreenStore.updateLyricIndex(currentIndex, songId)
     }
 
     fun clearLyrics() {

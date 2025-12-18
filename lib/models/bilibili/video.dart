@@ -7,34 +7,55 @@ part 'video.g.dart';
 class BilibiliVideo {
   /// AV 号
   final int aid;
-  
+
   /// BV 号
   final String bvid;
-  
+
   /// 视频标题
   final String title;
-  
+
   /// 封面图 URL
   final String pic;
-  
+
   /// 视频时长（秒）
   final int duration;
-  
+
   /// 视频简介
   final String? desc;
-  
+
   /// UP主信息
   final BilibiliUploader owner;
-  
+
   /// 第一个分P的 CID
   final int cid;
-  
+
   /// 发布时间（Unix 时间戳）
   final int pubdate;
-  
+
   /// 分P列表
   final List<BilibiliVideoPage>? pages;
-  
+
+  /// 播放量
+  final int? view;
+
+  /// 弹幕数
+  final int? danmaku;
+
+  /// 评论数
+  final int? reply;
+
+  /// 收藏数
+  final int? favorite;
+
+  /// 投币数
+  final int? coin;
+
+  /// 分享数
+  final int? share;
+
+  /// 点赞数
+  final int? like;
+
   BilibiliVideo({
     required this.aid,
     required this.bvid,
@@ -46,6 +67,13 @@ class BilibiliVideo {
     required this.cid,
     required this.pubdate,
     this.pages,
+    this.view,
+    this.danmaku,
+    this.reply,
+    this.favorite,
+    this.coin,
+    this.share,
+    this.like,
   });
   
   factory BilibiliVideo.fromJson(Map<String, dynamic> json) => _$BilibiliVideoFromJson(json);

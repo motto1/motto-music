@@ -1,4 +1,4 @@
-enum PlayerPage { home, library, favorite, recently, bilibili, settings, favoriteDetail, userVideos, globalSearch, searchResult, videoDetail, recentlyPlayedDetail }
+enum PlayerPage { home, library, favorite, recently, bilibili, settings, favoriteDetail, userVideos, globalSearch, searchResult, videoDetail, recentlyPlayedDetail, musicRanking }
 
 enum SettingsPageKeys { settings, storage }
 
