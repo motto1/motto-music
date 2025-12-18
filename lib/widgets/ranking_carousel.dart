@@ -318,12 +318,12 @@ class _RankingCarouselState extends State<RankingCarousel> {
                   child: const Icon(Icons.music_note, color: Colors.white54, size: 48),
                 ),
               ),
-              // 底部渐变遮罩 - 从透明到纯色
+              // 底部纯色区域 - 歌名背景完全不透明
               Positioned(
                 left: 0,
                 right: 0,
                 bottom: 0,
-                height: 110,
+                height: 130,
                 child: Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -332,7 +332,9 @@ class _RankingCarouselState extends State<RankingCarousel> {
                       colors: [
                         gradientColor.withValues(alpha: 0.0),
                         gradientColor,
+                        gradientColor,
                       ],
+                      stops: const [0.0, 0.35, 1.0],
                     ),
                   ),
                 ),
