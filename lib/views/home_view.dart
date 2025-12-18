@@ -122,16 +122,6 @@ class HomeViewState extends State<HomeView> with ShowAwarePage {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          '音乐库',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        _buildLibraryCardsScroll(context),
-                        const SizedBox(height: 28),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
