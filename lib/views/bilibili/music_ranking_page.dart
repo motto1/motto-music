@@ -66,7 +66,7 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
   @override
   Widget build(BuildContext context) {
     final backgroundColor = ThemeUtils.backgroundColor(context);
-    final textColor = ThemeUtils.defaultTextColor(context);
+    final textColor = ThemeUtils.textColor(context);
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -145,7 +145,7 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
   }
 
   Widget _buildVideoCard(BilibiliVideo video, int rank) {
-    final textColor = ThemeUtils.defaultTextColor(context);
+    final textColor = ThemeUtils.textColor(context);
 
     return GestureDetector(
       onTap: () {
