@@ -6,6 +6,7 @@ import '../services/player_provider.dart';
 import '../widgets/show_aware_page.dart';
 import '../widgets/themed_background.dart';
 import '../widgets/unified_cover_image.dart';
+import '../widgets/ranking_carousel.dart';
 import '../utils/platform_utils.dart';
 import '../contants/app_contants.dart';
 import '../router/router.dart';
@@ -72,11 +73,20 @@ class HomeViewState extends State<HomeView> with ShowAwarePage {
           builder: (context, theme) {
             return CustomScrollView(
               slivers: [
+                // 排行榜轮播卡片
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      top: PlatformUtils.select(desktop: 40.0, mobile: 60.0),
+                    ),
+                    child: const RankingCarousel(),
+                  ),
+                ),
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.fromLTRB(
                       20,
-                      PlatformUtils.select(desktop: 40.0, mobile: 80.0),
+                      24,
                       20,
                       0,
                     ),
@@ -86,13 +96,13 @@ class HomeViewState extends State<HomeView> with ShowAwarePage {
                         Text(
                           '音乐库',
                           style: TextStyle(
-                            fontSize: 26,
+                            fontSize: 22,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         _buildLibraryCardsScroll(context),
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 28),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
