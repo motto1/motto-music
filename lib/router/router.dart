@@ -3,6 +3,7 @@ import '../contants/app_contants.dart';
 import '../views/home_view.dart';
 import '../views/favorites_view.dart';
 import '../views/bilibili/music_ranking_page.dart';
+import '../views/bilibili/favorites_page.dart';
 import '../storage/player_state_storage.dart';
 import '../widgets/show_aware_page.dart';
 import '../views/settings/settings_page.dart';
@@ -88,6 +89,14 @@ class MenuManager {
       key: PlayerPage.musicRanking,
       pageKey: GlobalKey(),
       builder: (key) => MusicRankingPage(key: key),
+    ),
+    MenuItem(
+      icon: Icons.video_library_rounded,
+      iconSize: 22.0,
+      label: 'Bilibili',
+      key: PlayerPage.bilibili,
+      pageKey: GlobalKey(),
+      builder: (key) => BilibiliFavoritesPage(key: key),
     ),
     MenuItem(
       icon: Icons.favorite_rounded,

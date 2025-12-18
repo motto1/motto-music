@@ -18,6 +18,8 @@ import '../../widgets/page_header.dart';
 import '../../widgets/frosted_page_header.dart';
 import 'package:motto_music/utils/common_utils.dart';
 import 'package:motto_music/utils/theme_utils.dart';
+import 'package:motto_music/views/library_view.dart';
+import 'package:motto_music/animations/page_transitions.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -137,7 +139,7 @@ class SettingsPageState extends State<SettingsPage> with ShowAwarePage {
         Padding(
           padding: const EdgeInsets.only(left: 16, bottom: 8),
           child: Text(
-            '存储设置',
+            '媒体与存储',
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w400,
@@ -151,19 +153,45 @@ class SettingsPageState extends State<SettingsPage> with ShowAwarePage {
             color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
             borderRadius: BorderRadius.circular(10),
           ),
-          child: ListTile(
-            title: const Text('存储管理', style: TextStyle(fontWeight: FontWeight.w400)),
-            subtitle: Text(
-              '本地存储、WebDAV等',
-              style: TextStyle(
-                fontSize: 13,
-                color: isDark ? Colors.white.withOpacity(0.5) : Colors.grey[600],
+          child: Column(
+            children: [
+              ListTile(
+                leading: Icon(Icons.library_music_rounded, color: Colors.pink),
+                title: const Text('本地音乐库', style: TextStyle(fontWeight: FontWeight.w400)),
+                subtitle: Text(
+                  '管理本地音乐文件',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? Colors.white.withOpacity(0.5) : Colors.grey[600],
+                  ),
+                ),
+                trailing: Icon(CupertinoIcons.chevron_right, size: 18, color: Colors.grey[400]),
+                onTap: () {
+                  Navigator.of(context, rootNavigator: true).push(
+                    NamidaPageRoute(
+                      page: const LibraryView(),
+                      type: PageTransitionType.slideUp,
+                    ),
+                  );
+                },
               ),
-            ),
-            trailing: Icon(CupertinoIcons.chevron_right, size: 18, color: Colors.grey[400]),
-            onTap: () {
-              NestedNavigationHelper.push(context, "/settings/storage");
-            },
+              Divider(height: 1, indent: 56, endIndent: 0),
+              ListTile(
+                leading: Icon(Icons.storage_rounded, color: Colors.blue),
+                title: const Text('存储管理', style: TextStyle(fontWeight: FontWeight.w400)),
+                subtitle: Text(
+                  '本地存储、WebDAV等',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? Colors.white.withOpacity(0.5) : Colors.grey[600],
+                  ),
+                ),
+                trailing: Icon(CupertinoIcons.chevron_right, size: 18, color: Colors.grey[400]),
+                onTap: () {
+                  NestedNavigationHelper.push(context, "/settings/storage");
+                },
+              ),
+            ],
           ),
         ),
       ],

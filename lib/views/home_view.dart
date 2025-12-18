@@ -8,13 +8,8 @@ import '../widgets/themed_background.dart';
 import '../widgets/unified_cover_image.dart';
 import '../widgets/ranking_carousel.dart';
 import '../utils/platform_utils.dart';
-import '../contants/app_contants.dart';
-import '../router/router.dart';
 import '../animations/page_transitions.dart';
 import '../views/recently_played_detail_page.dart';
-import '../views/library_view.dart';
-import '../views/bilibili/favorites_page.dart';
-import '../views/bilibili/music_ranking_page.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -181,111 +176,6 @@ class HomeViewState extends State<HomeView> with ShowAwarePage {
           },
         );
       },
-    );
-  }
-
-  Widget _buildLibraryCardsScroll(BuildContext context) {
-    return SizedBox(
-      height: 260,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: [
-          _buildLibraryCard(
-            context,
-            title: '本地音乐库',
-            icon: Icons.library_music_rounded,
-            colors: [Color(0xFFE91E63), Color(0xFFF06292)],
-            onTap: () {
-              Navigator.of(context).push(
-                NamidaPageRoute(
-                  page: const LibraryView(),
-                  type: PageTransitionType.slideUp,
-                ),
-              );
-            },
-          ),
-          const SizedBox(width: 12),
-          _buildLibraryCard(
-            context,
-            title: 'Bilibili音乐',
-            icon: Icons.video_library_rounded,
-            colors: [Color(0xFF00BCD4), Color(0xFF4DD0E1)],
-            onTap: () {
-              Navigator.of(context).push(
-                NamidaPageRoute(
-                  page: const BilibiliFavoritesPage(),
-                  type: PageTransitionType.slideUp,
-                ),
-              );
-            },
-          ),
-          const SizedBox(width: 12),
-          _buildLibraryCard(
-            context,
-            title: '音乐排行榜',
-            icon: Icons.trending_up_rounded,
-            colors: [Color(0xFFFF6B35), Color(0xFFFF8E53)],
-            onTap: () {
-              Navigator.of(context).push(
-                NamidaPageRoute(
-                  page: const MusicRankingPage(),
-                  type: PageTransitionType.slideUp,
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLibraryCard(
-    BuildContext context, {
-    required String title,
-    required IconData icon,
-    required List<Color> colors,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        width: 180,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: colors,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: colors[0].withOpacity(0.3),
-              blurRadius: 12,
-              offset: Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Icon(icon, color: Colors.white.withOpacity(0.9), size: 72),
-              const Spacer(),
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
