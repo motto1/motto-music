@@ -17,12 +17,14 @@ class RankingCarousel extends StatefulWidget {
 
 class _RankingCarouselState extends State<RankingCarousel> {
   late final BilibiliApiService _apiService;
-  late final PageController _pageController;
+  late final ScrollController _scrollController;
   List<BilibiliVideo> _videos = [];
   bool _isLoading = true;
 
   // 卡片尺寸
-  static const double _cardHeight = 340.0;
+  static const double _cardHeight = 320.0;
+  static const double _horizontalPadding = 20.0;
+  static const double _cardSpacing = 12.0;
 
   @override
   void initState() {
@@ -30,17 +32,14 @@ class _RankingCarouselState extends State<RankingCarousel> {
     final cookieManager = CookieManager();
     final apiClient = BilibiliApiClient(cookieManager);
     _apiService = BilibiliApiService(apiClient);
-
-    _pageController = PageController(
-      viewportFraction: 0.78, // 控制卡片可见比例
-    );
+    _scrollController = ScrollController();
 
     _loadRanking();
   }
 
   @override
   void dispose() {
-    _pageController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -49,7 +48,7 @@ class _RankingCarouselState extends State<RankingCarousel> {
       final videos = await _apiService.getMusicRanking();
       if (mounted) {
         setState(() {
-          _videos = videos.take(10).toList(); // 只取前10个
+          _videos = videos.take(10).toList();
           _isLoading = false;
         });
       }
@@ -62,11 +61,21 @@ class _RankingCarouselState extends State<RankingCarousel> {
     }
   }
 
+  // 计算卡片宽度：屏幕宽度 - 左右padding - 1/3卡片的空间
+  double _getCardWidth(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    // 屏幕可显示1又1/3个卡片
+    // 可用宽度 = 屏幕宽度 - 左padding
+    // 卡片宽度 = 可用宽度 / 1.33 - spacing
+    final availableWidth = screenWidth - _horizontalPadding;
+    return (availableWidth / 1.35) - _cardSpacing;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
       return SizedBox(
-        height: _cardHeight,
+        height: _cardHeight + 60,
         child: const Center(
           child: CircularProgressIndicator(),
         ),
@@ -76,6 +85,8 @@ class _RankingCarouselState extends State<RankingCarousel> {
     if (_videos.isEmpty) {
       return const SizedBox.shrink();
     }
+
+    final cardWidth = _getCardWidth(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -108,7 +119,7 @@ class _RankingCarouselState extends State<RankingCarousel> {
               ),
               TextButton(
                 onPressed: () {
-                  // 导航到排行榜页面 - 使用底部导航
+                  // 导航到排行榜页面
                 },
                 child: Text(
                   '查看全部',
@@ -121,28 +132,19 @@ class _RankingCarouselState extends State<RankingCarousel> {
           ),
         ),
         const SizedBox(height: 12),
-        // 卡片轮播
+        // 卡片列表 - 使用ListView实现平移滑动
         SizedBox(
           height: _cardHeight,
-          child: PageView.builder(
-            controller: _pageController,
+          child: ListView.builder(
+            controller: _scrollController,
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.only(left: _horizontalPadding),
+            physics: const BouncingScrollPhysics(),
             itemCount: _videos.length,
             itemBuilder: (context, index) {
-              return AnimatedBuilder(
-                animation: _pageController,
-                builder: (context, child) {
-                  double value = 1.0;
-                  if (_pageController.position.haveDimensions) {
-                    value = _pageController.page! - index;
-                    value = (1 - (value.abs() * 0.15)).clamp(0.85, 1.0);
-                  }
-                  return Center(
-                    child: Transform.scale(
-                      scale: value,
-                      child: _buildCard(_videos[index], index),
-                    ),
-                  );
-                },
+              return Padding(
+                padding: EdgeInsets.only(right: _cardSpacing),
+                child: _buildCard(_videos[index], index, cardWidth),
               );
             },
           ),
@@ -151,7 +153,7 @@ class _RankingCarouselState extends State<RankingCarousel> {
     );
   }
 
-  Widget _buildCard(BilibiliVideo video, int index) {
+  Widget _buildCard(BilibiliVideo video, int index, double cardWidth) {
     return GestureDetector(
       onTap: () {
         Navigator.of(context).push(
@@ -162,14 +164,14 @@ class _RankingCarouselState extends State<RankingCarousel> {
         );
       },
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 8),
+        width: cardWidth,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -190,12 +192,12 @@ class _RankingCarouselState extends State<RankingCarousel> {
                   child: const Icon(Icons.music_note, color: Colors.white54, size: 48),
                 ),
               ),
-              // 底部渐变遮罩
+              // 底部纯色渐变遮罩
               Positioned(
                 left: 0,
                 right: 0,
                 bottom: 0,
-                height: 140,
+                height: 100,
                 child: Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -203,65 +205,47 @@ class _RankingCarouselState extends State<RankingCarousel> {
                       end: Alignment.bottomCenter,
                       colors: [
                         Colors.transparent,
-                        Colors.black.withValues(alpha: 0.6),
-                        Colors.black.withValues(alpha: 0.85),
+                        Colors.black.withValues(alpha: 0.9),
                       ],
-                      stops: const [0.0, 0.5, 1.0],
                     ),
                   ),
                 ),
               ),
-              // 排名标签
+              // 排名数字 - 只显示数字，无容器
               Positioned(
                 top: 12,
-                left: 12,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: _getRankColor(index + 1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '#${index + 1}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                    ),
+                left: 14,
+                child: Text(
+                  '${index + 1}',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withValues(alpha: 0.5),
+                        blurRadius: 8,
+                        offset: const Offset(1, 2),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              // 标题和UP主
+              // 标题 - 不显示作者
               Positioned(
-                left: 16,
-                right: 16,
-                bottom: 16,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      video.title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        height: 1.2,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      video.owner.name,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.8),
-                        fontSize: 13,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                left: 14,
+                right: 14,
+                bottom: 14,
+                child: Text(
+                  video.title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    height: 1.25,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -269,18 +253,5 @@ class _RankingCarouselState extends State<RankingCarousel> {
         ),
       ),
     );
-  }
-
-  Color _getRankColor(int rank) {
-    switch (rank) {
-      case 1:
-        return const Color(0xFFFFD700); // 金色
-      case 2:
-        return const Color(0xFFC0C0C0); // 银色
-      case 3:
-        return const Color(0xFFCD7F32); // 铜色
-      default:
-        return Colors.black54;
-    }
   }
 }
