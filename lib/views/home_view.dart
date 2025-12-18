@@ -73,11 +73,40 @@ class HomeViewState extends State<HomeView> with ShowAwarePage {
           builder: (context, theme) {
             return CustomScrollView(
               slivers: [
-                // 排行榜轮播卡片
+                // 主页大标题
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.only(
                       top: PlatformUtils.select(desktop: 40.0, mobile: 60.0),
+                      left: 20,
+                      right: 20,
+                      bottom: 8,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '主页',
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Divider(
+                          height: 1,
+                          thickness: 0.5,
+                          color: Colors.grey.withValues(alpha: 0.3),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // 排行榜轮播卡片
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      top: 16,
                     ),
                     child: const RankingCarousel(),
                   ),
