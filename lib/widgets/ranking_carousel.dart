@@ -275,6 +275,7 @@ class _RankingCarouselState extends State<RankingCarousel> {
   Widget _buildCard(BilibiliVideo video, int index, double cardWidth) {
     final gradientColor = _getGradientColor(video.pic);
     final borderColor = _getBorderColor(video.pic);
+    const double infoAreaHeight = 85.0;
 
     return GestureDetector(
       onTap: () {
@@ -303,76 +304,82 @@ class _RankingCarouselState extends State<RankingCarousel> {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(14.5),
-          child: Stack(
-            fit: StackFit.expand,
+          child: Column(
             children: [
-              // 封面图
-              CachedNetworkImage(
-                imageUrl: video.pic,
-                fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  color: Colors.grey[800],
-                ),
-                errorWidget: (context, url, error) => Container(
-                  color: Colors.grey[800],
-                  child: const Icon(Icons.music_note, color: Colors.white54, size: 48),
-                ),
-              ),
-              // 底部纯色区域 - 歌名背景完全不透明
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                height: 130,
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        gradientColor.withValues(alpha: 0.0),
-                        gradientColor,
-                        gradientColor,
-                      ],
-                      stops: const [0.0, 0.35, 1.0],
-                    ),
-                  ),
-                ),
-              ),
-              // 排名数字
-              Positioned(
-                top: 10,
-                left: 12,
-                child: Text(
-                  '${index + 1}',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black.withValues(alpha: 0.6),
-                        blurRadius: 6,
-                        offset: const Offset(1, 1),
+              // 封面区域
+              Expanded(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // 封面图
+                    CachedNetworkImage(
+                      imageUrl: video.pic,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        color: Colors.grey[800],
                       ),
-                    ],
-                  ),
+                      errorWidget: (context, url, error) => Container(
+                        color: Colors.grey[800],
+                        child: const Icon(Icons.music_note, color: Colors.white54, size: 48),
+                      ),
+                    ),
+                    // 底部过渡渐变（极短，只做过渡）
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: 20,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              gradientColor.withValues(alpha: 0.0),
+                              gradientColor,
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    // 排名数字
+                    Positioned(
+                      top: 10,
+                      left: 12,
+                      child: Text(
+                        '${index + 1}',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withValues(alpha: 0.6),
+                              blurRadius: 6,
+                              offset: const Offset(1, 1),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              // 标题
-              Positioned(
-                left: 14,
-                right: 14,
-                bottom: 14,
+              // 纯色信息区域 - 完全不透明
+              Container(
+                height: infoAreaHeight,
+                width: double.infinity,
+                color: gradientColor,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 child: Text(
                   video.title,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
-                    height: 1.25,
+                    height: 1.3,
                   ),
-                  maxLines: 2,
+                  maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
