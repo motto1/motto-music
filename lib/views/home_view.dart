@@ -11,6 +11,50 @@ import '../utils/platform_utils.dart';
 import '../animations/page_transitions.dart';
 import '../views/recently_played_detail_page.dart';
 
+/// 最近播放卡片的吸附滚动物理效果
+class _RecentPlayedSnappingPhysics extends ScrollPhysics {
+  final double itemExtent;
+
+  const _RecentPlayedSnappingPhysics({required this.itemExtent, super.parent});
+
+  @override
+  _RecentPlayedSnappingPhysics applyTo(ScrollPhysics? ancestor) {
+    return _RecentPlayedSnappingPhysics(
+      itemExtent: itemExtent,
+      parent: buildParent(ancestor),
+    );
+  }
+
+  double _getTargetPixels(ScrollMetrics position, Tolerance tolerance, double velocity) {
+    double page = position.pixels / itemExtent;
+    if (velocity < -tolerance.velocity) {
+      page -= 0.5;
+    } else if (velocity > tolerance.velocity) {
+      page += 0.5;
+    }
+    return (page.roundToDouble() * itemExtent).clamp(
+      position.minScrollExtent,
+      position.maxScrollExtent,
+    );
+  }
+
+  @override
+  Simulation? createBallisticSimulation(ScrollMetrics position, double velocity) {
+    final currentTolerance = toleranceFor(position);
+    final double target = _getTargetPixels(position, currentTolerance, velocity);
+    if (target == position.pixels) {
+      return null;
+    }
+    return ScrollSpringSimulation(
+      spring,
+      position.pixels,
+      target,
+      velocity,
+      tolerance: currentTolerance,
+    );
+  }
+}
+
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
 
@@ -200,11 +244,12 @@ class HomeViewState extends State<HomeView> with ShowAwarePage {
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20),
+        physics: const _RecentPlayedSnappingPhysics(itemExtent: 176), // 160 + 16
         itemCount: recentSongs.length,
         itemBuilder: (context, index) {
           final song = recentSongs[index];
           final isPlaying = playerProvider.currentSong?.id == song.id;
-          
+
           return Padding(
             padding: const EdgeInsets.only(right: 16),
             child: InkWell(
@@ -222,39 +267,41 @@ class HomeViewState extends State<HomeView> with ShowAwarePage {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Stack(
-                      children: [
-                        Container(
-                          width: 160,
-                          height: 160,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                          ),
-                          child: UnifiedCoverImage(
-                            coverPath: song.albumArtPath,
-                            width: 160,
-                            height: 160,
-                            borderRadius: 12,
-                          ),
+                    Container(
+                      width: 160,
+                      height: 160,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.grey.withValues(alpha: 0.3),
+                          width: 0.8,
                         ),
-                        if (isPlaying)
-                          Positioned.fill(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                color: Colors.black.withOpacity(0.3),
-                              ),
-                              child: Center(
-                                child: Icon(
-                                  Icons.play_arrow_rounded,
-                                  color: Colors.white,
-                                  size: 48,
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(11),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            UnifiedCoverImage(
+                              coverPath: song.albumArtPath,
+                              width: 160,
+                              height: 160,
+                              borderRadius: 0,
+                            ),
+                            if (isPlaying)
+                              Container(
+                                color: Colors.black.withValues(alpha: 0.3),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.play_arrow_rounded,
+                                    color: Colors.white,
+                                    size: 48,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
-                      ],
+                          ],
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
