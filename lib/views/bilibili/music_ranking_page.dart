@@ -25,11 +25,13 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
 
   // 分类标签
   final List<String> _categories = [
-    '全部音乐',
-    '原创音乐',
-    '翻唱',
-    'VOCALOID',
-    '演奏',
+    '全部歌曲',
+    '中国大陆',
+    '中国香港',
+    '中国台湾',
+    '日本',
+    '韩国',
+    '欧美',
   ];
 
   @override
@@ -215,9 +217,20 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
       );
     }
 
-    return ListView.builder(
+    return ListView.separated(
       padding: const EdgeInsets.only(top: 16, bottom: 100),
       itemCount: _videos.length,
+      separatorBuilder: (context, index) {
+        // 分隔线从排名数字后开始
+        return Padding(
+          padding: const EdgeInsets.only(left: 60),
+          child: Divider(
+            height: 1,
+            thickness: 0.5,
+            color: Colors.grey.withValues(alpha: 0.2),
+          ),
+        );
+      },
       itemBuilder: (context, index) {
         return _buildRankingItem(_videos[index], index + 1, textColor, isDark);
       },
