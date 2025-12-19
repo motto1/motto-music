@@ -8,7 +8,7 @@ import 'package:motto_music/utils/theme_utils.dart';
 import 'package:motto_music/animations/page_transitions.dart';
 import 'package:motto_music/views/bilibili/video_detail_page.dart';
 
-/// B站音乐排行榜页面
+/// B站音乐排行榜页面 - Apple Music风格
 class MusicRankingPage extends StatefulWidget {
   const MusicRankingPage({super.key});
 
@@ -21,6 +21,16 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
   List<BilibiliVideo> _videos = [];
   bool _isLoading = true;
   String? _errorMessage;
+  int _selectedCategoryIndex = 0;
+
+  // 分类标签
+  final List<String> _categories = [
+    '全部音乐',
+    '原创音乐',
+    '翻唱',
+    'VOCALOID',
+    '演奏',
+  ];
 
   @override
   void initState() {
@@ -55,99 +65,168 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
     }
   }
 
-  String _formatCount(int? count) {
-    if (count == null) return '0';
-    if (count >= 10000) {
-      return '${(count / 10000).toStringAsFixed(1)}万';
-    }
-    return count.toString();
-  }
-
   @override
   Widget build(BuildContext context) {
     final backgroundColor = ThemeUtils.backgroundColor(context);
     final textColor = ThemeUtils.textColor(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: backgroundColor,
-      body: CustomScrollView(
-        slivers: [
-          // 顶部导航栏
-          SliverAppBar(
-            pinned: true,
-            backgroundColor: backgroundColor.withOpacity(0.9),
-            elevation: 0,
-            leading: IconButton(
-              icon: Icon(Icons.arrow_back_ios_rounded, color: textColor),
-              onPressed: () => Navigator.of(context).pop(),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 顶部标题区域
+            _buildHeader(textColor),
+            // 分类标签栏
+            _buildCategoryTabs(isDark),
+            // 排行榜列表
+            Expanded(
+              child: _buildContent(textColor, isDark),
             ),
-            title: Text(
-              '音乐排行榜',
-              style: TextStyle(
-                color: textColor,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 顶部标题区域
+  Widget _buildHeader(Color textColor) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 8, 16, 0),
+      child: Row(
+        children: [
+          // 返回按钮
+          IconButton(
+            icon: Icon(
+              Icons.arrow_back_ios_rounded,
+              color: textColor,
+              size: 20,
             ),
-            actions: [
-              IconButton(
-                icon: Icon(Icons.refresh_rounded, color: textColor),
-                onPressed: _loadRanking,
-              ),
-            ],
+            onPressed: () => Navigator.of(context).pop(),
           ),
-          // 内容区域
-          if (_isLoading)
-            const SliverFillRemaining(
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (_errorMessage != null)
-            SliverFillRemaining(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.error_outline, size: 48, color: Colors.grey),
-                    const SizedBox(height: 16),
-                    Text(_errorMessage!, style: TextStyle(color: Colors.grey)),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _loadRanking,
-                      child: const Text('重试'),
-                    ),
-                  ],
+          const SizedBox(width: 4),
+          // 标题和副标题
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '排行榜',
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-            )
-          else
-            SliverPadding(
-              padding: const EdgeInsets.all(12),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 0.75,
+                const SizedBox(height: 2),
+                Text(
+                  '每天更新',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 13,
+                  ),
                 ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) => _buildVideoCard(_videos[index], index + 1),
-                  childCount: _videos.length,
-                ),
-              ),
+              ],
             ),
-          // 底部安全区域
-          SliverToBoxAdapter(
-            child: SizedBox(height: MediaQuery.of(context).padding.bottom + 100),
+          ),
+          // 刷新按钮
+          IconButton(
+            icon: Icon(
+              Icons.refresh_rounded,
+              color: textColor,
+              size: 22,
+            ),
+            onPressed: _loadRanking,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildVideoCard(BilibiliVideo video, int rank) {
-    final textColor = ThemeUtils.textColor(context);
+  /// 分类标签栏
+  Widget _buildCategoryTabs(bool isDark) {
+    return Container(
+      height: 44,
+      margin: const EdgeInsets.only(top: 16),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: _categories.length,
+        itemBuilder: (context, index) {
+          final isSelected = index == _selectedCategoryIndex;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedCategoryIndex = index;
+                });
+                // 可以在这里根据分类加载不同数据
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? const Color(0xFFE91E63)
+                      : (isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.15)),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Center(
+                  child: Text(
+                    _categories[index],
+                    style: TextStyle(
+                      color: isSelected ? Colors.white : (isDark ? Colors.white : Colors.black87),
+                      fontSize: 14,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 
-    return GestureDetector(
+  /// 内容区域
+  Widget _buildContent(Color textColor, bool isDark) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_errorMessage != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 48, color: Colors.grey),
+            const SizedBox(height: 16),
+            Text(_errorMessage!, style: TextStyle(color: Colors.grey)),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _loadRanking,
+              child: const Text('重试'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.only(top: 16, bottom: 100),
+      itemCount: _videos.length,
+      itemBuilder: (context, index) {
+        return _buildRankingItem(_videos[index], index + 1, textColor, isDark);
+      },
+    );
+  }
+
+  /// 排行榜列表项
+  Widget _buildRankingItem(BilibiliVideo video, int rank, Color textColor, bool isDark) {
+    return InkWell(
       onTap: () {
         Navigator.of(context).push(
           NamidaPageRoute(
@@ -157,114 +236,65 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
         );
       },
       child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          color: Colors.black.withOpacity(0.2),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(
           children: [
-            // 封面图
-            Expanded(
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  CachedNetworkImage(
-                    imageUrl: video.pic,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
-                      color: Colors.grey[800],
-                      child: const Center(
-                        child: Icon(Icons.music_note, color: Colors.white54),
-                      ),
-                    ),
-                    errorWidget: (context, url, error) => Container(
-                      color: Colors.grey[800],
-                      child: const Center(
-                        child: Icon(Icons.broken_image, color: Colors.white54),
-                      ),
-                    ),
-                  ),
-                  // 渐变遮罩
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      height: 60,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.transparent,
-                            Colors.black.withOpacity(0.7),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  // 排名标签
-                  Positioned(
-                    top: 8,
-                    left: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: _getRankColor(rank),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '#$rank',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  // 播放量
-                  Positioned(
-                    bottom: 8,
-                    left: 8,
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.play_arrow_rounded,
-                          color: Colors.white70,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 2),
-                        Text(
-                          _formatCount(video.view),
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+            // 排名数字
+            SizedBox(
+              width: 32,
+              child: Text(
+                '$rank',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _getRankColor(rank),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-            // 标题和UP主
-            Padding(
-              padding: const EdgeInsets.all(10),
+            const SizedBox(width: 12),
+            // 封面图片
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Colors.grey.withValues(alpha: 0.2),
+                  width: 0.5,
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(7.5),
+                child: CachedNetworkImage(
+                  imageUrl: video.pic,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(
+                    color: isDark ? Colors.grey[800] : Colors.grey[200],
+                    child: const Icon(Icons.music_note, color: Colors.grey, size: 24),
+                  ),
+                  errorWidget: (context, url, error) => Container(
+                    color: isDark ? Colors.grey[800] : Colors.grey[200],
+                    child: const Icon(Icons.broken_image, color: Colors.grey, size: 24),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            // 歌曲信息
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     video.title,
-                    maxLines: 2,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: textColor,
-                      fontSize: 13,
+                      fontSize: 15,
                       fontWeight: FontWeight.w500,
-                      height: 1.3,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -273,12 +303,23 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: textColor.withOpacity(0.6),
-                      fontSize: 11,
+                      color: Colors.grey,
+                      fontSize: 13,
                     ),
                   ),
                 ],
               ),
+            ),
+            // 更多按钮
+            IconButton(
+              icon: Icon(
+                Icons.more_horiz,
+                color: Colors.grey,
+                size: 20,
+              ),
+              onPressed: () {
+                _showMoreOptions(video);
+              },
             ),
           ],
         ),
@@ -286,16 +327,76 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
     );
   }
 
+  /// 获取排名颜色
   Color _getRankColor(int rank) {
     switch (rank) {
       case 1:
-        return const Color(0xFFFFD700); // 金色
+        return const Color(0xFFE91E63); // 粉红色
       case 2:
-        return const Color(0xFFC0C0C0); // 银色
+        return const Color(0xFFE91E63);
       case 3:
-        return const Color(0xFFCD7F32); // 铜色
+        return const Color(0xFFE91E63);
       default:
-        return Colors.black54;
+        return Colors.grey;
     }
+  }
+
+  /// 显示更多选项
+  void _showMoreOptions(BilibiliVideo video) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: ThemeUtils.backgroundColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[400],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.play_arrow_rounded),
+                title: const Text('播放'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.of(context).push(
+                    NamidaPageRoute(
+                      page: VideoDetailPage(bvid: video.bvid),
+                      type: PageTransitionType.slideUp,
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.favorite_border_rounded),
+                title: const Text('添加到收藏'),
+                onTap: () {
+                  Navigator.pop(context);
+                  // TODO: 实现收藏功能
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.share_rounded),
+                title: const Text('分享'),
+                onTap: () {
+                  Navigator.pop(context);
+                  // TODO: 实现分享功能
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
