@@ -244,14 +244,14 @@ class HomeViewState extends State<HomeView> with ShowAwarePage {
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        physics: const _RecentPlayedSnappingPhysics(itemExtent: 176), // 160 + 16
+        physics: const _RecentPlayedSnappingPhysics(itemExtent: 168), // 160 + 8
         itemCount: recentSongs.length,
         itemBuilder: (context, index) {
           final song = recentSongs[index];
           final isPlaying = playerProvider.currentSong?.id == song.id;
 
           return Padding(
-            padding: const EdgeInsets.only(right: 16),
+            padding: const EdgeInsets.only(right: 8),
             child: InkWell(
               onTap: () {
                 playerProvider.playSong(
