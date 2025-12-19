@@ -7,6 +7,7 @@ import 'package:motto_music/services/bilibili/api_service.dart';
 import 'package:motto_music/services/bilibili/api_client.dart';
 import 'package:motto_music/services/bilibili/cookie_manager.dart';
 import 'package:motto_music/animations/page_transitions.dart';
+import 'package:motto_music/views/bilibili/music_ranking_page.dart';
 import 'package:motto_music/views/bilibili/video_detail_page.dart';
 import 'package:http/http.dart' as http;
 
@@ -237,7 +238,12 @@ class _RankingCarouselState extends State<RankingCarousel> {
               ),
               TextButton(
                 onPressed: () {
-                  // 导航到排行榜页面
+                  Navigator.of(context).push(
+                    NamidaPageRoute(
+                      page: const MusicRankingPage(),
+                      type: PageTransitionType.slideUp,
+                    ),
+                  );
                 },
                 child: Text(
                   '查看全部',

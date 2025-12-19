@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../contants/app_contants.dart';
 import '../views/home_view.dart';
 import '../views/favorites_view.dart';
-import '../views/bilibili/music_ranking_page.dart';
 import '../views/bilibili/favorites_page.dart';
 import '../storage/player_state_storage.dart';
 import '../widgets/show_aware_page.dart';
@@ -81,14 +80,6 @@ class MenuManager {
       key: PlayerPage.home,
       pageKey: GlobalKey<HomeViewState>(),
       builder: (key) => HomeView(key: key),
-    ),
-    MenuItem(
-      icon: Icons.trending_up_rounded,
-      iconSize: 22.0,
-      label: '排行榜',
-      key: PlayerPage.musicRanking,
-      pageKey: GlobalKey(),
-      builder: (key) => MusicRankingPage(key: key),
     ),
     MenuItem(
       icon: Icons.video_library_rounded,
