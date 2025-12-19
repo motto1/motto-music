@@ -293,13 +293,6 @@ class _RankingCarouselState extends State<RankingCarousel> {
             color: borderColor.withValues(alpha: 0.6),
             width: 0.8,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: gradientColor.withValues(alpha: 0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
-            ),
-          ],
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(14.5),
@@ -327,7 +320,7 @@ class _RankingCarouselState extends State<RankingCarousel> {
                       left: 0,
                       right: 0,
                       bottom: 0,
-                      height: 6,
+                      height: 3,
                       child: Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
