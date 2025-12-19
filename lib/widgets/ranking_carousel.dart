@@ -357,11 +357,22 @@ class _RankingCarouselState extends State<RankingCarousel> {
                   ],
                 ),
               ),
-              // 纯色信息区域 - 完全不透明
+              // 纯色信息区域 - 垂直渐变效果
               Container(
                 height: infoAreaHeight,
                 width: double.infinity,
-                color: gradientColor,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      gradientColor,
+                      HSLColor.fromColor(gradientColor)
+                          .withLightness((HSLColor.fromColor(gradientColor).lightness * 0.7).clamp(0.0, 1.0))
+                          .toColor(),
+                    ],
+                  ),
+                ),
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 child: Text(
                   video.title,
