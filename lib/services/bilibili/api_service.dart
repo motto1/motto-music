@@ -280,7 +280,9 @@ class BilibiliApiService {
       owner: BilibiliUploader(
         mid: json['mid'] as int? ?? 0,
         name: cleanAuthor,
-        face: null,
+        face: _normalizePicUrl(
+          (json['upic'] ?? json['up_face'] ?? json['face'])?.toString() ?? '',
+        ),
       ),
       cid: 0, // 搜索结果不包含 cid
       pubdate: json['pubdate'] as int? ?? 0,

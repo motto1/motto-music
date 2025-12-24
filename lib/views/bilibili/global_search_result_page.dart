@@ -61,9 +61,48 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
   bool _hasMore = true;
   int _searchGeneration = 0;
 
+  final Map<String, List<BilibiliVideoPage>> _videoPagesCache = {};
+  final Set<String> _videoPagesLoading = {};
+
   String _normalizeQuery(String query) => query.trim().toLowerCase();
   String _cacheKeyForPage(String query, int page) =>
       '${_normalizeQuery(query)}_page_$page';
+
+  List<BilibiliVideoPage>? _cachedPagesFor(BilibiliVideo video) =>
+      _videoPagesCache[video.bvid] ?? video.pages;
+
+  bool _isAlbumVideo(BilibiliVideo video) {
+    final pages = _cachedPagesFor(video);
+    return pages != null && pages.length > 1;
+  }
+
+  Future<void> _ensureVideoPages({required List<BilibiliVideo> videos, int limit = 12}) async {
+    final pending = <BilibiliVideo>[];
+    for (final video in videos) {
+      if (video.bvid.isEmpty) continue;
+      if (_videoPagesCache.containsKey(video.bvid)) continue;
+      if (_videoPagesLoading.contains(video.bvid)) continue;
+      pending.add(video);
+      if (pending.length >= limit) break;
+    }
+
+    if (pending.isEmpty) return;
+
+    _videoPagesLoading.addAll(pending.map((e) => e.bvid));
+    if (mounted) setState(() {});
+
+    for (final video in pending) {
+      try {
+        final pages = await _apiService.getVideoPages(video.bvid);
+        _videoPagesCache[video.bvid] = pages;
+      } catch (_) {
+        _videoPagesCache[video.bvid] = const <BilibiliVideoPage>[];
+      } finally {
+        _videoPagesLoading.remove(video.bvid);
+        if (mounted) setState(() {});
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -86,7 +125,13 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
       setState(() {});
     });
 
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) return;
+      if (_tabController.index == 1) {
+        unawaited(_ensureVideoPages(videos: _videos, limit: 12));
+      }
+    });
     
     _scrollController = ScrollController();
     _scrollController.addListener(_onScroll);
@@ -169,6 +214,8 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
     setState(() {
       _submittedQuery = '';
       _videos = [];
+      _videoPagesCache.clear();
+      _videoPagesLoading.clear();
       _isLoading = false;
       _isLoadingMore = false;
       _errorMessage = null;
@@ -255,6 +302,7 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
           _isLoading = false;
           _hasMore = cached.length >= 20;
         });
+        unawaited(_ensureVideoPages(videos: cached, limit: 12));
       }
     }
 
@@ -268,6 +316,7 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
         _isLoading = false;
         _hasMore = videos.isNotEmpty && videos.length >= 20;
       });
+      unawaited(_ensureVideoPages(videos: videos, limit: 12));
     } catch (e) {
       if (!mounted || generation != _searchGeneration) return;
       setState(() {
@@ -297,6 +346,7 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
         _isLoadingMore = false;
         _hasMore = videos.isNotEmpty && videos.length >= 20;
       });
+      unawaited(_ensureVideoPages(videos: _videos, limit: 12));
     } catch (e) {
       if (!mounted || generation != _searchGeneration) return;
       setState(() => _isLoadingMore = false);
@@ -400,12 +450,8 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
             IconButton(
               icon: const SizedBox.shrink(),
               onPressed: null,
-              tooltip: '返回',
-              style: IconButton.styleFrom(
-                padding: EdgeInsets.zero,
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 0, height: 0),
 
 
 
@@ -579,20 +625,18 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
           unselectedLabelColor: unselectedLabelColor,
           indicatorColor: const Color(0xFFE84C4C),
           tabs: const [
-            Tab(text: '最佳结果'),
-            Tab(text: '艺人'),
-            Tab(text: '专辑'),
             Tab(text: '歌曲'),
+            Tab(text: '专辑'),
+            Tab(text: '作者'),
           ],
         ),
         Expanded(
           child: TabBarView(
             controller: _tabController,
             children: [
-              _buildBestTab(context),
-              _buildArtistTab(context),
-              _buildAlbumTab(context),
               _buildSongTab(context),
+              _buildAlbumTab(context),
+              _buildArtistTab(context),
             ],
           ),
         ),
@@ -646,7 +690,7 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
     if (uploaders.isEmpty) {
       return Center(
         child: Text(
-          '暂无艺人结果',
+          '暂无作者结果',
           style: TextStyle(
             fontSize: 14,
             color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
@@ -699,27 +743,96 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
   }
 
   Widget _buildAlbumTab(BuildContext context) {
-    return Center(
-      child: Text(
-        '暂不支持“专辑”结果',
-        style: TextStyle(
-          fontSize: 14,
-          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final albums = _videos.where(_isAlbumVideo).toList(growable: false);
+    final hasUnknown = _videos.any(
+      (video) =>
+          video.bvid.isNotEmpty &&
+          !_videoPagesCache.containsKey(video.bvid) &&
+          !_videoPagesLoading.contains(video.bvid),
+    );
+
+    if (albums.isEmpty) {
+      if (hasUnknown) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          unawaited(_ensureVideoPages(videos: _videos, limit: 12));
+        });
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 12),
+              Text(
+                '正在识别专辑（多P视频）…',
+                style: TextStyle(
+                  fontSize: 14,
+                  color:
+                      Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+
+      return Center(
+        child: Text(
+          '暂无专辑结果',
+          style: TextStyle(
+            fontSize: 14,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+          ),
         ),
-      ),
+      );
+    }
+
+    return ListView.builder(
+      padding: EdgeInsets.only(top: 8, bottom: 16 + bottomPadding),
+      itemCount: albums.length,
+      itemBuilder: (context, index) {
+        final video = albums[index];
+        final pages = _cachedPagesFor(video);
+        final count = pages?.length ?? 0;
+
+        final author = video.owner.name.isNotEmpty ? video.owner.name : 'UP主';
+        final subtitle = count > 0 ? '$author · $count首' : author;
+
+        return Column(
+          children: [
+            AppleMusicSongTile(
+              title: video.title,
+              artist: subtitle,
+              coverUrl: video.pic,
+              duration: count > 0 ? '$count首' : null,
+              onTap: () => _navigateToVideoDetail(video),
+              onMoreTap: () => _showResultMenu(video, _videos.indexOf(video)),
+            ),
+            Divider(
+              height: 1,
+              thickness: 0.5,
+              indent: 88,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
+            ),
+          ],
+        );
+      },
     );
   }
 
   Widget _buildSongTab(BuildContext context) {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final songs =
+        _videos.where((video) => !_isAlbumVideo(video)).toList(growable: false);
     return RefreshIndicator(
       onRefresh: _refresh,
       child: ListView.builder(
         controller: _scrollController,
         padding: EdgeInsets.only(bottom: 16 + bottomPadding),
-        itemCount: _videos.length + (_hasMore ? 1 : 0),
+        itemCount: songs.length + (_hasMore ? 1 : 0),
         itemBuilder: (context, index) {
-          if (index == _videos.length) {
+          if (index == songs.length) {
             return Padding(
               padding: const EdgeInsets.all(16),
               child: Center(
@@ -730,7 +843,8 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
             );
           }
 
-          final video = _videos[index];
+          final video = songs[index];
+          final globalIndex = _videos.indexOf(video);
           final artist = video.owner.name.isNotEmpty ? video.owner.name : 'UP主';
           final subtitle = '$artist · ${_formatPubdate(video.pubdate)}';
 
@@ -742,8 +856,8 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
                 coverUrl: video.pic,
                 duration: _formatDuration(video.duration),
                 onTap: () => _navigateToVideoDetail(video),
-                onLongPress: () => _playVideo(video, index),
-                onMoreTap: () => _showResultMenu(video, index),
+                onLongPress: () => _playVideo(video, globalIndex),
+                onMoreTap: () => _showResultMenu(video, globalIndex),
               ),
               Divider(
                 height: 1,
