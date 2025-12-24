@@ -340,12 +340,12 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
     return Scaffold(
-      resizeToAvoidBottomInset: false,
+      resizeToAvoidBottomInset: true,
       backgroundColor: ThemeUtils.backgroundColor(context),
       body: Padding(
-        padding: EdgeInsets.only(bottom: bottomInset),
+        padding: EdgeInsets.zero,
         child: Column(
           children: [
             _buildHeader(context),
@@ -401,6 +401,8 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
               icon: const SizedBox.shrink(),
               onPressed: null,
               tooltip: '返回',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 0, height: 0),
             ),
             Expanded(
               child: MottoSearchField(
@@ -409,6 +411,9 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
                 autofocus: true,
                 hintText: '艺人、歌曲、歌词以及更多内容',
                 isLoading: _isResolving,
+                leadingIcon: Icons.arrow_back_ios_new,
+                onLeadingTap: () => Navigator.of(context).maybePop(),
+                showSearchIcon: false,
                 onSubmitted: (_) => unawaited(_handleSubmitted()),
                 onClear: () {
                   _searchController.clear();

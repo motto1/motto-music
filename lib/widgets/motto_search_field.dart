@@ -65,6 +65,7 @@ class MottoSearchField extends StatelessWidget {
         controller: controller,
         focusNode: focusNode,
         autofocus: autofocus,
+        textAlignVertical: TextAlignVertical.center,
         textInputAction: textInputAction,
         onChanged: onChanged,
         onSubmitted: onSubmitted,
