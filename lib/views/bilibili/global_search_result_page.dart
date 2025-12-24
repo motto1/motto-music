@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'dart:collection';
+import 'dart:math' as math;
 import 'package:motto_music/models/bilibili/video.dart';
 import 'package:motto_music/models/bilibili/search_strategy.dart';
 import 'package:motto_music/services/bilibili/api_service.dart';
@@ -64,6 +66,22 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
   final Map<String, List<BilibiliVideoPage>> _videoPagesCache = {};
   final Set<String> _videoPagesLoading = {};
 
+  static const int _precachePrevWindow = 6;
+  static const int _precacheNextWindow = 16;
+  static const int _maxPrecacheInFlight = 4;
+  static const int _maxPrecacheSeen = 300;
+  static const Duration _precacheThrottleDuration = Duration(milliseconds: 150);
+  static const double _estimatedSongTileExtent = 80;
+
+  final Queue<String> _precacheQueue = Queue<String>();
+  final Set<String> _precacheQueued = <String>{};
+  final Set<String> _precacheInFlight = <String>{};
+  final Set<String> _precacheSeen = <String>{};
+  final Queue<String> _precacheSeenOrder = Queue<String>();
+  Timer? _precacheThrottle;
+  bool _precacheDrainScheduled = false;
+  int _precacheGeneration = 0;
+
   String _normalizeQuery(String query) => query.trim().toLowerCase();
   String _cacheKeyForPage(String query, int page) =>
       '${_normalizeQuery(query)}_page_$page';
@@ -104,6 +122,134 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
     }
   }
 
+  void _resetPrecacheState() {
+    _precacheThrottle?.cancel();
+    _precacheThrottle = null;
+    _precacheQueue.clear();
+    _precacheQueued.clear();
+    _precacheInFlight.clear();
+    _precacheSeen.clear();
+    _precacheSeenOrder.clear();
+    _precacheDrainScheduled = false;
+    _precacheGeneration++;
+  }
+
+  void _enqueueCoverPrecache(String url) {
+    final trimmed = url.trim();
+    if (trimmed.isEmpty) return;
+
+    if (_precacheSeen.contains(trimmed)) return;
+    if (_precacheQueued.contains(trimmed)) return;
+    if (_precacheInFlight.contains(trimmed)) return;
+
+    _precacheQueued.add(trimmed);
+    _precacheQueue.add(trimmed);
+    _schedulePrecacheDrain();
+  }
+
+  void _schedulePrecacheDrain() {
+    if (_precacheDrainScheduled) return;
+    _precacheDrainScheduled = true;
+
+    scheduleMicrotask(() {
+      if (!mounted) return;
+      _precacheDrainScheduled = false;
+      unawaited(_drainPrecacheQueue());
+    });
+  }
+
+  Future<void> _drainPrecacheQueue() async {
+    final generation = _precacheGeneration;
+    while (
+        mounted &&
+        generation == _precacheGeneration &&
+        _precacheQueue.isNotEmpty &&
+        _precacheInFlight.length < _maxPrecacheInFlight) {
+      final url = _precacheQueue.removeFirst();
+      _precacheQueued.remove(url);
+      _precacheInFlight.add(url);
+      unawaited(_precacheOne(url, generation));
+    }
+  }
+
+  Future<void> _precacheOne(String url, int generation) async {
+    try {
+      await precacheImage(CachedNetworkImageProvider(url), context);
+    } catch (_) {
+      // 静默降级：预取失败不影响主流程
+    } finally {
+      if (!mounted || generation != _precacheGeneration) return;
+
+      _precacheInFlight.remove(url);
+      if (_precacheSeen.add(url)) {
+        _precacheSeenOrder.add(url);
+        while (_precacheSeenOrder.length > _maxPrecacheSeen) {
+          final removed = _precacheSeenOrder.removeFirst();
+          _precacheSeen.remove(removed);
+        }
+      }
+
+      _schedulePrecacheDrain();
+    }
+  }
+
+  void _prefetchAroundIndex({
+    required List<BilibiliVideo> list,
+    required int anchorIndex,
+    int prevWindow = _precachePrevWindow,
+    int nextWindow = _precacheNextWindow,
+  }) {
+    if (list.isEmpty) return;
+
+    final clampedAnchor = anchorIndex.clamp(0, list.length - 1);
+    final start = math.max(0, clampedAnchor - prevWindow);
+    final end = math.min(list.length - 1, clampedAnchor + nextWindow);
+
+    for (var i = start; i <= end; i++) {
+      final url = list[i].pic;
+      if (url.isEmpty) continue;
+      _enqueueCoverPrecache(url);
+    }
+  }
+
+  void _schedulePrefetchFromScrollMetrics(
+    ScrollMetrics metrics, {
+    required List<BilibiliVideo> list,
+  }) {
+    if (list.isEmpty) return;
+
+    _precacheThrottle?.cancel();
+    _precacheThrottle = Timer(_precacheThrottleDuration, () {
+      if (!mounted) return;
+
+      final firstIndex = (metrics.pixels / _estimatedSongTileExtent).floor();
+      final perScreen =
+          (metrics.viewportDimension / _estimatedSongTileExtent).ceil();
+      final anchor = firstIndex + (perScreen ~/ 2);
+
+      _prefetchAroundIndex(list: list, anchorIndex: anchor);
+    });
+  }
+
+  void _prefetchInitialForCurrentTab() {
+    if (!mounted) return;
+
+    final tabIndex = _tabController.index;
+    if (tabIndex == 0) {
+      final songs = _videos
+          .where((video) => !_isAlbumVideo(video))
+          .toList(growable: false);
+      _prefetchAroundIndex(list: songs, anchorIndex: 0);
+      return;
+    }
+
+    if (tabIndex == 1) {
+      final albums = _videos.where(_isAlbumVideo).toList(growable: false);
+      _prefetchAroundIndex(list: albums, anchorIndex: 0);
+      return;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -131,6 +277,7 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
       if (_tabController.index == 1) {
         unawaited(_ensureVideoPages(videos: _videos, limit: 12));
       }
+      _prefetchInitialForCurrentTab();
     });
     
     _scrollController = ScrollController();
@@ -152,6 +299,7 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
 
   @override
   void dispose() {
+    _precacheThrottle?.cancel();
     _searchController.dispose();
     _searchFocusNode.dispose();
     _tabController.dispose();
@@ -211,6 +359,7 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
   }
 
   void _resetSearchState() {
+    _resetPrecacheState();
     setState(() {
       _submittedQuery = '';
       _videos = [];
@@ -281,6 +430,7 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
     if (normalized.isEmpty) return;
 
     final generation = ++_searchGeneration;
+    _resetPrecacheState();
     setState(() {
       _submittedQuery = normalized;
       _isLoading = _videos.isEmpty || query != null;
@@ -303,6 +453,10 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
           _hasMore = cached.length >= 20;
         });
         unawaited(_ensureVideoPages(videos: cached, limit: 12));
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted || generation != _searchGeneration) return;
+          _prefetchInitialForCurrentTab();
+        });
       }
     }
 
@@ -317,6 +471,10 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
         _hasMore = videos.isNotEmpty && videos.length >= 20;
       });
       unawaited(_ensureVideoPages(videos: videos, limit: 12));
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || generation != _searchGeneration) return;
+        _prefetchInitialForCurrentTab();
+      });
     } catch (e) {
       if (!mounted || generation != _searchGeneration) return;
       setState(() {
@@ -347,6 +505,9 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
         _hasMore = videos.isNotEmpty && videos.length >= 20;
       });
       unawaited(_ensureVideoPages(videos: _videos, limit: 12));
+      for (final video in videos.take(_precacheNextWindow)) {
+        _enqueueCoverPrecache(video.pic);
+      }
     } catch (e) {
       if (!mounted || generation != _searchGeneration) return;
       setState(() => _isLoadingMore = false);
@@ -774,36 +935,51 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
       );
     }
 
-    return ListView.builder(
-      padding: EdgeInsets.only(top: 8, bottom: 16 + bottomPadding),
-      itemCount: albums.length,
-      itemBuilder: (context, index) {
-        final video = albums[index];
-        final pages = _cachedPagesFor(video);
-        final count = pages?.length ?? 0;
+    final cacheExtent = MediaQuery.sizeOf(context).height * 1.5;
 
-        final author = video.owner.name.isNotEmpty ? video.owner.name : 'UP主';
-        final subtitle = count > 0 ? '$author · $count首' : author;
-
-        return Column(
-          children: [
-            AppleMusicSongTile(
-              title: video.title,
-              artist: subtitle,
-              coverUrl: video.pic,
-              duration: count > 0 ? '$count首' : null,
-              onTap: () => _navigateToVideoDetail(video),
-              onMoreTap: () => _showResultMenu(video, _videos.indexOf(video)),
-            ),
-            Divider(
-              height: 1,
-              thickness: 0.5,
-              indent: 88,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
-            ),
-          ],
-        );
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (notification is ScrollUpdateNotification ||
+            notification is ScrollEndNotification) {
+          _schedulePrefetchFromScrollMetrics(
+            notification.metrics,
+            list: albums,
+          );
+        }
+        return false;
       },
+      child: ListView.builder(
+        cacheExtent: cacheExtent,
+        padding: EdgeInsets.only(top: 8, bottom: 16 + bottomPadding),
+        itemCount: albums.length,
+        itemBuilder: (context, index) {
+          final video = albums[index];
+          final pages = _cachedPagesFor(video);
+          final count = pages?.length ?? 0;
+
+          final author = video.owner.name.isNotEmpty ? video.owner.name : 'UP主';
+          final subtitle = count > 0 ? '$author · $count首' : author;
+
+          return Column(
+            children: [
+              AppleMusicSongTile(
+                title: video.title,
+                artist: subtitle,
+                coverUrl: video.pic,
+                duration: count > 0 ? '$count首' : null,
+                onTap: () => _navigateToVideoDetail(video),
+                onMoreTap: () => _showResultMenu(video, _videos.indexOf(video)),
+              ),
+              Divider(
+                height: 1,
+                thickness: 0.5,
+                indent: 88,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -811,13 +987,27 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     final songs =
         _videos.where((video) => !_isAlbumVideo(video)).toList(growable: false);
+    final cacheExtent = MediaQuery.sizeOf(context).height * 1.5;
+
     return RefreshIndicator(
       onRefresh: _refresh,
-      child: ListView.builder(
-        controller: _scrollController,
-        padding: EdgeInsets.only(bottom: 16 + bottomPadding),
-        itemCount: songs.length + (_hasMore ? 1 : 0),
-        itemBuilder: (context, index) {
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          if (notification is ScrollUpdateNotification ||
+              notification is ScrollEndNotification) {
+            _schedulePrefetchFromScrollMetrics(
+              notification.metrics,
+              list: songs,
+            );
+          }
+          return false;
+        },
+        child: ListView.builder(
+          controller: _scrollController,
+          cacheExtent: cacheExtent,
+          padding: EdgeInsets.only(bottom: 16 + bottomPadding),
+          itemCount: songs.length + (_hasMore ? 1 : 0),
+          itemBuilder: (context, index) {
           if (index == songs.length) {
             return Padding(
               padding: const EdgeInsets.all(16),
@@ -854,6 +1044,7 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
             ],
           );
         },
+        ),
       ),
     );
   }
