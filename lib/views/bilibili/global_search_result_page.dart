@@ -620,9 +620,9 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
           child: TabBarView(
             controller: _tabController,
             children: [
-              _buildSongTab(context),
-              _buildAlbumTab(context),
-              _buildArtistTab(context),
+              _TabKeepAlive(child: _buildSongTab(context)),
+              _TabKeepAlive(child: _buildAlbumTab(context)),
+              _TabKeepAlive(child: _buildArtistTab(context)),
             ],
           ),
         ),
@@ -1111,3 +1111,28 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
     }
   }
 }
+
+class _TabKeepAlive extends StatefulWidget {
+  final Widget child;
+
+  const _TabKeepAlive({
+    super.key,
+    required this.child,
+  });
+
+  @override
+  State<_TabKeepAlive> createState() => _TabKeepAliveState();
+}
+
+class _TabKeepAliveState extends State<_TabKeepAlive>
+    with AutomaticKeepAliveClientMixin<_TabKeepAlive> {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
+  }
+}
+
