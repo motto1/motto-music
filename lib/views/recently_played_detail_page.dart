@@ -4,6 +4,7 @@ import '../database/database.dart';
 import '../services/player_provider.dart';
 import '../utils/theme_utils.dart';
 import '../widgets/unified_cover_image.dart';
+import '../widgets/global_top_bar.dart';
 
 class RecentlyPlayedDetailPage extends StatefulWidget {
   const RecentlyPlayedDetailPage({super.key});
@@ -13,12 +14,26 @@ class RecentlyPlayedDetailPage extends StatefulWidget {
 }
 
 class _RecentlyPlayedDetailPageState extends State<RecentlyPlayedDetailPage> {
+  static const Color _accentColor = Color(0xFFE84C4C);
   List<Song> recentSongs = [];
   late final VoidCallback _recentSongListener;
 
   @override
   void initState() {
     super.initState();
+    GlobalTopBarController.instance.push(
+      GlobalTopBarStyle(
+        source: 'detail',
+        title: '最近播放',
+        showBackButton: true,
+        centerTitle: true,
+        backIconColor: _accentColor,
+        onBack: _handleBackPress,
+        opacity: 1.0,
+        translateY: 0.0,
+        showDivider: true,
+      ),
+    );
     _recentSongListener = () {
       _loadRecentSongs();
     };
@@ -29,6 +44,7 @@ class _RecentlyPlayedDetailPageState extends State<RecentlyPlayedDetailPage> {
   @override
   void dispose() {
     PlayerProvider.removeSongChangeListener(_recentSongListener);
+    GlobalTopBarController.instance.pop();
     super.dispose();
   }
 
@@ -55,46 +71,29 @@ class _RecentlyPlayedDetailPageState extends State<RecentlyPlayedDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    final backgroundColor = ThemeUtils.backgroundColor(context);
+    final textColor = ThemeUtils.textColor(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final topPadding = MediaQuery.of(context).padding.top;
+    const topBarHeight = 52.0;
+
     return Scaffold(
-      backgroundColor: ThemeUtils.backgroundColor(context),
+      backgroundColor: backgroundColor,
       body: Column(
         children: [
-          // 顶部导航栏
-          SafeArea(
-            bottom: false,
-            child: Container(
-              height: 56,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_rounded),
-                    onPressed: _handleBackPress,
-                  ),
-                  const Text(
-                    '最近播放',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          
-          // 网格内容区（底部预留空间给全局播放器）
+          SizedBox(height: topPadding + topBarHeight + 1),
           Expanded(
-            child: _buildGridContent(),
+            child: _buildGridContent(textColor, isDark),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildGridContent() {
+  Widget _buildGridContent(Color textColor, bool isDark) {
     return Consumer<PlayerProvider>(
       builder: (context, playerProvider, child) {
+        final borderColor = Colors.black.withValues(alpha: isDark ? 0.18 : 0.12);
         if (recentSongs.isEmpty) {
           return Center(
             child: Text(
@@ -112,12 +111,12 @@ class _RecentlyPlayedDetailPageState extends State<RecentlyPlayedDetailPage> {
         }
 
         return GridView.builder(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 104), // 底部留出播放器空间 (84 + 20)
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 140),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
             crossAxisSpacing: 16,
             mainAxisSpacing: 20,
-            childAspectRatio: 0.7,
+            childAspectRatio: 0.75,
           ),
           itemCount: recentSongs.length,
           itemBuilder: (context, index) {
@@ -139,59 +138,31 @@ class _RecentlyPlayedDetailPageState extends State<RecentlyPlayedDetailPage> {
                 children: [
                   AspectRatio(
                     aspectRatio: 1,
-                    child: Stack(
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                          ),
-                          child: UnifiedCoverImage(
-                            coverPath: song.albumArtPath,
-                            width: double.infinity,
-                            height: double.infinity,
-                            borderRadius: 12,
-                          ),
-                        ),
-                        if (isPlaying)
-                          Positioned.fill(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                color: Colors.black.withOpacity(0.3),
-                              ),
-                              child: const Center(
-                                child: Icon(
-                                  Icons.play_arrow_rounded,
-                                  color: Colors.white,
-                                  size: 48,
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
+                    child: _buildCoverCard(
+                      song.albumArtPath,
+                      isDark,
+                      borderColor,
+                      isPlaying,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     song.title,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      height: 1.25,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     song.artist ?? '未知艺术家',
                     style: TextStyle(
-                      fontSize: 13,
-                      color: ThemeUtils.select(
-                        context,
-                        light: Colors.grey.shade600,
-                        dark: Colors.grey.shade400,
-                      ),
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -202,6 +173,66 @@ class _RecentlyPlayedDetailPageState extends State<RecentlyPlayedDetailPage> {
           },
         );
       },
+    );
+  }
+
+  Widget _buildCoverCard(
+    String? coverPath,
+    bool isDark,
+    Color borderColor,
+    bool isPlaying,
+  ) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Stack(
+        children: [
+          Container(
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+            child: UnifiedCoverImage(
+              coverPath: coverPath,
+              width: double.infinity,
+              height: double.infinity,
+              borderRadius: 0,
+            ),
+          ),
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.black.withValues(alpha: 0.0),
+                    Colors.black.withValues(alpha: 0.35),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+            ),
+          ),
+          if (isPlaying)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.3),
+                child: const Center(
+                  child: Icon(
+                    Icons.play_arrow_rounded,
+                    color: Colors.white,
+                    size: 48,
+                  ),
+                ),
+              ),
+            ),
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: borderColor, width: 0.8),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

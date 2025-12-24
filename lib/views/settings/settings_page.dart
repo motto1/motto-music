@@ -15,10 +15,12 @@ import 'package:motto_music/widgets/frosted_container.dart';
 import 'dart:ui';
 import 'package:motto_music/widgets/themed_background.dart';
 import '../../widgets/page_header.dart';
-import '../../widgets/frosted_page_header.dart';
+import 'package:motto_music/widgets/global_top_bar.dart';
 import 'package:motto_music/utils/common_utils.dart';
 import 'package:motto_music/utils/theme_utils.dart';
 import 'package:motto_music/views/library_view.dart';
+import 'package:motto_music/views/bilibili/download_management_page.dart';
+import 'package:motto_music/views/bilibili/bilibili_settings_page.dart';
 import 'package:motto_music/animations/page_transitions.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -29,13 +31,108 @@ class SettingsPage extends StatefulWidget {
 }
 
 class SettingsPageState extends State<SettingsPage> with ShowAwarePage {
+  final ScrollController _scrollController = ScrollController();
+  double _collapseProgress = 0.0;
+  static const double _collapseDistance = 64.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_handleScroll);
+  }
+
   @override
   void onPageShow() {
     print('settings ...');
+    _applyTopBarStyle();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _applyTopBarStyle();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_handleScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _applyTopBarStyle() {
+    final offset = _scrollController.hasClients ? _scrollController.offset : 0.0;
+    final progress = (offset / _collapseDistance).clamp(0.0, 1.0);
+    if (_collapseProgress != progress && mounted) {
+      setState(() {
+        _collapseProgress = progress;
+      });
+    }
+    _applyTopBarStyleWithProgress(progress);
+  }
+
+  void _applyTopBarStyleWithProgress(double progress) {
+    final barProgress = Curves.easeOutCubic.transform(
+      ((progress - 0.08) / 0.72).clamp(0.0, 1.0),
+    );
+    final titleOpacity = Curves.easeOutCubic.transform(
+      ((progress - 0.18) / 0.52).clamp(0.0, 1.0),
+    );
+    GlobalTopBarController.instance.set(
+      GlobalTopBarStyle(
+        source: 'settings',
+        title: '系统设置',
+        showBackButton: false,
+        centerTitle: false,
+        opacity: barProgress,
+        titleOpacity: titleOpacity,
+        titleTranslateY: (1 - titleOpacity) * 6,
+        translateY: 0.0,
+        showDivider: progress > 0.28,
+      ),
+    );
+  }
+
+  void _handleScroll() {
+    if (!_scrollController.hasClients) return;
+    final progress =
+        (_scrollController.offset / _collapseDistance).clamp(0.0, 1.0);
+    if ((progress - _collapseProgress).abs() > 0.01) {
+      setState(() {
+        _collapseProgress = progress;
+      });
+    }
+    _applyTopBarStyleWithProgress(progress);
+  }
+
+  Widget _buildLargeTitle() {
+    final eased = Curves.easeOutCubic.transform(_collapseProgress);
+    final opacity = (1 - eased).clamp(0.0, 1.0);
+    final translateY = -14 * eased;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),
+      child: Transform.translate(
+        offset: Offset(0, translateY),
+        child: Opacity(
+          opacity: opacity,
+          child: const Text(
+            '系统设置',
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.w700,
+              height: 1.05,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final topPadding = MediaQuery.of(context).padding.top;
+    const topBarHeight = 52.0;
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
@@ -55,13 +152,14 @@ class SettingsPageState extends State<SettingsPage> with ShowAwarePage {
                 return true;
               },
               child: CustomScrollView(
+                controller: _scrollController,
                 physics: const ClampingScrollPhysics(),
                 slivers: [
                   SliverToBoxAdapter(
-                    child: FrostedPageHeader(
-                      title: '系统设置',
-                      showBackButton: false,
-                    ),
+                    child: SizedBox(height: topPadding + topBarHeight + 1),
+                  ),
+                  SliverToBoxAdapter(
+                    child: _buildLargeTitle(),
                   ),
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(16, 24, 16, 150),
@@ -70,6 +168,8 @@ class SettingsPageState extends State<SettingsPage> with ShowAwarePage {
                         _buildThemeSection(themeProvider, isDark),
                         const SizedBox(height: 32),
                         _buildStorageSection(isDark),
+                        const SizedBox(height: 32),
+                        _buildBilibiliSection(isDark),
                         const SizedBox(height: 32),
                         _buildPlaybackSection(isDark),
                         const SizedBox(height: 32),
@@ -189,6 +289,77 @@ class SettingsPageState extends State<SettingsPage> with ShowAwarePage {
                 trailing: Icon(CupertinoIcons.chevron_right, size: 18, color: Colors.grey[400]),
                 onTap: () {
                   NestedNavigationHelper.push(context, "/settings/storage");
+                },
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // 构建 Bilibili 分组
+  Widget _buildBilibiliSection(bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 16, bottom: 8),
+          child: Text(
+            'Bilibili',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+              color: Colors.red,
+            ),
+          ),
+        ),
+        Container(
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Column(
+            children: [
+              ListTile(
+                leading: Icon(CupertinoIcons.arrow_down_circle, color: Colors.blue),
+                title: const Text('下载管理', style: TextStyle(fontWeight: FontWeight.w400)),
+                subtitle: Text(
+                  '查看与管理 Bilibili 下载任务',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? Colors.white.withOpacity(0.5) : Colors.grey[600],
+                  ),
+                ),
+                trailing: Icon(CupertinoIcons.chevron_right, size: 18, color: Colors.grey[400]),
+                onTap: () {
+                  Navigator.of(context, rootNavigator: true).push(
+                    NamidaPageRoute(
+                      page: const DownloadManagementPage(),
+                      type: PageTransitionType.slideLeft,
+                    ),
+                  );
+                },
+              ),
+              Divider(height: 1, indent: 56, endIndent: 0),
+              ListTile(
+                leading: Icon(CupertinoIcons.gear_alt, color: Colors.indigo),
+                title: const Text('Bilibili 设置', style: TextStyle(fontWeight: FontWeight.w400)),
+                subtitle: Text(
+                  '账号、音质与下载配置',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? Colors.white.withOpacity(0.5) : Colors.grey[600],
+                  ),
+                ),
+                trailing: Icon(CupertinoIcons.chevron_right, size: 18, color: Colors.grey[400]),
+                onTap: () {
+                  Navigator.of(context, rootNavigator: true).push(
+                    NamidaPageRoute(
+                      page: const BilibiliSettingsPage(),
+                      type: PageTransitionType.slideLeft,
+                    ),
+                  );
                 },
               ),
             ],

@@ -55,7 +55,7 @@ class SnappingScrollPhysics extends ScrollPhysics {
   }
 }
 
-/// Apple Music风格的排行榜卡片轮播
+/// Apple Music风格的音乐索引卡片轮播
 class RankingCarousel extends StatefulWidget {
   const RankingCarousel({super.key});
 
@@ -96,10 +96,15 @@ class _RankingCarouselState extends State<RankingCarousel> {
 
   Future<void> _loadRanking() async {
     try {
-      final videos = await _apiService.getMusicRanking();
+      final videos = await _apiService.getZoneRankList(
+        cateId: 3,
+        order: 'click',
+        page: 1,
+        pageSize: 10,
+      );
       if (mounted) {
         setState(() {
-          _videos = videos.take(10).toList();
+          _videos = videos;
           _isLoading = false;
         });
         // 预加载颜色
@@ -228,7 +233,7 @@ class _RankingCarouselState extends State<RankingCarousel> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'B站音乐排行榜',
+                    '音乐分区 · 热门',
                     style: TextStyle(
                       fontSize: 13,
                       color: Colors.grey,
@@ -240,7 +245,11 @@ class _RankingCarouselState extends State<RankingCarousel> {
                 onPressed: () {
                   Navigator.of(context).push(
                     NamidaPageRoute(
-                      page: const MusicRankingPage(),
+                      page: const MusicRankingPage(
+                        title: '热门音乐',
+                        zoneTid: 3,
+                        order: 'click',
+                      ),
                       type: PageTransitionType.slideUp,
                     ),
                   );

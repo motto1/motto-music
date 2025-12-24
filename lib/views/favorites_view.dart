@@ -10,6 +10,8 @@ import '../widgets/apple_music_card.dart';
 import '../widgets/apple_music_song_tile.dart';
 import '../widgets/animated_list_item.dart';
 import '../widgets/unified_cover_image.dart';
+import '../widgets/motto_search_field.dart';
+import '../widgets/global_top_bar.dart';
 import '../main.dart';
 
 /// 喜欢的音乐页面
@@ -22,27 +24,44 @@ class FavoritesView extends StatefulWidget {
 
 class FavoritesViewState extends State<FavoritesView> with ShowAwarePage {
   late final TextEditingController _searchController;
-  
+  late final FocusNode _searchFocusNode;
+
   List<Song> _songs = [];
   List<Song>? _filteredSongs;
   String _searchQuery = '';
   bool _isLoading = false;
+  final ScrollController _scrollController = ScrollController();
+  double _collapseProgress = 0.0;
+  static const double _collapseDistance = 64.0;
 
   @override
   void initState() {
     super.initState();
-    _searchController = TextEditingController();
+    _searchController = TextEditingController(text: _searchQuery);
+    _searchFocusNode = FocusNode();
     _loadSongs();
+    _scrollController.addListener(_handleScroll);
+    _applyTopBarStyle();
   }
 
   @override
   void onPageShow() {
     _loadSongs();
+    _applyTopBarStyle();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _applyTopBarStyle();
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_handleScroll);
+    _scrollController.dispose();
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -104,6 +123,7 @@ class FavoritesViewState extends State<FavoritesView> with ShowAwarePage {
       
       debugPrint('  过滤后歌曲数: ${_filteredSongs?.length ?? 0}');
     });
+    _applyTopBarStyle();
   }
 
   /// 清除搜索
@@ -112,8 +132,57 @@ class FavoritesViewState extends State<FavoritesView> with ShowAwarePage {
     _filterSongs('');
   }
 
+  void _applyTopBarStyle() {
+    final offset = _scrollController.hasClients ? _scrollController.offset : 0.0;
+    final progress = (offset / _collapseDistance).clamp(0.0, 1.0);
+    if (_collapseProgress != progress && mounted) {
+      setState(() {
+        _collapseProgress = progress;
+      });
+    }
+    _applyTopBarStyleWithProgress(progress);
+  }
+
+  void _applyTopBarStyleWithProgress(double progress) {
+    final barProgress = Curves.easeOutCubic.transform(
+      ((progress - 0.08) / 0.72).clamp(0.0, 1.0),
+    );
+    final titleOpacity = Curves.easeOutCubic.transform(
+      ((progress - 0.18) / 0.52).clamp(0.0, 1.0),
+    );
+    GlobalTopBarController.instance.set(
+      GlobalTopBarStyle(
+        source: 'favorites',
+        title: '喜欢的音乐',
+        showBackButton: false,
+        centerTitle: false,
+        opacity: barProgress,
+        titleOpacity: titleOpacity,
+        titleTranslateY: (1 - titleOpacity) * 6,
+        translateY: 0.0,
+        showDivider: progress > 0.28,
+      ),
+    );
+  }
+
+  void _handleScroll() {
+    if (!_scrollController.hasClients) return;
+    final progress = (_scrollController.offset / _collapseDistance)
+        .clamp(0.0, 1.0);
+    if ((progress - _collapseProgress).abs() > 0.01) {
+      setState(() {
+        _collapseProgress = progress;
+      });
+    }
+    _applyTopBarStyleWithProgress(progress);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final topPadding = MediaQuery.of(context).padding.top;
+    const topBarHeight = 52.0;
+    final playerProvider = Provider.of<PlayerProvider>(context);
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
@@ -138,190 +207,63 @@ class FavoritesViewState extends State<FavoritesView> with ShowAwarePage {
         }
       },
       child: Scaffold(
+        resizeToAvoidBottomInset: false,
         backgroundColor: Theme.of(context).brightness == Brightness.dark
             ? ThemeUtils.backgroundColor(context)
             : const Color(0xFFFFFFFF),
-        body: CustomScrollView(
-          slivers: [
-            // 液态玻璃头部容器（AppBar + 搜索框）
-            SliverToBoxAdapter(
-              child: _buildHeaderWithSearch(),
-            ),
-            
-            // 内容
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height - 200,
-                child: _buildBody(),
+        body: RefreshIndicator(
+          onRefresh: _loadSongs,
+          child: CustomScrollView(
+            controller: _scrollController,
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(
+                child: SizedBox(height: topPadding + topBarHeight + 1),
               ),
-            ),
-          ],
+              SliverToBoxAdapter(
+                child: _buildLargeTitle(),
+              ),
+              SliverToBoxAdapter(
+                child: _buildSearchField(),
+              ),
+              ..._buildContentSlivers(playerProvider),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  /// 构建整合的头部（AppBar + 搜索框）
-  Widget _buildHeaderWithSearch() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final statusBarHeight = MediaQuery.of(context).padding.top;
-    
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(20),
-          bottomRight: Radius.circular(20),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isDark
-                ? Colors.blue.withOpacity(0.15)
-                : Colors.blue.withOpacity(0.2),
-            blurRadius: 20,
-            spreadRadius: 0,
-            offset: const Offset(0, 4),
-          ),
-          if (!isDark)
-            BoxShadow(
-              color: Colors.blue.withOpacity(0.08),
-              blurRadius: 30,
-              spreadRadius: 2,
-              offset: const Offset(0, 6),
-            ),
-        ],
+  Widget _buildSearchField() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+      child: MottoSearchField(
+        controller: _searchController,
+        focusNode: _searchFocusNode,
+        hintText: '歌名 / 歌手 / 专辑',
+        onChanged: _filterSongs,
+        onSubmitted: (_) => _filterSongs(_searchController.text),
+        onClear: _clearSearch,
       ),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(20),
-          bottomRight: Radius.circular(20),
-        ),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            decoration: BoxDecoration(
-              color: isDark
-                  ? ThemeUtils.backgroundColor(context).withOpacity(0.97)
-                  : Colors.white.withOpacity(0.95),
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-              ),
-              border: Border.all(
-                color: isDark
-                    ? Colors.white.withOpacity(0.12)
-                    : Colors.white.withOpacity(0.3),
-                width: 1,
-              ),
-            ),
-            child: Column(
-              children: [
-                SizedBox(height: statusBarHeight),
-                
-                // AppBar 部分
-                SizedBox(
-                  height: 56,
-                  child: Row(
-                    children: [
-                      // 移除返回按钮
-                      const SizedBox(width: 20),
-                      Expanded(
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.favorite,
-                              color: Colors.red.shade400,
-                              size: 22,
-                            ),
-                            const SizedBox(width: 8),
-                            const Text(
-                              '喜欢的音乐',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.autorenew, size: 22),
-                        onPressed: _loadSongs,
-                        tooltip: '刷新',
-                      ),
-                    ],
-                  ),
-                ),
-                
-                // 搜索框部分
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                  child: Container(
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? const Color(0xFF1C1C1E)
-                          : const Color(0xFFE5E5EA),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(left: 8),
-                          child: Icon(
-                            Icons.search,
-                            size: 20,
-                            color: isDark
-                                ? Colors.white.withOpacity(0.5)
-                                : Colors.black.withOpacity(0.5),
-                          ),
-                        ),
-                        Expanded(
-                          child: Center(
-                            child: TextField(
-                              controller: _searchController,
-                              onChanged: (query) => _filterSongs(query),
-                              style: TextStyle(
-                                fontSize: 17,
-                                color: isDark ? Colors.white : Colors.black,
-                              ),
-                              decoration: InputDecoration(
-                                hintText: '搜索',
-                                hintStyle: TextStyle(
-                                  fontSize: 17,
-                                  color: isDark
-                                      ? Colors.white.withOpacity(0.3)
-                                      : Colors.black.withOpacity(0.3),
-                                ),
-                                border: InputBorder.none,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 0,
-                                ),
-                                isDense: true,
-                              ),
-                              textAlignVertical: TextAlignVertical.center,
-                            ),
-                          ),
-                        ),
-                        if (_searchQuery.isNotEmpty)
-                          IconButton(
-                            icon: Icon(
-                              Icons.cancel,
-                              size: 18,
-                              color: isDark
-                                  ? Colors.white.withOpacity(0.5)
-                                  : Colors.black.withOpacity(0.5),
-                            ),
-                            onPressed: _clearSearch,
-                            tooltip: '清除',
-                            padding: const EdgeInsets.all(8),
-                            constraints: const BoxConstraints(),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+    );
+  }
+
+  Widget _buildLargeTitle() {
+    final eased = Curves.easeOutCubic.transform(_collapseProgress);
+    final opacity = (1 - eased).clamp(0.0, 1.0);
+    final translateY = -14 * eased;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),
+      child: Transform.translate(
+        offset: Offset(0, translateY),
+        child: Opacity(
+          opacity: opacity,
+          child: const Text(
+            '喜欢的音乐',
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.w700,
+              height: 1.05,
             ),
           ),
         ),
@@ -329,20 +271,35 @@ class FavoritesViewState extends State<FavoritesView> with ShowAwarePage {
     );
   }
 
-  Widget _buildBody() {
-    debugPrint('[FavoritesView _buildBody] _isLoading: $_isLoading, _filteredSongs: ${_filteredSongs?.length}');
-    
+  List<Widget> _buildContentSlivers(PlayerProvider playerProvider) {
+    debugPrint('[FavoritesView] _isLoading: $_isLoading, _filteredSongs: ${_filteredSongs?.length}');
+    final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
+    final bottomSafePadding = keyboardVisible ? 24.0 : 180.0;
+
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return [
+        const SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ];
     }
-    
+
     if (_filteredSongs == null || _filteredSongs!.isEmpty) {
-      debugPrint('[FavoritesView _buildBody] 显示空视图');
-      return _buildEmptyView();
+      return [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: _buildEmptyView(),
+        ),
+      ];
     }
-    
-    debugPrint('[FavoritesView _buildBody] 显示歌曲列表');
-    return _buildSongsList();
+
+    return [
+      SliverPadding(
+        padding: EdgeInsets.only(top: 8, bottom: bottomSafePadding),
+        sliver: _buildSongsSliver(playerProvider),
+      ),
+    ];
   }
 
   /// 构建空视图
@@ -356,14 +313,14 @@ class FavoritesViewState extends State<FavoritesView> with ShowAwarePage {
             Icon(
               Icons.favorite_border,
               size: 64,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
             ),
             const SizedBox(height: 16),
             Text(
               _searchQuery.isEmpty ? '暂无喜欢的歌曲' : '未找到匹配的歌曲',
               style: TextStyle(
                 fontSize: 18,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
             if (_searchQuery.isEmpty) ...[
@@ -372,7 +329,7 @@ class FavoritesViewState extends State<FavoritesView> with ShowAwarePage {
                 '在歌曲菜单中点击爱心即可添加',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                 ),
               ),
             ],
@@ -383,49 +340,45 @@ class FavoritesViewState extends State<FavoritesView> with ShowAwarePage {
   }
 
   /// 构建歌曲列表
-  Widget _buildSongsList() {
-    return Consumer<PlayerProvider>(
-      builder: (context, playerProvider, child) {
-        return ListView.builder(
-          padding: const EdgeInsets.only(top: 8, bottom: 180),
-          itemCount: _filteredSongs!.length,
-          itemBuilder: (context, index) {
-            final song = _filteredSongs![index];
-            final isPlaying = playerProvider.currentSong?.id == song.id;
+  SliverList _buildSongsSliver(PlayerProvider playerProvider) {
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          final song = _filteredSongs![index];
+          final isPlaying = playerProvider.currentSong?.id == song.id;
 
-            return AnimatedListItem(
-              index: index,
-              delay: 33,
-              child: Column(
-                children: [
-                  AppleMusicSongTile(
-                    title: song.title,
-                    artist: song.artist ?? '未知艺术家',
-                    coverUrl: song.albumArtPath,
-                    duration: song.duration != null
-                        ? formatDuration(song.duration!)
-                        : null,
-                    isPlaying: isPlaying,
-                    isFavorite: true, // 喜欢页面中的歌曲都是已喜欢的
-                    onTap: () {
-                      playerProvider.playSong(song, playlist: _filteredSongs!, index: index);
-                    },
-                    onFavoriteTap: () => _toggleFavorite(song),
-                    onMoreTap: () => _showSongMenu(song),
-                  ),
-                  // Apple Music 风格分隔线
-                  Divider(
-                    height: 1,
-                    thickness: 0.5,
-                    indent: 88,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+          return AnimatedListItem(
+            index: index,
+            delay: 33,
+            child: Column(
+              children: [
+                AppleMusicSongTile(
+                  title: song.title,
+                  artist: song.artist ?? '未知艺术家',
+                  coverUrl: song.albumArtPath,
+                  duration: song.duration != null
+                      ? formatDuration(song.duration!)
+                      : null,
+                  isPlaying: isPlaying,
+                  isFavorite: true,
+                  onTap: () {
+                    playerProvider.playSong(song, playlist: _filteredSongs!, index: index);
+                  },
+                  onFavoriteTap: () => _toggleFavorite(song),
+                  onMoreTap: () => _showSongMenu(song),
+                ),
+                Divider(
+                  height: 1,
+                  thickness: 0.5,
+                  indent: 88,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
+                ),
+              ],
+            ),
+          );
+        },
+        childCount: _filteredSongs!.length,
+      ),
     );
   }
 

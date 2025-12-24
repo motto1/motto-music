@@ -26,6 +26,7 @@ import './router/router.dart';
 import './contants/app_contants.dart' show PlayerPage;
 import './widgets/expandable_player.dart';
 import './widgets/expandable_player_content.dart';
+import './widgets/global_top_bar.dart';
 
 /// 全局播放器管理器（用于跨页面访问播放器状态）
 class GlobalPlayerManager {
@@ -171,6 +172,7 @@ class _HomePageWrapperState extends State<HomePageWrapper> {
   final menuManager = MenuManager();
   OverlayEntry? _playerOverlay;
   OverlayEntry? _navBarOverlay;
+  OverlayEntry? _topBarOverlay;
   
   // 使用 ValueNotifier 替代 setState + markNeedsBuild
   late final ValueNotifier<double> _playerBottomNotifier;
@@ -238,6 +240,14 @@ class _HomePageWrapperState extends State<HomePageWrapper> {
     );
     overlay.insert(_navBarOverlay!);
     
+    // 插入统一顶栏（位于页面上方，但在播放器之下）
+    _topBarOverlay = OverlayEntry(
+      builder: (context) {
+        return GlobalTopBar(controller: GlobalTopBarController.instance);
+      },
+    );
+    overlay.insert(_topBarOverlay!);
+
     // 插入全局播放器（在导航栏上方，动态调整底部偏移）
     _playerOverlay = OverlayEntry(
       builder: (context) {
@@ -314,6 +324,8 @@ class _HomePageWrapperState extends State<HomePageWrapper> {
     _playerOverlay = null;
     _navBarOverlay?.remove();
     _navBarOverlay = null;
+    _topBarOverlay?.remove();
+    _topBarOverlay = null;
     _playerBottomNotifier.dispose();
     GlobalPlayerManager.clearPlayerKey(); // 清理全局引用
     super.dispose();

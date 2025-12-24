@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:motto_music/models/bilibili/video.dart';
 import 'package:motto_music/services/bilibili/api_service.dart';
@@ -7,10 +8,26 @@ import 'package:motto_music/services/bilibili/cookie_manager.dart';
 import 'package:motto_music/utils/theme_utils.dart';
 import 'package:motto_music/animations/page_transitions.dart';
 import 'package:motto_music/views/bilibili/video_detail_page.dart';
+import 'package:motto_music/widgets/global_top_bar.dart';
 
-/// B站音乐排行榜页面 - Apple Music风格
+/// B站音乐索引页面
 class MusicRankingPage extends StatefulWidget {
-  const MusicRankingPage({super.key});
+  final String title;
+  final Color accentColor;
+  final int zoneTid;
+  final String order;
+  final int rangeDays;
+  final int pageSize;
+
+  const MusicRankingPage({
+    super.key,
+    this.title = '音乐索引',
+    this.accentColor = const Color(0xFFE84C4C),
+    required this.zoneTid,
+    this.order = 'click',
+    this.rangeDays = 7,
+    this.pageSize = 30,
+  });
 
   @override
   State<MusicRankingPage> createState() => _MusicRankingPageState();
@@ -18,21 +35,25 @@ class MusicRankingPage extends StatefulWidget {
 
 class _MusicRankingPageState extends State<MusicRankingPage> {
   late final BilibiliApiService _apiService;
-  List<BilibiliVideo> _videos = [];
-  bool _isLoading = true;
-  String? _errorMessage;
-  int _selectedCategoryIndex = 0;
+  late final ScrollController _scrollController;
 
-  // 分类标签
-  final List<String> _categories = [
-    '全部歌曲',
-    '中国大陆',
-    '中国香港',
-    '中国台湾',
-    '日本',
-    '韩国',
-    '欧美',
-  ];
+  final List<BilibiliVideo> _videos = [];
+  bool _isLoading = true;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  String? _errorMessage;
+  late String _order;
+  late int _rangeDays;
+  int _page = 1;
+
+  static const Map<String, String> _orderLabels = {
+    'click': '播放',
+    'scores': '评论',
+    'stow': '收藏',
+    'coin': '投币',
+    'dm': '弹幕',
+  };
+  static const List<int> _rangeOptions = [7, 30, 90];
 
   @override
   void initState() {
@@ -40,21 +61,58 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
     final cookieManager = CookieManager();
     final apiClient = BilibiliApiClient(cookieManager);
     _apiService = BilibiliApiService(apiClient);
-    _loadRanking();
+    _scrollController = ScrollController()..addListener(_handleScroll);
+    _order = widget.order;
+    _rangeDays = widget.rangeDays;
+    _loadFirstPage();
+    GlobalTopBarController.instance.push(
+      GlobalTopBarStyle(
+        source: 'detail',
+        title: widget.title,
+        showBackButton: true,
+        centerTitle: true,
+        backIconColor: widget.accentColor,
+        onBack: () => Navigator.of(context).pop(),
+        opacity: 1.0,
+        translateY: 0.0,
+        showDivider: true,
+      ),
+    );
   }
 
-  Future<void> _loadRanking() async {
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_handleScroll)
+      ..dispose();
+    GlobalTopBarController.instance.pop();
+    super.dispose();
+  }
+
+  Future<void> _loadFirstPage() async {
     setState(() {
       _isLoading = true;
+      _isLoadingMore = false;
+      _hasMore = true;
       _errorMessage = null;
+      _page = 1;
     });
 
     try {
-      final videos = await _apiService.getMusicRanking();
+      final videos = await _apiService.getZoneRankList(
+        cateId: widget.zoneTid,
+        order: _order,
+        page: _page,
+        pageSize: widget.pageSize,
+        rangeDays: _rangeDays,
+      );
       if (mounted) {
         setState(() {
-          _videos = videos;
+          _videos
+            ..clear()
+            ..addAll(videos);
           _isLoading = false;
+          _hasMore = videos.length >= widget.pageSize;
         });
       }
     } catch (e) {
@@ -67,133 +125,175 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
     }
   }
 
+  void _handleScroll() {
+    if (!_scrollController.hasClients) return;
+    if (_isLoading || _isLoadingMore || !_hasMore) return;
+
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 800) {
+      _loadMore();
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_isLoading || _isLoadingMore || !_hasMore) return;
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    try {
+      final nextPage = _page + 1;
+      final videos = await _apiService.getZoneRankList(
+        cateId: widget.zoneTid,
+        order: _order,
+        page: nextPage,
+        pageSize: widget.pageSize,
+        rangeDays: _rangeDays,
+      );
+      if (!mounted) return;
+      setState(() {
+        _page = nextPage;
+        _videos.addAll(videos);
+        _isLoadingMore = false;
+        _hasMore = videos.length >= widget.pageSize;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingMore = false;
+      });
+    }
+  }
+
+  String get _orderLabel => _orderLabels[_order] ?? _order;
+
   @override
   Widget build(BuildContext context) {
     final backgroundColor = ThemeUtils.backgroundColor(context);
     final textColor = ThemeUtils.textColor(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final topPadding = MediaQuery.of(context).padding.top;
+    const topBarHeight = 52.0;
 
     return Scaffold(
       backgroundColor: backgroundColor,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 顶部标题区域
-            _buildHeader(textColor),
-            // 分类标签栏
-            _buildCategoryTabs(isDark),
-            // 排行榜列表
-            Expanded(
-              child: _buildContent(textColor, isDark),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// 顶部标题区域
-  Widget _buildHeader(Color textColor) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 8, 16, 0),
-      child: Row(
+      body: Column(
         children: [
-          // 返回按钮
-          IconButton(
-            icon: Icon(
-              Icons.arrow_back_ios_rounded,
-              color: textColor,
-              size: 20,
-            ),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          const SizedBox(width: 4),
-          // 标题和副标题
+          SizedBox(height: topPadding + topBarHeight + 1),
+          _buildFilters(textColor, isDark),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '排行榜',
-                  style: TextStyle(
-                    color: textColor,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '每天更新',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // 刷新按钮
-          IconButton(
-            icon: Icon(
-              Icons.refresh_rounded,
-              color: textColor,
-              size: 22,
-            ),
-            onPressed: _loadRanking,
+            child: _buildContent(textColor, isDark),
           ),
         ],
       ),
     );
   }
 
-  /// 分类标签栏
-  Widget _buildCategoryTabs(bool isDark) {
+  Widget _buildFilters(Color textColor, bool isDark) {
+    final dividerColor = Colors.black.withValues(alpha: isDark ? 0.15 : 0.08);
     return Container(
-      height: 44,
-      margin: const EdgeInsets.only(top: 16),
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: _categories.length,
-        itemBuilder: (context, index) {
-          final isSelected = index == _selectedCategoryIndex;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _selectedCategoryIndex = index;
-                });
-                // 可以在这里根据分类加载不同数据
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? const Color(0xFFE91E63)
-                      : (isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.15)),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Center(
-                  child: Text(
-                    _categories[index],
-                    style: TextStyle(
-                      color: isSelected ? Colors.white : (isDark ? Colors.white : Colors.black87),
-                      fontSize: 14,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                    ),
-                  ),
-                ),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: dividerColor, width: 0.6)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              '近$_rangeDays天 · $_orderLabel',
+              style: TextStyle(
+                color: textColor.withValues(alpha: 0.78),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-          );
-        },
+          ),
+          PopupMenuButton<String>(
+            initialValue: _order,
+            onSelected: (value) {
+              if (value == _order) return;
+              setState(() {
+                _order = value;
+              });
+              _loadFirstPage();
+            },
+            itemBuilder: (context) {
+              return _orderLabels.entries
+                  .map(
+                    (e) => PopupMenuItem<String>(
+                      value: e.key,
+                      child: Text('按${e.value}'),
+                    ),
+                  )
+                  .toList();
+            },
+            child: _buildFilterChip(
+              icon: Icons.sort,
+              label: '排序',
+              isDark: isDark,
+            ),
+          ),
+          const SizedBox(width: 10),
+          PopupMenuButton<int>(
+            initialValue: _rangeDays,
+            onSelected: (value) {
+              if (value == _rangeDays) return;
+              setState(() {
+                _rangeDays = value;
+              });
+              _loadFirstPage();
+            },
+            itemBuilder: (context) {
+              return _rangeOptions
+                  .map(
+                    (days) => PopupMenuItem<int>(
+                      value: days,
+                      child: Text('近$days天'),
+                    ),
+                  )
+                  .toList();
+            },
+            child: _buildFilterChip(
+              icon: Icons.calendar_today,
+              label: '时间',
+              isDark: isDark,
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  /// 内容区域
+  Widget _buildFilterChip({
+    required IconData icon,
+    required String label,
+    required bool isDark,
+  }) {
+    final borderColor = Colors.black.withValues(alpha: isDark ? 0.22 : 0.12);
+    final background = Colors.black.withValues(alpha: isDark ? 0.18 : 0.04);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: borderColor, width: 0.8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildContent(Color textColor, bool isDark) {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -204,12 +304,12 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, size: 48, color: Colors.grey),
+            const Icon(Icons.error_outline, size: 48, color: Colors.grey),
             const SizedBox(height: 16),
-            Text(_errorMessage!, style: TextStyle(color: Colors.grey)),
+            Text(_errorMessage!, style: const TextStyle(color: Colors.grey)),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: _loadRanking,
+              onPressed: _loadFirstPage,
               child: const Text('重试'),
             ),
           ],
@@ -217,28 +317,39 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
       );
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.only(top: 16, bottom: 100),
-      itemCount: _videos.length,
-      separatorBuilder: (context, index) {
-        // 分隔线从排名数字后开始
-        return Padding(
-          padding: const EdgeInsets.only(left: 60),
-          child: Divider(
-            height: 1,
-            thickness: 0.5,
-            color: Colors.grey.withValues(alpha: 0.2),
-          ),
-        );
-      },
-      itemBuilder: (context, index) {
-        return _buildRankingItem(_videos[index], index + 1, textColor, isDark);
-      },
+    if (_videos.isEmpty) {
+      return const Center(
+        child: Text(
+          '暂无内容',
+          style: TextStyle(color: Colors.grey, fontSize: 14),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadFirstPage,
+      child: GridView.builder(
+        controller: _scrollController,
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 140),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 20,
+          childAspectRatio: 0.75,
+        ),
+        itemCount: _videos.length + (_isLoadingMore ? 2 : 0),
+        itemBuilder: (context, index) {
+          if (index >= _videos.length) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return _buildGridItem(_videos[index], index, textColor, isDark);
+        },
+      ),
     );
   }
 
-  /// 排行榜列表项
-  Widget _buildRankingItem(BilibiliVideo video, int rank, Color textColor, bool isDark) {
+  Widget _buildGridItem(BilibiliVideo video, int index, Color textColor, bool isDark) {
+    final isFeatured = index < 2;
     return InkWell(
       onTap: () {
         Navigator.of(context).push(
@@ -248,168 +359,138 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
           ),
         );
       },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: Row(
-          children: [
-            // 排名数字
-            SizedBox(
-              width: 32,
-              child: Text(
-                '$rank',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: _getRankColor(rank),
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+      borderRadius: BorderRadius.circular(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AspectRatio(
+            aspectRatio: 1.0,
+            child: _buildCoverCard(video.pic, isDark, isFeatured),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            video.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              height: 1.25,
             ),
-            const SizedBox(width: 12),
-            // 封面图片
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: Colors.grey.withValues(alpha: 0.2),
-                  width: 0.5,
-                ),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(7.5),
-                child: CachedNetworkImage(
-                  imageUrl: video.pic,
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => Container(
-                    color: isDark ? Colors.grey[800] : Colors.grey[200],
-                    child: const Icon(Icons.music_note, color: Colors.grey, size: 24),
-                  ),
-                  errorWidget: (context, url, error) => Container(
-                    color: isDark ? Colors.grey[800] : Colors.grey[200],
-                    child: const Icon(Icons.broken_image, color: Colors.grey, size: 24),
-                  ),
-                ),
-              ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            video.owner.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: Colors.grey.shade600,
+              fontSize: 12,
             ),
-            const SizedBox(width: 12),
-            // 歌曲信息
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    video.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: textColor,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    video.owner.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // 更多按钮
-            IconButton(
-              icon: Icon(
-                Icons.more_horiz,
-                color: Colors.grey,
-                size: 20,
-              ),
-              onPressed: () {
-                _showMoreOptions(video);
-              },
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  /// 获取排名颜色
-  Color _getRankColor(int rank) {
-    switch (rank) {
-      case 1:
-        return const Color(0xFFE91E63); // 粉红色
-      case 2:
-        return const Color(0xFFE91E63);
-      case 3:
-        return const Color(0xFFE91E63);
-      default:
-        return Colors.grey;
-    }
-  }
-
-  /// 显示更多选项
-  void _showMoreOptions(BilibiliVideo video) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: ThemeUtils.backgroundColor(context),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[400],
-                  borderRadius: BorderRadius.circular(2),
+  Widget _buildCoverCard(String imageUrl, bool isDark, bool showAvatars) {
+    final borderColor = Colors.black.withValues(alpha: isDark ? 0.18 : 0.12);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: CachedNetworkImage(
+              imageUrl: imageUrl,
+              fit: BoxFit.cover,
+              placeholder: (context, url) => Container(
+                color: isDark ? Colors.grey[800] : Colors.grey[200],
+                child: const Icon(Icons.music_note, color: Colors.grey, size: 24),
+              ),
+              errorWidget: (context, url, error) => Container(
+                color: isDark ? Colors.grey[800] : Colors.grey[200],
+                child: const Icon(Icons.broken_image, color: Colors.grey, size: 24),
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.black.withValues(alpha: 0.0),
+                    Colors.black.withValues(alpha: 0.35),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
               ),
-              ListTile(
-                leading: const Icon(Icons.play_arrow_rounded),
-                title: const Text('播放'),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.of(context).push(
-                    NamidaPageRoute(
-                      page: VideoDetailPage(bvid: video.bvid),
-                      type: PageTransitionType.slideUp,
-                    ),
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.favorite_border_rounded),
-                title: const Text('添加到收藏'),
-                onTap: () {
-                  Navigator.pop(context);
-                  // TODO: 实现收藏功能
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.share_rounded),
-                title: const Text('分享'),
-                onTap: () {
-                  Navigator.pop(context);
-                  // TODO: 实现分享功能
-                },
-              ),
-              const SizedBox(height: 8),
-            ],
+            ),
           ),
-        );
-      },
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: borderColor, width: 0.8),
+              ),
+            ),
+          ),
+          if (showAvatars)
+            Positioned(
+              right: 8,
+              bottom: 8,
+              child: _buildAvatarStack(imageUrl, isDark),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAvatarStack(String imageUrl, bool isDark) {
+    const double size = 28;
+    const double overlap = 14;
+
+    return SizedBox(
+      width: size + overlap * 2,
+      height: size,
+      child: Stack(
+        children: [
+          _buildAvatar(imageUrl, 0, size, isDark),
+          _buildAvatar(imageUrl, overlap, size, isDark),
+          _buildAvatar(imageUrl, overlap * 2, size, isDark),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAvatar(String imageUrl, double left, double size, bool isDark) {
+    return Positioned(
+      left: left,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: isDark ? Colors.black.withValues(alpha: 0.4) : Colors.white,
+            width: 1,
+          ),
+        ),
+        child: ClipOval(
+          child: CachedNetworkImage(
+            imageUrl: imageUrl,
+            fit: BoxFit.cover,
+            placeholder: (context, url) => Container(
+              color: isDark ? Colors.grey[800] : Colors.grey[200],
+            ),
+            errorWidget: (context, url, error) => Container(
+              color: isDark ? Colors.grey[800] : Colors.grey[200],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

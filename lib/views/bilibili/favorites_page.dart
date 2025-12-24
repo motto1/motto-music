@@ -1,8 +1,8 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:provider/provider.dart';
+import 'dart:async';
 import 'dart:ui';
 import 'package:motto_music/database/database.dart' as db;
 import 'package:motto_music/models/bilibili/favorite.dart' as api;
@@ -13,7 +13,6 @@ import 'package:motto_music/services/player_provider.dart';
 import 'package:motto_music/services/cache/page_cache_service.dart';
 import 'package:motto_music/views/bilibili/login_page.dart';
 import 'package:motto_music/views/bilibili/favorite_detail_page.dart';
-import 'package:motto_music/views/bilibili/global_search_page.dart';
 import 'package:motto_music/views/bilibili/user_videos_page.dart';
 import 'package:motto_music/utils/theme_utils.dart';
 import 'package:motto_music/utils/bilibili_song_utils.dart';
@@ -21,14 +20,14 @@ import 'package:motto_music/router/router.dart';
 import 'package:motto_music/contants/app_contants.dart';
 import 'package:motto_music/animations/page_transitions.dart';
 import 'package:motto_music/main.dart'; // 导入以访问全局播放器 Key
-import 'package:motto_music/widgets/apple_music_card.dart';
-import 'package:motto_music/widgets/animated_list_item.dart';
-import 'package:motto_music/views/bilibili/download_management_page.dart';
-import 'package:motto_music/views/bilibili/bilibili_settings_page.dart';
 import 'package:motto_music/services/bilibili/download_manager.dart';
 import 'package:motto_music/widgets/unified_cover_image.dart';
 import 'package:motto_music/models/bilibili/audio_quality.dart';
 import 'package:motto_music/widgets/audio_quality_section.dart';
+import 'package:motto_music/widgets/show_aware_page.dart';
+import 'package:motto_music/widgets/global_top_bar.dart';
+import 'package:motto_music/router/route_observer.dart';
+import 'package:motto_music/widgets/motto_search_field.dart';
 
 /// Bilibili 收藏夹列表页面
 class BilibiliFavoritesPage extends StatefulWidget {
@@ -38,41 +37,149 @@ class BilibiliFavoritesPage extends StatefulWidget {
   State<BilibiliFavoritesPage> createState() => _BilibiliFavoritesPageState();
 }
 
-class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
+class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage>
+    with ShowAwarePage, RouteAware {
   late final BilibiliApiService _apiService;
   late final db.MusicDatabase _db;
+  late final ScrollController _scrollController;
   late final TextEditingController _searchController;
+  late final FocusNode _searchFocusNode;
+  Timer? _searchDebounce;
   final _pageCache = PageCacheService();
 
+  static const Color _accentColor = Color(0xFFE84C4C);
+  static const double _collapseDistance = 64.0;
+
+  double _collapseProgress = 0.0;
   bool _isLoading = false;
+  bool _isSearching = false;
   bool _isLoggedIn = false;
   List<api.BilibiliFavorite>? _favorites;
   List<api.BilibiliFavorite>? _filteredFavorites;
+  List<db.Song> _searchResults = [];
   String? _errorMessage;
+  String? _searchError;
   String _searchQuery = '';
   String? _userAvatarUrl;
   bool _isSelectionMode = false;
   final Set<int> _selectedFavoriteIds = <int>{};
 
-  /// 搜索结果 Future 缓存，避免因 rebuild（如键盘弹出/收起）导致重复搜索
-  Future<List<db.Song>>? _searchFuture;
-
   @override
   void initState() {
     super.initState();
-    
+
     _db = db.MusicDatabase.database;
     final cookieManager = CookieManager();
     final apiClient = BilibiliApiClient(cookieManager);
     _apiService = BilibiliApiService(apiClient);
-    _searchController = TextEditingController();
-    
+    _scrollController = ScrollController();
+    _scrollController.addListener(_handleScroll);
+    _searchController = TextEditingController(text: _searchQuery);
+    _searchFocusNode = FocusNode();
+
     _checkLoginAndLoadData();
   }
 
   @override
+  void onPageShow() {
+    _applyTopBarStyle();
+  }
+
+  void _applyTopBarStyle() {
+    _applyTopBarStyleWithProgress(_collapseProgress);
+  }
+
+  void _applyTopBarStyleWithProgress(double progress) {
+    final barProgress = Curves.easeOutCubic.transform(
+      ((progress - 0.08) / 0.72).clamp(0.0, 1.0),
+    );
+    final titleOpacity = Curves.easeOutCubic.transform(
+      ((progress - 0.18) / 0.52).clamp(0.0, 1.0),
+    );
+    GlobalTopBarController.instance.set(
+      GlobalTopBarStyle(
+        source: 'bilibili-library',
+        title: '专辑',
+        showBackButton: true,
+        centerTitle: false,
+        opacity: barProgress,
+        titleOpacity: titleOpacity,
+        titleTranslateY: (1 - titleOpacity) * 6,
+        translateY: 0.0,
+        showDivider: progress > 0.28,
+        backIconColor: _accentColor,
+        onBack: () => Navigator.of(context).pop(),
+        trailing: _buildTopBarTrailing(),
+      ),
+    );
+  }
+
+  void _handleScroll() {
+    if (!_scrollController.hasClients) return;
+    final offset = _scrollController.offset;
+    final progress = (offset / _collapseDistance).clamp(0.0, 1.0);
+    if ((progress - _collapseProgress).abs() > 0.01) {
+      setState(() {
+        _collapseProgress = progress;
+      });
+    }
+    _applyTopBarStyleWithProgress(progress);
+  }
+
+  Widget _buildTopBarTrailing() {
+    return SizedBox(
+      width: 40,
+      height: 40,
+      child: IconButton(
+        padding: EdgeInsets.zero,
+        icon: const Icon(
+          Icons.menu_rounded,
+          size: 22,
+          color: _accentColor,
+        ),
+        onPressed: _showPageMenu,
+        tooltip: '更多',
+      ),
+    );
+  }
+
+  void _scheduleSearch(String value) {
+    final query = value.trim();
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 260), () {
+      if (!mounted) return;
+      _filterFavorites(query);
+    });
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    _filterFavorites('');
+    _searchFocusNode.requestFocus();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null) {
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didPopNext() {
+    _applyTopBarStyle();
+  }
+
+  @override
   void dispose() {
+    _scrollController.removeListener(_handleScroll);
+    _scrollController.dispose();
+    _searchDebounce?.cancel();
     _searchController.dispose();
+    _searchFocusNode.dispose();
+    routeObserver.unsubscribe(this);
     super.dispose();
   }
 
@@ -84,6 +191,7 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
     setState(() {
       _isLoggedIn = isLoggedIn;
     });
+    _applyTopBarStyle();
     
     if (isLoggedIn) {
       await _loadFavorites();
@@ -111,6 +219,7 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
               setState(() {
                 _userAvatarUrl = cachedUser.face;
               });
+              _applyTopBarStyle();
             }
 
             // 后台刷新用户信息
@@ -119,6 +228,7 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
                 setState(() {
                   _userAvatarUrl = userInfo.face;
                 });
+                _applyTopBarStyle();
                 // 更新缓存
                 _pageCache.cacheUserInfo(userInfo);
               }
@@ -165,19 +275,41 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
 
   /// 搜索收藏夹内的歌曲
   Future<void> _filterFavorites(String query) async {
+    final trimmed = query.trim();
     setState(() {
-      _searchQuery = query;
-      _searchFuture = null; // 关键词变更时重置 Future，下次构建时重新搜索
-      if (query.isEmpty) {
+      _searchQuery = trimmed;
+      _searchError = null;
+      if (trimmed.isEmpty) {
         _filteredFavorites = _favorites;
+        _searchResults = [];
+        _isSearching = false;
       }
     });
+    if (trimmed.isNotEmpty) {
+      await _runSearch(trimmed);
+    }
   }
 
-  /// 清除搜索
-  void _clearSearch() {
-    _searchController.clear();
-    _filterFavorites('');
+  Future<void> _runSearch(String query) async {
+    setState(() {
+      _isSearching = true;
+      _searchResults = [];
+    });
+    try {
+      final results = await _searchSongsInFavorites(query);
+      if (!mounted || _searchQuery != query) return;
+      setState(() {
+        _searchResults = results;
+        _isSearching = false;
+      });
+    } catch (e) {
+      if (!mounted || _searchQuery != query) return;
+      setState(() {
+        _searchError = e.toString();
+        _searchResults = [];
+        _isSearching = false;
+      });
+    }
   }
 
   /// 批量获取所有收藏夹的封面信息
@@ -738,6 +870,7 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
           _favorites = null;
           _filteredFavorites = null;
         });
+        _applyTopBarStyle();
         
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('已退出登录')),
@@ -754,6 +887,11 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final topPadding = MediaQuery.of(context).padding.top;
+    final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
+    final bottomSpacerHeight = keyboardVisible ? 16.0 : 120.0;
+    const topBarHeight = 52.0;
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
@@ -778,321 +916,72 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
         }
       },
       child: Scaffold(
+        resizeToAvoidBottomInset: false,
         backgroundColor: Theme.of(context).brightness == Brightness.dark
             ? ThemeUtils.backgroundColor(context)
             : const Color(0xFFFFFFFF),
-        body: CustomScrollView(
-          slivers: [
-            // 整合的液态玻璃头部容器（AppBar + 搜索框）
-            SliverToBoxAdapter(
-              child: _buildHeaderWithSearch(),
-            ),
-            
-            // 内容
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height - 200,
-                child: _buildBody(),
+        body: Stack(
+          children: [
+            RefreshIndicator(
+              onRefresh: _refreshFavorites,
+              child: CustomScrollView(
+                controller: _scrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: SizedBox(height: topPadding + topBarHeight + 1),
+                  ),
+                  SliverToBoxAdapter(
+                    child: _buildLargeTitle(),
+                  ),
+                  SliverToBoxAdapter(
+                    child: _buildSearchField(),
+                  ),
+                  SliverToBoxAdapter(
+                    child: _buildActionButtons(),
+                  ),
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: 12),
+                  ),
+                  ..._buildContentSlivers(),
+                  SliverToBoxAdapter(
+                    child: SizedBox(height: bottomSpacerHeight),
+                  ),
+                ],
               ),
             ),
+            if (_isSelectionMode)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: keyboardVisible ? 0 : 120),
+                  child: _buildSelectionBar(),
+                ),
+              ),
           ],
         ),
       ),
     );
   }
 
-  /// 构建整合的头部（AppBar + 搜索框）
-  Widget _buildHeaderWithSearch() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final statusBarHeight = MediaQuery.of(context).padding.top;
-    
-    return Container(
-      decoration: BoxDecoration(
-        // 只有下方两个角圆角
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(20),
-          bottomRight: Radius.circular(20),
-        ),
-        // 增强发光效果（浅色模式更明显）
-        boxShadow: [
-          BoxShadow(
-            color: isDark
-                ? Colors.blue.withOpacity(0.15)
-                : Colors.blue.withOpacity(0.2), // 浅色模式增强
-            blurRadius: 20,
-            spreadRadius: 0,
-            offset: const Offset(0, 4),
-          ),
-          if (!isDark) // 浅色模式额外阴影层
-            BoxShadow(
-              color: Colors.blue.withOpacity(0.08),
-              blurRadius: 30,
-              spreadRadius: 2,
-              offset: const Offset(0, 6),
-            ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(20),
-          bottomRight: Radius.circular(20),
-        ),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            decoration: BoxDecoration(
-              color: isDark
-                  ? ThemeUtils.backgroundColor(context).withOpacity(0.97)
-                  : Colors.white.withOpacity(0.95),
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-              ),
-              border: Border.all(
-                color: isDark
-                    ? Colors.white.withOpacity(0.12)
-                    : Colors.white.withOpacity(0.3),
-                width: 1,
-              ),
-            ),
-            child: Column(
-              children: [
-                // 状态栏占位
-                SizedBox(height: statusBarHeight),
-                
-                // AppBar 部分
-                SizedBox(
-                  height: 56,
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 40,
-                        height: 40,
-                        child: IconButton(
-                          padding: EdgeInsets.zero,
-                          icon: const Icon(Icons.arrow_back_ios, size: 20),
-                          onPressed: () => Navigator.of(context).pop(),
-                          tooltip: '返回',
-                        ),
-                      ),
-                      const Expanded(
-                        child: Text(
-                          'Bilibili音乐库',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          softWrap: false,
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      if (_userAvatarUrl != null)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 4),
-                          child: GestureDetector(
-                            onTap: _showLogoutDialog,
-                            child: CircleAvatar(
-                              radius: 18,
-                              backgroundImage: CachedNetworkImageProvider(_userAvatarUrl!),
-                            ),
-                          ),
-                        ),
-                      SizedBox(
-                        width: 40,
-                        height: 40,
-                        child: IconButton(
-                          padding: EdgeInsets.zero,
-                          icon: const Icon(CupertinoIcons.search, size: 20),
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              NamidaPageRoute(
-                                page: const GlobalSearchPage(),
-                                type: PageTransitionType.slideLeft,
-                              ),
-                            );
-                          },
-                          tooltip: '智能搜索',
-                        ),
-                      ),
-                      // 下载管理按钮（带徽章）
-                      if (_isLoggedIn)
-                        Consumer<DownloadManager>(
-                          builder: (context, downloadManager, child) {
-                            final downloadingCount = downloadManager.downloadingCount;
-                            return Stack(
-                              children: [
-                                SizedBox(
-                                  width: 40,
-                                  height: 40,
-                                  child: IconButton(
-                                    padding: EdgeInsets.zero,
-                                    icon: const Icon(CupertinoIcons.arrow_down_circle, size: 20),
-                                    onPressed: () {
-                                      Navigator.of(context).push(
-                                        NamidaPageRoute(
-                                          page: const DownloadManagementPage(),
-                                          type: PageTransitionType.slideLeft,
-                                        ),
-                                      );
-                                    },
-                                    tooltip: '下载管理',
-                                  ),
-                                ),
-                                if (downloadingCount > 0)
-                                  Positioned(
-                                    right: 4,
-                                    top: 4,
-                                    child: Container(
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: BoxDecoration(
-                                        color: Colors.red,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      constraints: const BoxConstraints(
-                                        minWidth: 16,
-                                        minHeight: 16,
-                                      ),
-                                      child: Text(
-                                        downloadingCount > 99 ? '99+' : '$downloadingCount',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            );
-                          },
-                        ),
-                      if (_isLoggedIn)
-                        SizedBox(
-                          width: 40,
-                          height: 40,
-                          child: IconButton(
-                            padding: EdgeInsets.zero,
-                            icon: const Icon(CupertinoIcons.gear_alt, size: 20),
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                NamidaPageRoute(
-                                  page: const BilibiliSettingsPage(),
-                                  type: PageTransitionType.slideLeft,
-                                ),
-                              );
-                            },
-                            tooltip: 'Bilibili 设置',
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                
-                // 搜索框部分
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                  child: Row(
-                    children: [
-                      // iOS 风格搜索框
-                      Expanded(
-                        child: Container(
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? const Color(0xFF1C1C1E)
-                                : const Color(0xFFE5E5EA),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Row(
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(left: 8),
-                                child: Icon(
-                                  CupertinoIcons.search,
-                                  size: 18,
-                                  color: isDark
-                                      ? Colors.white.withOpacity(0.5)
-                                      : Colors.black.withOpacity(0.5),
-                                ),
-                              ),
-                              Expanded(
-                                child: Center(
-                                  child: TextField(
-                                    controller: _searchController,
-                                    textInputAction: TextInputAction.search,
-                                    onSubmitted: (query) => _filterFavorites(query),
-                                    style: TextStyle(
-                                      fontSize: 17,
-                                      color: isDark ? Colors.white : Colors.black,
-                                    ),
-                                    decoration: InputDecoration(
-                                      hintText: '搜索',
-                                      hintStyle: TextStyle(
-                                        fontSize: 17,
-                                        color: isDark
-                                            ? Colors.white.withOpacity(0.3)
-                                            : Colors.black.withOpacity(0.3),
-                                      ),
-                                      border: InputBorder.none,
-                                      contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 0,
-                                      ),
-                                      isDense: true,
-                                    ),
-                                    textAlignVertical: TextAlignVertical.center,
-                                  ),
-                                ),
-                              ),
-                              if (_searchQuery.isNotEmpty)
-                                IconButton(
-                                  icon: Icon(
-                                    CupertinoIcons.xmark_circle_fill,
-                                    size: 18,
-                                    color: isDark
-                                        ? Colors.white.withOpacity(0.5)
-                                        : Colors.black.withOpacity(0.5),
-                                  ),
-                                  onPressed: _clearSearch,
-                                  tooltip: '清除',
-                                  padding: const EdgeInsets.all(8),
-                                  constraints: const BoxConstraints(),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      
-                      // 添加收藏夹按钮
-                      if (_isLoggedIn) ...[
-                        const SizedBox(width: 12),
-                        Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: _showAddFavoriteDialog,
-                            borderRadius: BorderRadius.circular(20),
-                            child: Container(
-                              width: 36,
-                              height: 36,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFFF3B30),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.add,
-                                size: 24,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
+  Widget _buildLargeTitle() {
+    final eased = Curves.easeOutCubic.transform(_collapseProgress);
+    final opacity = (1 - eased).clamp(0.0, 1.0);
+    final translateY = -14 * eased;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),
+      child: Transform.translate(
+        offset: Offset(0, translateY),
+        child: Opacity(
+          opacity: opacity,
+          child: const Text(
+            '专辑',
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.w700,
+              height: 1.05,
             ),
           ),
         ),
@@ -1100,27 +989,472 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
     );
   }
 
-  Widget _buildBody() {
-    // 未登录状态
-    if (!_isLoggedIn) {
-      return _buildNotLoggedInView();
+  Widget _buildSearchField() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: MottoSearchField(
+              controller: _searchController,
+              focusNode: _searchFocusNode,
+              hintText: '在专辑中搜索',
+              onChanged: (value) {
+                setState(() {});
+                _scheduleSearch(value);
+              },
+              onSubmitted: (value) => _filterFavorites(value),
+              onClear: _clearSearch,
+            ),
+          ),
+          if (_isLoggedIn) ...[
+            const SizedBox(width: 12),
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: _showAddFavoriteDialog,
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: const BoxDecoration(
+                    color: _accentColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.add,
+                    size: 24,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildActionButton(
+              icon: Icons.play_arrow_rounded,
+              label: '播放',
+              onTap: () => _playAllFavorites(shuffle: false),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildActionButton(
+              icon: Icons.shuffle_rounded,
+              label: '随机播放',
+              onTap: () => _playAllFavorites(shuffle: true),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF2F2F2);
+    final textColor = _accentColor;
+    return Material(
+      color: bgColor,
+      borderRadius: BorderRadius.circular(22),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+        onTap: onTap,
+        child: SizedBox(
+          height: 44,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 20, color: textColor),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: textColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _playAllFavorites({required bool shuffle}) async {
+    final favorites = _filteredFavorites ?? _favorites ?? const [];
+    if (favorites.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('暂无可播放的收藏夹')),
+        );
+      }
+      return;
     }
-    
-    // 加载中
-    if (_isLoading && _favorites == null) {
-      return const Center(
-        child: CircularProgressIndicator(),
+
+    try {
+      final songs = await _collectSongsForFavorites(favorites);
+      if (!mounted) return;
+      if (songs.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('未找到可播放的歌曲')),
+        );
+        return;
+      }
+
+      final playerProvider = context.read<PlayerProvider>();
+      await playerProvider.playSong(
+        songs.first,
+        playlist: songs,
+        index: 0,
+        shuffle: shuffle,
+        playNow: true,
       );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('播放失败: $e')),
+        );
+      }
     }
-    
-    // 加载出错
+  }
+
+  List<Widget> _buildContentSlivers() {
+    if (!_isLoggedIn) {
+      return [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: _buildNotLoggedInView(),
+        ),
+      ];
+    }
+
+    if (_isLoading && _favorites == null) {
+      return const [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ];
+    }
+
     if (_errorMessage != null && _favorites == null) {
-      return _buildErrorView();
+      return [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: _buildErrorView(),
+        ),
+      ];
     }
-    
-    // 已登录时，始终显示列表视图（包括搜索框和添加按钮）
-    // 即使列表为空，也要显示UI让用户可以添加
-    return _buildFavoritesList();
+
+    if (_searchQuery.isNotEmpty) {
+      return _buildSearchResultSlivers();
+    }
+
+    if (_filteredFavorites == null || _filteredFavorites!.isEmpty) {
+      return [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: _buildEmptyView(),
+        ),
+      ];
+    }
+
+    return [
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+        sliver: _buildFavoritesSliverList(),
+      ),
+    ];
+  }
+
+  SliverGrid _buildFavoritesSliverList() {
+    final favorites = _filteredFavorites ?? const [];
+    return SliverGrid(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          final favorite = favorites[index];
+          return _buildAlbumCard(favorite);
+        },
+        childCount: favorites.length,
+      ),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 20,
+        childAspectRatio: 0.78,
+      ),
+    );
+  }
+
+  Widget _buildAlbumCard(api.BilibiliFavorite favorite) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final borderColor = Colors.black.withValues(alpha: isDark ? 0.18 : 0.12);
+    final isSelected = _selectedFavoriteIds.contains(favorite.id);
+    final showSelection = _isSelectionMode;
+    final subtitle = (favorite.intro ?? '').trim().isEmpty
+        ? 'Bilibili'
+        : favorite.intro!.trim();
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => showSelection
+          ? _toggleFavoriteSelection(favorite)
+          : _navigateToFavoriteDetail(favorite),
+      onLongPress: () => showSelection
+          ? _toggleFavoriteSelection(favorite)
+          : _showRemoveDialog(favorite),
+      child: AnimatedOpacity(
+        opacity: showSelection && !isSelected ? 0.6 : 1.0,
+        duration: const Duration(milliseconds: 150),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final size = constraints.maxWidth;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: size,
+                  height: size,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        UnifiedCoverImage(
+                          coverPath: favorite.cover,
+                          width: size,
+                          height: size,
+                          borderRadius: 0,
+                        ),
+                        Positioned.fill(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: borderColor, width: 0.8),
+                            ),
+                          ),
+                        ),
+                        if (showSelection)
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: Container(
+                              width: 22,
+                              height: 22,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: isSelected
+                                    ? _accentColor
+                                    : (isDark
+                                        ? Colors.black.withOpacity(0.35)
+                                        : Colors.white.withOpacity(0.9)),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? _accentColor
+                                      : (isDark
+                                          ? Colors.white.withOpacity(0.6)
+                                          : Colors.black.withOpacity(0.2)),
+                                  width: 1,
+                                ),
+                              ),
+                              child: isSelected
+                                  ? const Icon(
+                                      Icons.check,
+                                      size: 14,
+                                      color: Colors.white,
+                                    )
+                                  : null,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  favorite.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: ThemeUtils.select(
+                      context,
+                      light: Colors.grey.shade600,
+                      dark: Colors.grey.shade400,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildSearchResultSlivers() {
+    if (_isSearching) {
+      return const [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ];
+    }
+
+    if (_searchError != null) {
+      return [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: Text(
+              '搜索失败：$_searchError',
+              style: const TextStyle(color: Colors.grey, fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ];
+    }
+
+    if (_searchResults.isEmpty) {
+      return [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: Text(
+              '未找到匹配的歌曲',
+              style: TextStyle(
+                fontSize: 16,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              ),
+            ),
+          ),
+        ),
+      ];
+    }
+
+    return [
+      SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            final song = _searchResults[index];
+            return _buildSearchResultItem(song, index);
+          },
+          childCount: _searchResults.length,
+        ),
+      ),
+    ];
+  }
+
+  Widget _buildSearchResultItem(db.Song song, int index) {
+    return Column(
+      children: [
+        InkWell(
+          onTap: () async {
+            final playerProvider = context.read<PlayerProvider>();
+            await playerProvider.playSong(
+              song,
+              playlist: _searchResults,
+              index: index,
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                UnifiedCoverImage(
+                  coverPath: song.albumArtPath,
+                  width: 64,
+                  height: 64,
+                  borderRadius: 6,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        song.title,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          height: 1.3,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        song.artist ?? '',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.5),
+                          height: 1.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.more_vert,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.5),
+                    size: 20,
+                  ),
+                  onPressed: () => _showSearchResultSongMenu(song),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 40,
+                    minHeight: 40,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Divider(
+          height: 1,
+          thickness: 0.5,
+          indent: 96,
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
+        ),
+      ],
+    );
   }
 
   /// 构建未登录视图
@@ -1314,218 +1648,6 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
     );
   }
 
-  /// 构建收藏夹列表
-  Widget _buildFavoritesList() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return Container(
-      // 统一的背景色，防止BackdropFilter模糊到不同颜色
-      color: isDark
-          ? ThemeUtils.backgroundColor(context)
-          : const Color(0xFFFFFFFF),
-      child: Column(
-        children: [
-          // 列表（添加clipBehavior防止阴影溢出）
-          Expanded(
-            child: ClipRect(
-              child: _searchQuery.isNotEmpty
-                  ? _buildSearchResults()
-                  : (_filteredFavorites == null || _filteredFavorites!.isEmpty
-                      ? _buildEmptyView()
-                      : RefreshIndicator(
-                          onRefresh: _refreshFavorites,
-                          child: _wrapWithoutStretch(
-                            ListView.builder(
-                              padding: const EdgeInsets.only(bottom: 100),
-                              itemCount: _filteredFavorites!.length,
-                              clipBehavior: Clip.none, // 允许阴影显示但不溢出父容器
-                              itemBuilder: (context, index) {
-                                final favorite = _filteredFavorites![index];
-                                return AnimatedListItem(
-                                  index: index,
-                                  child: _buildFavoriteCard(
-                                    favorite,
-                                    isFirst: index == 0,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        )),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 禁用 Material StretchingOverscrollIndicator 防止叠加变色
-  Widget _wrapWithoutStretch(Widget child) {
-    return NotificationListener<OverscrollIndicatorNotification>(
-      onNotification: (notification) {
-        notification.disallowIndicator();
-        return true;
-      },
-      child: child,
-    );
-  }
-
-  /// 构建搜索结果（显示匹配的歌曲），支持下拉刷新
-  Widget _buildSearchResults() {
-    // 仅在查询变更或手动重置时重建 Future，避免键盘弹出/收起等 layout 变更导致重复搜索
-    _searchFuture ??= _searchSongsInFavorites(_searchQuery);
-
-    return FutureBuilder<List<db.Song>>(
-      future: _searchFuture,
-      builder: (context, snapshot) {
-        // 统一用 RefreshIndicator 包裹，确保向下滑动可以触发刷新
-        Widget buildScrollable(Widget child) {
-          return RefreshIndicator(
-            onRefresh: _refreshFavorites,
-            child: _wrapWithoutStretch(
-              ListView(
-                padding: EdgeInsets.zero,
-                physics: const AlwaysScrollableScrollPhysics(),
-                children: [child],
-              ),
-            ),
-          );
-        }
-
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return buildScrollable(
-            const Center(child: Padding(
-              padding: EdgeInsets.all(24.0),
-              child: CircularProgressIndicator(),
-            )),
-          );
-        }
-        
-        final songs = snapshot.data ?? [];
-        
-        if (songs.isEmpty) {
-          return buildScrollable(
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.search_off,
-                      size: 64,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      '未找到匹配的歌曲',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }
-        
-        return RefreshIndicator(
-          onRefresh: _refreshFavorites,
-          child: _wrapWithoutStretch(
-            ListView.builder(
-              padding: EdgeInsets.zero,
-              itemCount: songs.length,
-              itemBuilder: (context, index) {
-                final song = songs[index];
-                return Column(
-                  children: [
-                    InkWell(
-                      onTap: () async {
-                        final playerProvider = context.read<PlayerProvider>();
-                        await playerProvider.playSong(
-                          song,
-                          playlist: songs,
-                          index: index,
-                        );
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        child: Row(
-                          children: [
-                            // 封面（统一使用 UnifiedCoverImage，兼容本地/网络路径）
-                            UnifiedCoverImage(
-                              coverPath: song.albumArtPath,
-                              width: 64,
-                              height: 64,
-                              borderRadius: 6,
-                            ),
-                            const SizedBox(width: 16),
-                            // 信息
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    song.title,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
-                                      height: 1.3,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    song.artist ?? '',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                                      height: 1.2,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            // 三点菜单
-                            IconButton(
-                              icon: Icon(
-                                Icons.more_vert,
-                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                                size: 20,
-                              ),
-                              onPressed: () => _showSearchResultSongMenu(song),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(
-                                minWidth: 40,
-                                minHeight: 40,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    // 分隔线
-                    Divider(
-                      height: 1,
-                      thickness: 0.5,
-                      indent: 96,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   Future<List<db.Song>> _collectSongsForFavorites(
     List<api.BilibiliFavorite> favorites,
   ) async {
@@ -1619,28 +1741,6 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
     }
     
     return allSongs;
-  }
-
-  /// 构建收藏夹卡片
-  Widget _buildFavoriteCard(api.BilibiliFavorite favorite,
-      {required bool isFirst}) {
-    return FutureBuilder<db.BilibiliFavorite?>(
-      future: _db.getBilibiliFavoriteByRemoteId(favorite.id),
-      builder: (context, snapshot) {
-        final isLocal = snapshot.data?.isLocal ?? false;
-        final subtitle = isLocal ? 'Bilibili 本地收藏夹' : 'Bilibili';
-
-        return AppleMusicCard(
-          title: favorite.title,
-          subtitle: subtitle,
-          coverUrl: favorite.cover,
-          itemCount: favorite.mediaCount,
-          margin: EdgeInsets.fromLTRB(16, isFirst ? 16 : 8, 16, 8),
-          onTap: () => _navigateToFavoriteDetail(favorite),
-          onLongPress: () => _showRemoveDialog(favorite),
-        );
-      },
-    );
   }
 
   /// 跳转到收藏夹详情
@@ -1749,6 +1849,15 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (_isLoggedIn)
+                ListTile(
+                  leading: const Icon(Icons.add_circle_outline),
+                  title: const Text('新建收藏夹'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showAddFavoriteDialog();
+                  },
+                ),
               ListTile(
                 leading: Icon(
                   _isSelectionMode
@@ -1795,6 +1904,15 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage> {
                           .withOpacity(0.6),
                     ),
                   ),
+                ),
+              if (_userAvatarUrl != null)
+                ListTile(
+                  leading: const Icon(Icons.logout),
+                  title: const Text('退出登录'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showLogoutDialog();
+                  },
                 ),
               SizedBox(
                 height: MediaQuery.of(context).padding.bottom + 120,

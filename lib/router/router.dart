@@ -3,12 +3,14 @@ import '../contants/app_contants.dart';
 import '../views/home_view.dart';
 import '../views/favorites_view.dart';
 import '../views/bilibili/favorites_page.dart';
+import '../views/bilibili/global_search_page.dart';
 import '../storage/player_state_storage.dart';
 import '../widgets/show_aware_page.dart';
 import '../views/settings/settings_page.dart';
 import '../views/settings/storage_setting_page.dart';
 import '../views/settings/config_management_page.dart';
 import '../animations/page_transitions.dart';
+import '../widgets/global_top_bar.dart';
 
 /// 单个菜单项
 class MenuItem {
@@ -88,6 +90,14 @@ class MenuManager {
       key: PlayerPage.bilibili,
       pageKey: GlobalKey(),
       builder: (key) => BilibiliFavoritesPage(key: key),
+    ),
+    MenuItem(
+      icon: Icons.search_rounded,
+      iconSize: 22.0,
+      label: '智能搜索',
+      key: PlayerPage.globalSearch,
+      pageKey: GlobalKey(),
+      builder: (key) => const GlobalSearchPage(),
     ),
     MenuItem(
       icon: Icons.favorite_rounded,
@@ -180,6 +190,8 @@ class MenuManager {
     if (page == currentPage.value) return;
     final oldPage = currentPage.value;
     currentPage.value = page;
+
+    GlobalTopBarController.instance.hide();
 
     PlayerStateStorage.getInstance().then((s) => s.setCurrentPage(page));
 
