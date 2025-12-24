@@ -735,34 +735,30 @@ class _VideoDetailPageState extends State<VideoDetailPage> with ShowAwarePage {
 
           const SizedBox(height: 8),
 
-          // 作者
-          GestureDetector(
-            onTap: _navigateToUploader,
-            child: Text(
-              video.owner.name,
-              style: TextStyle(
-                fontSize: 14,
-                color: isDark
-                    ? Colors.white.withOpacity(0.6)
-                    : Colors.black.withOpacity(0.6),
-                shadows: [
-                  Shadow(
-                    color: Colors.black.withOpacity(0.1),
-                    offset: const Offset(0, 1),
-                    blurRadius: 6,
-                  ),
-                ],
-                decoration: TextDecoration.underline,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+          // 简介/元信息（与收藏夹页 intro 文案风格一致）
+          Text(
+            '${video.owner.name} · ${_formatPubdate(video.pubdate)} · ${_formatDuration(video.duration)}${pagesCount > 1 ? ' · ${pagesCount}P' : ''}',
+            style: TextStyle(
+              fontSize: 14,
+              color: isDark
+                  ? Colors.white.withOpacity(0.6)
+                  : Colors.black.withOpacity(0.6),
+              shadows: [
+                Shadow(
+                  color: Colors.black.withOpacity(0.1),
+                  offset: const Offset(0, 1),
+                  blurRadius: 6,
+                ),
+              ],
             ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
 
           const SizedBox(height: 8),
 
-          // 统计信息（先按已有数据渲染，后续再补齐映射/接口）
+          // 统计信息（与收藏夹页 intro 文案风格一致）
           Text(
             statsLine,
             style: TextStyle(
@@ -782,20 +778,6 @@ class _VideoDetailPageState extends State<VideoDetailPage> with ShowAwarePage {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
-
-          if (pagesCount > 1) ...[
-            const SizedBox(height: 8),
-            Text(
-              '共 $pagesCount 个分P',
-              style: TextStyle(
-                fontSize: 13,
-                color: isDark
-                    ? Colors.white.withOpacity(0.55)
-                    : Colors.black.withOpacity(0.55),
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
 
           const SizedBox(height: 24),
 
@@ -864,69 +846,217 @@ class _VideoDetailPageState extends State<VideoDetailPage> with ShowAwarePage {
     );
   }
 
-  void _showPageMenu(BilibiliVideoPage page, int index) {
-    showModalBottomSheet<void>(
+  void _showFrostedBottomSheet({
+    required double initialChildSize,
+    required double minChildSize,
+    required double maxChildSize,
+    Widget? infoHeader,
+    required List<Widget> tiles,
+  }) {
+    showModalBottomSheet(
       context: context,
-      showDragHandle: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.play_arrow_rounded),
-                title: const Text('播放该分P'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _playPage(index);
-                },
+        return DraggableScrollableSheet(
+          initialChildSize: initialChildSize,
+          minChildSize: minChildSize,
+          maxChildSize: maxChildSize,
+          builder: (context, scrollController) => ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.black.withOpacity(0.3)
+                      : Colors.white.withOpacity(0.5),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(28)),
+                  border: Border.all(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white.withOpacity(0.2)
+                        : Colors.white.withOpacity(0.6),
+                    width: 1.5,
+                  ),
+                ),
+                child: ListView(
+                  controller: scrollController,
+                  children: [
+                    Center(
+                      child: Container(
+                        margin: const EdgeInsets.only(top: 12, bottom: 8),
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white.withOpacity(0.2)
+                              : Colors.black.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(2.5),
+                        ),
+                      ),
+                    ),
+                    if (infoHeader != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        child: infoHeader,
+                      ),
+                    const Divider(height: 1),
+                    ...tiles,
+                    SizedBox(
+                      height: MediaQuery.of(context).padding.bottom + 120,
+                    ),
+                  ],
+                ),
               ),
-              SizedBox(height: MediaQuery.of(context).padding.bottom),
-            ],
+            ),
           ),
         );
       },
     );
   }
 
-  void _showVideoPageMenu() {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.refresh),
-                title: const Text('刷新'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _loadVideoDetails();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.playlist_add),
-                title: const Text('添加到音乐库'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showAddToLibraryDialog();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.person_outline_rounded),
-                title: const Text('查看UP主'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _navigateToUploader();
-                },
-              ),
-              SizedBox(height: MediaQuery.of(context).padding.bottom),
-            ],
+  void _showPageMenu(BilibiliVideoPage page, int index) {
+    final video = _video;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final extraRatio = 120 / screenHeight;
+    final initialSize = (0.28 + extraRatio).clamp(0.2, 0.9);
+
+    _showFrostedBottomSheet(
+      initialChildSize: initialSize,
+      minChildSize: 0.2,
+      maxChildSize: 0.6,
+      infoHeader: Row(
+        children: [
+          UnifiedCoverImage(
+            coverPath: video?.pic,
+            width: 48,
+            height: 48,
+            borderRadius: 8,
           ),
-        );
-      },
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'P${page.page} ${page.part}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '时长 ${_formatDuration(page.duration)}',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      tiles: [
+        ListTile(
+          leading: const Icon(Icons.play_arrow_rounded),
+          title: const Text('播放该分P'),
+          onTap: () {
+            Navigator.pop(context);
+            _playPage(index);
+          },
+        ),
+      ],
+    );
+  }
+
+  void _showVideoPageMenu() {
+    final video = _video;
+    final pagesCount = _pages?.length ?? 1;
+
+    final screenHeight = MediaQuery.of(context).size.height;
+    final extraRatio = 120 / screenHeight;
+    final initialSize = (0.32 + extraRatio).clamp(0.2, 0.9);
+
+    _showFrostedBottomSheet(
+      initialChildSize: initialSize,
+      minChildSize: 0.2,
+      maxChildSize: 0.7,
+      infoHeader: Row(
+        children: [
+          UnifiedCoverImage(
+            coverPath: video?.pic,
+            width: 48,
+            height: 48,
+            borderRadius: 8,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  video?.title ?? '视频详情',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '共 $pagesCount 个分P',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      tiles: [
+        ListTile(
+          leading: const Icon(Icons.refresh),
+          title: const Text('刷新'),
+          onTap: () {
+            Navigator.pop(context);
+            _loadVideoDetails();
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.playlist_add),
+          title: const Text('添加到音乐库'),
+          onTap: () {
+            Navigator.pop(context);
+            _showAddToLibraryDialog();
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.person_outline_rounded),
+          title: const Text('查看UP主'),
+          onTap: () {
+            Navigator.pop(context);
+            _navigateToUploader();
+          },
+        ),
+      ],
     );
   }
 
