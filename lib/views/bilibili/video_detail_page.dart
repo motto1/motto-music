@@ -13,6 +13,8 @@ import 'package:motto_music/database/database.dart' as db;
 import 'package:motto_music/utils/theme_utils.dart';
 import 'package:motto_music/utils/bilibili_song_utils.dart';
 import 'package:motto_music/widgets/show_aware_page.dart';
+import 'package:motto_music/widgets/animated_list_item.dart';
+import 'package:motto_music/widgets/apple_music_song_tile.dart';
 import 'package:motto_music/widgets/unified_cover_image.dart';
 import 'package:motto_music/views/bilibili/user_videos_page.dart';
 
@@ -549,20 +551,10 @@ class _VideoDetailPageState extends State<VideoDetailPage> with ShowAwarePage {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: ThemeUtils.backgroundColor(context),
-      body: Column(
-        children: [
-          _buildHeader(context),
-          Expanded(
-            child: _wrapWithoutStretch(
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: _buildBody(),
-              ),
-            ),
-          ),
-        ],
-      ),
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? ThemeUtils.backgroundColor(context)
+          : const Color(0xFFFFFFFF),
+      body: _buildBody(),
     );
   }
 
@@ -623,18 +615,405 @@ class _VideoDetailPageState extends State<VideoDetailPage> with ShowAwarePage {
   }
 
   Widget _buildVideoContent() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.only(bottom: 120),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final pages = _pages;
+
+    return RefreshIndicator(
+      onRefresh: _loadVideoDetails,
+      child: Container(
+        // 统一的背景色，防止 BackdropFilter 模糊到不同颜色
+        color: isDark ? ThemeUtils.backgroundColor(context) : const Color(0xFFFFFFFF),
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(
+              child: _buildVideoHeader(),
+            ),
+            if (pages != null && pages.length > 1)
+              _buildPagesSliverList(pages),
+            const SliverPadding(
+              padding: EdgeInsets.only(bottom: 180),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 页面头部（完全复刻收藏夹详情页视觉）
+  Widget _buildVideoHeader() {
+    if (_video == null) {
+      return const SizedBox.shrink();
+    }
+
+    final video = _video!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final statusBarHeight = MediaQuery.of(context).padding.top;
+    final coverSize = MediaQuery.of(context).size.width * 0.6;
+    final pagesCount = _pages?.length ?? 1;
+
+    final statsLine =
+        '播放 ${_formatCount(video.view)} · 收藏 ${_formatCount(video.favorite)} · 投币 ${_formatCount(video.coin)} · 点赞 ${_formatCount(video.like)}';
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(16, statusBarHeight + 16, 16, 24),
+      color:
+          isDark ? ThemeUtils.backgroundColor(context) : const Color(0xFFFFFFFF),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          _buildIntegratedCard(),
-          if (_video!.isMultiPage && _pages != null && _pages!.isNotEmpty)
-            _buildPagesSection(),
+          // 顶部返回 + 更多操作
+          Row(
+            children: [
+              IconButton(
+                icon: Icon(
+                  Icons.arrow_back_ios_new,
+                  size: 22,
+                  color: isDark ? Colors.white : Colors.black,
+                ),
+                onPressed: () => Navigator.of(context).pop(),
+                tooltip: '返回',
+              ),
+              const Spacer(),
+              IconButton(
+                icon: Icon(
+                  Icons.more_vert,
+                  size: 22,
+                  color: isDark ? Colors.white : Colors.black,
+                ),
+                onPressed: _showVideoPageMenu,
+                tooltip: '更多操作',
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // 大封面（与收藏夹页一致）
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 30,
+                  offset: const Offset(0, 10),
+                  spreadRadius: 0,
+                ),
+              ],
+            ),
+            child: UnifiedCoverImage(
+              coverPath: video.pic,
+              width: coverSize,
+              height: coverSize,
+              borderRadius: 8,
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // 标题
+          Text(
+            video.title,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              height: 1.2,
+              color: isDark ? Colors.white : Colors.black,
+              shadows: [
+                Shadow(
+                  color: Colors.black.withOpacity(0.15),
+                  offset: const Offset(0, 1),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+
+          const SizedBox(height: 8),
+
+          // 作者
+          GestureDetector(
+            onTap: _navigateToUploader,
+            child: Text(
+              video.owner.name,
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark
+                    ? Colors.white.withOpacity(0.6)
+                    : Colors.black.withOpacity(0.6),
+                shadows: [
+                  Shadow(
+                    color: Colors.black.withOpacity(0.1),
+                    offset: const Offset(0, 1),
+                    blurRadius: 6,
+                  ),
+                ],
+                decoration: TextDecoration.underline,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          // 统计信息（先按已有数据渲染，后续再补齐映射/接口）
+          Text(
+            statsLine,
+            style: TextStyle(
+              fontSize: 14,
+              color: isDark
+                  ? Colors.white.withOpacity(0.6)
+                  : Colors.black.withOpacity(0.6),
+              shadows: [
+                Shadow(
+                  color: Colors.black.withOpacity(0.1),
+                  offset: const Offset(0, 1),
+                  blurRadius: 6,
+                ),
+              ],
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+
+          if (pagesCount > 1) ...[
+            const SizedBox(height: 8),
+            Text(
+              '共 $pagesCount 个分P',
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark
+                    ? Colors.white.withOpacity(0.55)
+                    : Colors.black.withOpacity(0.55),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+
+          const SizedBox(height: 24),
+
+          // 播放/添加按钮（与收藏夹页玻璃按钮一致）
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildGlassButton(
+                onPressed: () => _playPage(_selectedPageIndex),
+                icon: Icons.play_arrow,
+                label: '播放',
+                isPrimary: true,
+              ),
+              const SizedBox(width: 16),
+              _buildGlassButton(
+                onPressed: _showAddToLibraryDialog,
+                icon: Icons.playlist_add,
+                label: '添加',
+                isPrimary: false,
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
         ],
       ),
     );
   }
+
+  SliverList _buildPagesSliverList(List<BilibiliVideoPage> pages) {
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          final page = pages[index];
+          final isSelected = index == _selectedPageIndex;
+
+          return AnimatedListItem(
+            index: index,
+            delay: 33,
+            child: Column(
+              children: [
+                AppleMusicSongTile(
+                  title: 'P${page.page} ${page.part}',
+                  artist: _video?.owner.name,
+                  coverUrl: _video?.pic,
+                  duration: _formatDuration(page.duration),
+                  isPlaying: isSelected,
+                  onTap: () => _playPage(index),
+                  onMoreTap: () => _showPageMenu(page, index),
+                ),
+                Divider(
+                  height: 1,
+                  thickness: 0.5,
+                  indent: 88,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withOpacity(0.1),
+                ),
+              ],
+            ),
+          );
+        },
+        childCount: pages.length,
+      ),
+    );
+  }
+
+  void _showPageMenu(BilibiliVideoPage page, int index) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.play_arrow_rounded),
+                title: const Text('播放该分P'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _playPage(index);
+                },
+              ),
+              SizedBox(height: MediaQuery.of(context).padding.bottom),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showVideoPageMenu() {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.refresh),
+                title: const Text('刷新'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _loadVideoDetails();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.playlist_add),
+                title: const Text('添加到音乐库'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showAddToLibraryDialog();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.person_outline_rounded),
+                title: const Text('查看UP主'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _navigateToUploader();
+                },
+              ),
+              SizedBox(height: MediaQuery.of(context).padding.bottom),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildGlassButton({
+    required VoidCallback onPressed,
+    required IconData icon,
+    required String label,
+    required bool isPrimary,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: isPrimary
+                ? Colors.red.withOpacity(0.3)
+                : (isDark
+                    ? Colors.blue.withOpacity(0.15)
+                    : Colors.black.withOpacity(0.1)),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onPressed,
+              splashColor: Colors.white.withOpacity(0.3),
+              highlightColor: Colors.white.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(24),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                decoration: BoxDecoration(
+                  color: isPrimary
+                      ? const Color(0xFFFF3B30).withOpacity(0.9)
+                      : (isDark
+                          ? Colors.white.withOpacity(0.1)
+                          : Colors.white.withOpacity(0.85)),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: isPrimary
+                        ? Colors.transparent
+                        : (isDark
+                            ? Colors.white.withOpacity(0.15)
+                            : Colors.white.withOpacity(0.4)),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      icon,
+                      size: 20,
+                      color: isPrimary
+                          ? Colors.white
+                          : (isDark ? Colors.white : Colors.black),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                        color: isPrimary
+                            ? Colors.white
+                            : (isDark ? Colors.white : Colors.black),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   /// 详情头部（复用收藏夹页的列表风格）
   Widget _buildIntegratedCard() {
     final video = _video!;
