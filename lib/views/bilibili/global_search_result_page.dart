@@ -604,12 +604,15 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
         TabBar(
           controller: _tabController,
           isScrollable: true,
+          tabAlignment: TabAlignment.start,
+          splashFactory: NoSplash.splashFactory,
+          overlayColor: const WidgetStatePropertyAll<Color>(Colors.transparent),
           labelColor: labelColor,
           unselectedLabelColor: unselectedLabelColor,
           indicatorColor: const Color(0xFFE84C4C),
           tabs: const [
             Tab(text: '歌曲'),
-            Tab(text: '专辑'),
+            Tab(text: '多P'),
             Tab(text: '作者'),
           ],
         ),
