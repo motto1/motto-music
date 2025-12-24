@@ -401,8 +401,16 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
               icon: const SizedBox.shrink(),
               onPressed: null,
               tooltip: '返回',
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(width: 0, height: 0),
+              style: IconButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+
+
+
+
+
             ),
             Expanded(
               child: MottoSearchField(
