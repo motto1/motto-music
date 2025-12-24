@@ -445,38 +445,21 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
       bottom: false,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-        child: Row(
-          children: [
-            IconButton(
-              icon: const SizedBox.shrink(),
-              onPressed: null,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(width: 0, height: 0),
-
-
-
-
-
-            ),
-            Expanded(
-              child: MottoSearchField(
-                controller: _searchController,
-                focusNode: _searchFocusNode,
-                autofocus: true,
-                hintText: '艺人、歌曲、歌词以及更多内容',
-                isLoading: _isResolving,
-                leadingIcon: Icons.arrow_back_ios_new,
-                onLeadingTap: () => Navigator.of(context).maybePop(),
-                showSearchIcon: false,
-                onSubmitted: (_) => unawaited(_handleSubmitted()),
-                onClear: () {
-                  _searchController.clear();
-                  _resetSearchState();
-                  _searchFocusNode.requestFocus();
-                },
-              ),
-            ),
-          ],
+        child: MottoSearchField(
+          controller: _searchController,
+          focusNode: _searchFocusNode,
+          autofocus: true,
+          hintText: '艺人、歌曲、歌词以及更多内容',
+          isLoading: _isResolving,
+          leadingIcon: Icons.arrow_back_ios_new,
+          onLeadingTap: () => Navigator.of(context).maybePop(),
+          showSearchIcon: false,
+          onSubmitted: (_) => unawaited(_handleSubmitted()),
+          onClear: () {
+            _searchController.clear();
+            _resetSearchState();
+            _searchFocusNode.requestFocus();
+          },
         ),
       ),
     );
