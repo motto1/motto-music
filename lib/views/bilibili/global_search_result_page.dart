@@ -645,8 +645,8 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
           artist: subtitle,
           coverUrl: best.pic,
           duration: _formatDuration(best.duration),
-          onTap: () => _navigateToVideoDetail(best),
-          onLongPress: () => _playVideo(best, 0),
+          onTap: () => _playVideo(best, 0),
+          onLongPress: () => unawaited(_showResultMenu(best, 0)),
           onMoreTap: () => _showResultMenu(best, 0),
         ),
         Divider(
@@ -841,8 +841,8 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
                 artist: subtitle,
                 coverUrl: video.pic,
                 duration: _formatDuration(video.duration),
-                onTap: () => _navigateToVideoDetail(video),
-                onLongPress: () => _playVideo(video, globalIndex),
+                onTap: () => _playVideo(video, globalIndex),
+                onLongPress: () => unawaited(_showResultMenu(video, globalIndex)),
                 onMoreTap: () => _showResultMenu(video, globalIndex),
               ),
               Divider(
