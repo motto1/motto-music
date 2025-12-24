@@ -92,12 +92,13 @@ class MottoSearchField extends StatelessWidget {
     }
 
     final resolvedLeadingColor = leadingIconColor ?? accentColor;
+    final leadingInset = leadingIcon != null ? 8.0 : 16.0;
 
     final content = SizedBox(
       height: 44,
       child: Row(
         children: [
-          const SizedBox(width: 16),
+          SizedBox(width: leadingInset),
           if (leadingIcon != null) ...[
             IconButton(
               icon: Icon(leadingIcon, size: 20, color: resolvedLeadingColor),
@@ -106,7 +107,7 @@ class MottoSearchField extends StatelessWidget {
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 4),
           ] else if (showSearchIcon) ...[
             Icon(Icons.search, size: 18, color: hintColor),
             const SizedBox(width: 8),
