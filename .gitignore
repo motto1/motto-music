@@ -82,3 +82,4 @@ Screenshot_*.jpg
 !web/**/*.png
 !screenshots/*.jpg
 !rounded_cover.png
+.ace-tool/
