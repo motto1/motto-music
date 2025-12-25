@@ -107,9 +107,9 @@ class _RankingCarouselState extends State<RankingCarousel> {
     debugPrint('[RankingCarousel] load ranking start');
 
     try {
-      var videos = await _apiService.getZoneRankList(
-        cateId: _activeZoneTid,
-        order: 'click',
+      var videos = await _apiService.getZoneRankingV2(
+        rid: _activeZoneTid,
+        type: 'all',
         page: 1,
         pageSize: 10,
       );
@@ -260,7 +260,7 @@ class _RankingCarouselState extends State<RankingCarousel> {
                         page: const MusicRankingPage(
                           title: '热门音乐',
                           zoneTid: 3,
-                          order: 'click',
+                          rankingType: 'all',
                         ),
                         type: PageTransitionType.slideUp,
                       ),
@@ -363,7 +363,7 @@ class _RankingCarouselState extends State<RankingCarousel> {
                       page: const MusicRankingPage(
                         title: '热门音乐',
                         zoneTid: 3,
-                        order: 'click',
+                        rankingType: 'all',
                       ),
                       type: PageTransitionType.slideUp,
                     ),

@@ -608,6 +608,79 @@ class BilibiliApiService {
   }
 
 
+  /// 获取分区排行榜（ranking/v2）
+  ///
+  /// 基于 bilibili-api-collect/docs/video_ranking/ranking.md
+  /// 注意：该接口仅支持主分区（rid 为主分区 tid）。
+  Future<List<BilibiliVideo>> getZoneRankingV2({
+    required int rid,
+    String type = 'all',
+    int page = 1,
+    int pageSize = 30,
+  }) async {
+    await _ensureWbiKeys();
+
+    final rawParams = <String, dynamic>{
+      'rid': rid.toString(),
+      'type': type,
+    };
+
+    final params = _wbiSigner.encodeWbiToMap(
+      rawParams,
+      _imgKey!,
+      _subKey!,
+    );
+
+    debugPrint('[BilibiliApiService] ranking/v2: rid=$rid type=$type page=$page pageSize=$pageSize');
+
+    final data = await _client.get<Map<String, dynamic>>(
+      '/x/web-interface/ranking/v2',
+      params: params,
+    );
+
+    final list = data['list'] as List<dynamic>?;
+    if (list == null || list.isEmpty) {
+      debugPrint('[BilibiliApiService] ranking/v2 empty: rid=$rid');
+      return [];
+    }
+
+    final start = (page - 1) * pageSize;
+    if (start >= list.length) return [];
+
+    final endExclusive = (start + pageSize) > list.length ? list.length : (start + pageSize);
+    final pageItems = list.sublist(start, endExclusive);
+
+    return pageItems.map((item) {
+      final json = item as Map<String, dynamic>;
+      final owner = json['owner'] as Map<String, dynamic>?;
+      final stat = json['stat'] as Map<String, dynamic>?;
+
+      return BilibiliVideo(
+        aid: _parseSafeInt(json['aid']),
+        bvid: json['bvid'] as String? ?? '',
+        title: json['title'] as String? ?? '',
+        pic: _normalizePicUrl(json['pic'] as String? ?? ''),
+        duration: _parseSafeInt(json['duration']),
+        desc: json['desc'] as String?,
+        owner: BilibiliUploader(
+          mid: _parseSafeInt(owner?['mid']),
+          name: owner?['name'] as String? ?? '',
+          face: owner?['face'] as String?,
+        ),
+        cid: 0,
+        pubdate: _parseSafeInt(json['pubdate']),
+        view: _parseSafeInt(stat?['view']),
+        danmaku: _parseSafeInt(stat?['danmaku']),
+        reply: _parseSafeInt(stat?['reply']),
+        favorite: _parseSafeInt(stat?['favorite']),
+        coin: _parseSafeInt(stat?['coin']),
+        share: _parseSafeInt(stat?['share']),
+        like: _parseSafeInt(stat?['like']),
+      );
+    }).toList();
+  }
+
+
   /// 获取分区视频列表（newlist_rank）
   ///
   /// 基于 bilibili-api-collect/docs/video_ranking/dynamic.md

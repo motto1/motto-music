@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:motto_music/models/bilibili/video.dart';
 import 'package:motto_music/services/bilibili/api_service.dart';
@@ -15,8 +14,7 @@ class MusicRankingPage extends StatefulWidget {
   final String title;
   final Color accentColor;
   final int zoneTid;
-  final String order;
-  final int rangeDays;
+  final String rankingType;
   final int pageSize;
 
   const MusicRankingPage({
@@ -24,8 +22,7 @@ class MusicRankingPage extends StatefulWidget {
     this.title = '音乐索引',
     this.accentColor = const Color(0xFFE84C4C),
     required this.zoneTid,
-    this.order = 'click',
-    this.rangeDays = 7,
+    this.rankingType = 'all',
     this.pageSize = 30,
   });
 
@@ -42,18 +39,14 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
   bool _isLoadingMore = false;
   bool _hasMore = true;
   String? _errorMessage;
-  late String _order;
-  late int _rangeDays;
+  late String _rankingType;
   int _page = 1;
 
-  static const Map<String, String> _orderLabels = {
-    'click': '播放',
-    'scores': '评论',
-    'stow': '收藏',
-    'coin': '投币',
-    'dm': '弹幕',
+  static const Map<String, String> _rankingTypeLabels = {
+    'all': '综合',
+    'rokkie': '新人',
+    'origin': '原创',
   };
-  static const List<int> _rangeOptions = [7, 30, 90];
 
   @override
   void initState() {
@@ -62,8 +55,7 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
     final apiClient = BilibiliApiClient(cookieManager);
     _apiService = BilibiliApiService(apiClient);
     _scrollController = ScrollController()..addListener(_handleScroll);
-    _order = widget.order;
-    _rangeDays = widget.rangeDays;
+    _rankingType = widget.rankingType;
     _loadFirstPage();
     GlobalTopBarController.instance.push(
       GlobalTopBarStyle(
@@ -99,12 +91,11 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
     });
 
     try {
-      final videos = await _apiService.getZoneRankList(
-        cateId: widget.zoneTid,
-        order: _order,
+      final videos = await _apiService.getZoneRankingV2(
+        rid: widget.zoneTid,
+        type: _rankingType,
         page: _page,
         pageSize: widget.pageSize,
-        rangeDays: _rangeDays,
       );
       if (mounted) {
         setState(() {
@@ -143,12 +134,11 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
 
     try {
       final nextPage = _page + 1;
-      final videos = await _apiService.getZoneRankList(
-        cateId: widget.zoneTid,
-        order: _order,
+      final videos = await _apiService.getZoneRankingV2(
+        rid: widget.zoneTid,
+        type: _rankingType,
         page: nextPage,
         pageSize: widget.pageSize,
-        rangeDays: _rangeDays,
       );
       if (!mounted) return;
       setState(() {
@@ -165,7 +155,7 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
     }
   }
 
-  String get _orderLabel => _orderLabels[_order] ?? _order;
+  String get _rankingTypeLabel => _rankingTypeLabels[_rankingType] ?? _rankingType;
 
   @override
   Widget build(BuildContext context) {
@@ -200,7 +190,7 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
         children: [
           Expanded(
             child: Text(
-              '近$_rangeDays天 · $_orderLabel',
+              'TOP100 · $_rankingTypeLabel',
               style: TextStyle(
                 color: textColor.withValues(alpha: 0.78),
                 fontSize: 13,
@@ -211,53 +201,27 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
             ),
           ),
           PopupMenuButton<String>(
-            initialValue: _order,
+            initialValue: _rankingType,
             onSelected: (value) {
-              if (value == _order) return;
+              if (value == _rankingType) return;
               setState(() {
-                _order = value;
+                _rankingType = value;
               });
               _loadFirstPage();
             },
             itemBuilder: (context) {
-              return _orderLabels.entries
+              return _rankingTypeLabels.entries
                   .map(
                     (e) => PopupMenuItem<String>(
                       value: e.key,
-                      child: Text('按${e.value}'),
+                      child: Text(e.value),
                     ),
                   )
                   .toList();
             },
             child: _buildFilterChip(
-              icon: Icons.sort,
-              label: '排序',
-              isDark: isDark,
-            ),
-          ),
-          const SizedBox(width: 10),
-          PopupMenuButton<int>(
-            initialValue: _rangeDays,
-            onSelected: (value) {
-              if (value == _rangeDays) return;
-              setState(() {
-                _rangeDays = value;
-              });
-              _loadFirstPage();
-            },
-            itemBuilder: (context) {
-              return _rangeOptions
-                  .map(
-                    (days) => PopupMenuItem<int>(
-                      value: days,
-                      child: Text('近$days天'),
-                    ),
-                  )
-                  .toList();
-            },
-            child: _buildFilterChip(
-              icon: Icons.calendar_today,
-              label: '时间',
+              icon: Icons.filter_list_rounded,
+              label: '类型',
               isDark: isDark,
             ),
           ),
