@@ -778,6 +778,7 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
       backgroundColor: ThemeUtils.backgroundColor(context),
       body: _wrapWithoutStretch(
         CustomScrollView(
+          key: const PageStorageKey<String>('global_search_scroll'),
           controller: _scrollController,
           slivers: [
             SliverToBoxAdapter(

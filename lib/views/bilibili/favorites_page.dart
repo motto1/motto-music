@@ -53,6 +53,7 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage>
   double _collapseProgress = 0.0;
   bool _isLoading = false;
   bool _isSearching = false;
+  bool _isCheckingLogin = true;
   bool _isLoggedIn = false;
   List<api.BilibiliFavorite>? _favorites;
   List<api.BilibiliFavorite>? _filteredFavorites;
@@ -185,14 +186,25 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage>
 
   /// 检查登录状态并加载数据
   Future<void> _checkLoginAndLoadData() async {
+    if (!mounted) return;
+
+    if (!_isCheckingLogin) {
+      setState(() {
+        _isCheckingLogin = true;
+      });
+    }
+
     final cookieManager = CookieManager();
     final isLoggedIn = await cookieManager.isLoggedIn();
-    
+
+    if (!mounted) return;
+
     setState(() {
       _isLoggedIn = isLoggedIn;
+      _isCheckingLogin = false;
     });
     _applyTopBarStyle();
-    
+
     if (isLoggedIn) {
       await _loadFavorites();
     }
@@ -865,6 +877,7 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage>
       
       if (mounted) {
         setState(() {
+          _isCheckingLogin = false;
           _isLoggedIn = false;
           _userAvatarUrl = null;
           _favorites = null;
@@ -1135,6 +1148,15 @@ class _BilibiliFavoritesPageState extends State<BilibiliFavoritesPage>
   }
 
   List<Widget> _buildContentSlivers() {
+    if (_isCheckingLogin) {
+      return const [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ];
+    }
+
     if (!_isLoggedIn) {
       return [
         SliverFillRemaining(

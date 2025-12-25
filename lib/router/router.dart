@@ -97,7 +97,7 @@ class MenuManager {
       label: '智能搜索',
       key: PlayerPage.globalSearch,
       pageKey: GlobalKey(),
-      builder: (key) => const GlobalSearchPage(),
+      builder: (key) => GlobalSearchPage(key: key),
     ),
     MenuItem(
       icon: Icons.favorite_rounded,
