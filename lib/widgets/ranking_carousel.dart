@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:motto_music/widgets/unified_cover_image.dart';
 import 'package:motto_music/models/bilibili/video.dart';
 import 'package:motto_music/services/bilibili/api_service.dart';
 import 'package:motto_music/services/bilibili/api_client.dart';
@@ -433,16 +434,25 @@ class _RankingCarouselState extends State<RankingCarousel> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    // 封面图
-                    CachedNetworkImage(
-                      imageUrl: video.pic,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(
-                        color: Colors.grey[800],
-                      ),
-                      errorWidget: (context, url, error) => Container(
-                        color: Colors.grey[800],
-                        child: const Icon(Icons.music_note, color: Colors.white54, size: 48),
+                    // 封面图（B站图片优先落地缓存）
+                    Positioned.fill(
+                      child: UnifiedCoverImage(
+                        coverPath: video.pic,
+                        width: double.infinity,
+                        height: double.infinity,
+                        borderRadius: 0,
+                        fit: BoxFit.cover,
+                        placeholder: Container(
+                          color: Colors.grey[800],
+                        ),
+                        errorWidget: Container(
+                          color: Colors.grey[800],
+                          child: const Icon(
+                            Icons.music_note,
+                            color: Colors.white54,
+                            size: 48,
+                          ),
+                        ),
                       ),
                     ),
                     // 底部过渡渐变（极短，只做过渡）

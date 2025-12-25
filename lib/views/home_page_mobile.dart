@@ -34,7 +34,6 @@ class _HomePageMobileState extends State<HomePageMobile> {
           valueListenable: menuManager.currentPage,
           builder: (context, currentPage, _) {
             return PopScope(
-              key: ValueKey(currentPage),
               canPop: false,
               onPopInvokedWithResult: (didPop, result) {
                 debugPrint('========== 系统返回事件 ==========');
@@ -84,11 +83,12 @@ class _HomePageMobileState extends State<HomePageMobile> {
                     child: ValueListenableBuilder<PlayerPage>(
                       valueListenable: menuManager.currentPage,
                       builder: (context, currentPage, _) {
-                        final pageIndex = menuManager.items.indexWhere((item) => item.key == currentPage);
-                        if (pageIndex != -1) {
-                          return menuManager.pages[pageIndex];
-                        }
-                        return menuManager.pages[0];
+                        final pageIndex = menuManager.items
+                            .indexWhere((item) => item.key == currentPage);
+                        return IndexedStack(
+                          index: pageIndex != -1 ? pageIndex : 0,
+                          children: menuManager.pages,
+                        );
                       },
                     ),
                   ),

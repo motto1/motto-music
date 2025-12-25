@@ -16,6 +16,7 @@ import 'package:motto_music/utils/theme_utils.dart';
 import 'package:motto_music/widgets/show_aware_page.dart';
 import 'package:motto_music/animations/page_transitions.dart';
 import 'package:motto_music/widgets/apple_music_card.dart';
+import 'package:motto_music/widgets/unified_cover_image.dart';
 import 'package:motto_music/widgets/global_top_bar.dart';
 import 'package:motto_music/router/route_observer.dart';
 import 'package:motto_music/widgets/motto_search_field.dart';
@@ -702,13 +703,17 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
             fit: StackFit.expand,
             children: [
               if (category.coverUrl != null)
-                CachedNetworkImage(
-                  imageUrl: category.coverUrl!,
+                Positioned.fill(
+                  child: UnifiedCoverImage(
+                  coverPath: category.coverUrl!,
+                    width: double.infinity,
+                    height: double.infinity,
+                    borderRadius: 0,
                   fit: BoxFit.cover,
-                  placeholder: (context, url) => Container(
+                  placeholder: Container(
                     color: category.overlayColor.withValues(alpha: 0.6),
                   ),
-                  errorWidget: (context, url, error) => Container(
+                  errorWidget: Container(
                     color: category.overlayColor.withValues(alpha: 0.6),
                   ),
                 )
