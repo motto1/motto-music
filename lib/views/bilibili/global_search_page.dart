@@ -750,7 +750,7 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
           title: category.title,
           accentColor: category.overlayColor,
           zoneTid: category.tid,
-          order: 'click',
+          rankingType: 'all',
         ),
         type: PageTransitionType.slideLeft,
       ),
