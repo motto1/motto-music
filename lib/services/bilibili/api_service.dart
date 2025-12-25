@@ -85,8 +85,22 @@ class BilibiliApiService {
     print('✅ 视频详情 API 响应成功');
     print('  - 视频标题: ${data['title']}');
     print('  - 视频 aid: ${data['aid']}');
-    
-    return BilibiliVideo.fromJson(data);
+
+    // 详情接口通常把统计字段放在 stat 子对象里，这里做一次扁平化映射，
+    // 以保持 BilibiliVideo 的 view/favorite/coin/like 等字段可用。
+    final normalized = Map<String, dynamic>.from(data);
+    final stat = data['stat'];
+    if (stat is Map) {
+      normalized['view'] ??= stat['view'];
+      normalized['danmaku'] ??= stat['danmaku'];
+      normalized['reply'] ??= stat['reply'];
+      normalized['favorite'] ??= stat['favorite'];
+      normalized['coin'] ??= stat['coin'];
+      normalized['share'] ??= stat['share'];
+      normalized['like'] ??= stat['like'];
+    }
+
+    return BilibiliVideo.fromJson(normalized);
   }
   
   /// 获取收藏夹内容（分页）- 返回完整信息包括封面
