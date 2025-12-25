@@ -642,11 +642,17 @@ class BilibiliApiService {
       params: params,
     );
 
-    final result = data['result'] as List<dynamic>?;
+    debugPrint('[BilibiliApiService] getZoneRankList: cateId=$cateId order=${params['order']} page=$page pageSize=$pageSize timeFrom=$timeFrom timeTo=$timeTo');
+    debugPrint('[BilibiliApiService] newlist_rank keys: ${data.keys.toList()}');
+
+    final result = (data['result'] as List<dynamic>?) ??
+        (data['list'] as List<dynamic>?) ??
+        (data['rank'] as List<dynamic>?);
     if (result == null || result.isEmpty) {
       return [];
     }
 
+    debugPrint('[BilibiliApiService] newlist_rank result count=${result.length}');
     return result.map((item) {
       final json = item as Map<String, dynamic>;
       final ownerName = json['author'] as String? ?? '';

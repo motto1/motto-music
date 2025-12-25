@@ -68,6 +68,7 @@ class _RankingCarouselState extends State<RankingCarousel> {
   late ScrollController _scrollController;
   List<BilibiliVideo> _videos = [];
   bool _isLoading = true;
+  String? _errorMessage;
 
   // 缓存提取的颜色
   final Map<String, Color> _colorCache = {};
@@ -95,6 +96,15 @@ class _RankingCarouselState extends State<RankingCarousel> {
   }
 
   Future<void> _loadRanking() async {
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
+
+    debugPrint('[RankingCarousel] load ranking start');
+
     try {
       final videos = await _apiService.getZoneRankList(
         cateId: 3,
@@ -105,17 +115,22 @@ class _RankingCarouselState extends State<RankingCarousel> {
       if (mounted) {
         setState(() {
           _videos = videos;
+          _errorMessage = videos.isEmpty ? '暂无数据' : null;
           _isLoading = false;
         });
         // 预加载颜色
         for (final video in _videos) {
-          _extractDominantColor(video.pic);
+          unawaited(_extractDominantColor(video.pic));
         }
       }
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('[RankingCarousel] load ranking failed: $e');
+      debugPrint(st.toString());
       if (mounted) {
         setState(() {
           _isLoading = false;
+          _videos = [];
+          _errorMessage = e.toString();
         });
       }
     }
@@ -206,7 +221,106 @@ class _RankingCarouselState extends State<RankingCarousel> {
     }
 
     if (_videos.isEmpty) {
-      return const SizedBox.shrink();
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      final message = (_errorMessage == null || _errorMessage!.isEmpty) ? '暂无数据' : _errorMessage!;
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '热门音乐',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '音乐分区 · 热门',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      NamidaPageRoute(
+                        page: const MusicRankingPage(
+                          title: '热门音乐',
+                          zoneTid: 3,
+                          order: 'click',
+                        ),
+                        type: PageTransitionType.slideUp,
+                      ),
+                    );
+                  },
+                  child: Text(
+                    '查看全部',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: _cardHeight,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 320),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.cloud_off_rounded,
+                      size: 40,
+                      color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.38),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '排行榜加载失败',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.82),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      message,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.55),
+                      ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 14),
+                    TextButton(
+                      onPressed: _loadRanking,
+                      child: const Text('点此重试'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
     }
 
     final cardWidth = _getCardWidth(context);
