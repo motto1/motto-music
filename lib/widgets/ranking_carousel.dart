@@ -69,6 +69,7 @@ class _RankingCarouselState extends State<RankingCarousel> {
   List<BilibiliVideo> _videos = [];
   bool _isLoading = true;
   String? _errorMessage;
+  int _activeZoneTid = 3;
 
   // 缓存提取的颜色
   final Map<String, Color> _colorCache = {};
@@ -106,8 +107,8 @@ class _RankingCarouselState extends State<RankingCarousel> {
     debugPrint('[RankingCarousel] load ranking start');
 
     try {
-      final videos = await _apiService.getZoneRankList(
-        cateId: 3,
+      var videos = await _apiService.getZoneRankList(
+        cateId: _activeZoneTid,
         order: 'click',
         page: 1,
         pageSize: 10,
@@ -291,7 +292,7 @@ class _RankingCarouselState extends State<RankingCarousel> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      '排行榜加载失败',
+                      (_errorMessage == '暂无数据') ? '暂无数据' : '排行榜加载失败',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,

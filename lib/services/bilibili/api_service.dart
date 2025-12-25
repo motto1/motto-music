@@ -198,7 +198,7 @@ class BilibiliApiService {
     final rawParams = <String, dynamic>{
       'keyword': trimmedKeyword,
       'search_type': searchType,
-      'page': page.toString(),
+      'page': page,
       'page_size': pageSize.toString(),
     };
     if (orderType != null && orderType.isNotEmpty) {
@@ -627,12 +627,15 @@ class BilibiliApiService {
     final timeTo = _formatYmd(now);
     final timeFrom = _formatYmd(now.subtract(Duration(days: rangeDays)));
     final params = <String, dynamic>{
+      'main_ver': 'v3',
       'search_type': 'video',
       'view_type': 'hot_rank',
+      'copy_right': -1,
+      'new_web_tag': 1,
       'order': order.isEmpty ? 'click' : order,
-      'cate_id': cateId.toString(),
-      'page': page.toString(),
-      'pagesize': pageSize.toString(),
+      'cate_id': cateId,
+      'page': page,
+      'pagesize': pageSize,
       'time_from': timeFrom,
       'time_to': timeTo,
     };
@@ -644,6 +647,9 @@ class BilibiliApiService {
 
     debugPrint('[BilibiliApiService] getZoneRankList: cateId=$cateId order=${params['order']} page=$page pageSize=$pageSize timeFrom=$timeFrom timeTo=$timeTo');
     debugPrint('[BilibiliApiService] newlist_rank keys: ${data.keys.toList()}');
+    debugPrint('[BilibiliApiService] newlist_rank meta: msg=${data['msg']} numResults=${data['numResults']} numPages=${data['numPages']} page=${data['page']} pagesize=${data['pagesize']}');
+    final rawResult = data['result'];
+    debugPrint('[BilibiliApiService] newlist_rank rawResult: type=${rawResult.runtimeType} len=${rawResult is List ? rawResult.length : 'n/a'}');
 
     final result = (data['result'] as List<dynamic>?) ??
         (data['list'] as List<dynamic>?) ??
