@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+
 import 'package:motto_music/models/bilibili/search_strategy.dart';
 import 'package:motto_music/services/bilibili/api_service.dart';
 import 'package:motto_music/services/bilibili/api_client.dart';
@@ -709,7 +709,7 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
                     width: double.infinity,
                     height: double.infinity,
                     borderRadius: 0,
-                  fit: BoxFit.cover,
+                    fit: BoxFit.cover,
                   placeholder: Container(
                     color: category.overlayColor.withValues(alpha: 0.6),
                   ),
@@ -717,6 +717,7 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
                     color: category.overlayColor.withValues(alpha: 0.6),
                   ),
                 )
+                ),
               else
                 Container(
                   color: category.overlayColor.withValues(alpha: 0.6),
