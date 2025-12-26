@@ -379,7 +379,9 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
 
     var nextIndex = 0;
     final workers = <Future<void>>[];
-    final concurrency = source.length < 4 ? source.length : 4;
+    // 分区封面需要多次请求 newlist_rank，过高并发容易触发抖动/限流，
+    // 这里控制在较低并发以提升稳定性。
+    final concurrency = source.length < 2 ? source.length : 2;
 
     Future<void> worker() async {
       while (true) {
@@ -400,7 +402,8 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
         }
 
         String? coverUrl;
-        try {
+        for (var attempt = 0; attempt < 2; attempt++) {
+          try {
           final list = await _apiService.getZoneRankList(
             cateId: category.tid,
             order: 'click',
@@ -409,9 +412,16 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
           );
           if (list.isNotEmpty && list.first.pic.isNotEmpty) {
             coverUrl = list.first.pic;
+            break;
           }
         } catch (_) {
-          coverUrl = null;
+          // ignore
+        }
+
+          // 轻微退避，减少瞬时抖动导致的空封面。
+          if (attempt == 0) {
+            await Future.delayed(const Duration(milliseconds: 250));
+          }
         }
 
         if (coverUrl != null && coverUrl.isNotEmpty) {
