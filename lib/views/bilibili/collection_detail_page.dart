@@ -14,6 +14,8 @@ import 'dart:ui';
 import 'package:drift/drift.dart' as drift;
 import 'package:motto_music/services/cache/page_cache_service.dart';
 import 'package:motto_music/services/cache/album_art_cache_service.dart';
+import 'package:motto_music/widgets/animated_list_item.dart';
+import 'package:motto_music/widgets/apple_music_song_tile.dart';
 import 'package:motto_music/widgets/unified_cover_image.dart';
 
 /// 合集详情页面（参考视频详情页设计）
@@ -76,7 +78,8 @@ class _CollectionDetailPageState extends State<CollectionDetailPage> with ShowAw
       return;
     }
 
-    if (_isLoading || (!loadMore && !_hasMore)) return;
+    if (_isLoading) return;
+    if (loadMore && !_hasMore) return;
 
     setState(() {
       _isLoading = true;
@@ -395,19 +398,7 @@ class _CollectionDetailPageState extends State<CollectionDetailPage> with ShowAw
       },
       child: Scaffold(
         backgroundColor: ThemeUtils.backgroundColor(context),
-        body: Column(
-          children: [
-            _buildHeader(context),
-            Expanded(
-              child: _wrapWithoutStretch(
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: _buildBody(),
-                ),
-              ),
-            ),
-          ],
-        ),
+        body: _wrapWithoutStretch(_buildBody()),
       ),
     );
   }
@@ -466,16 +457,439 @@ class _CollectionDetailPageState extends State<CollectionDetailPage> with ShowAw
     );
   }
 
-  Widget _buildCollectionContent() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.only(bottom: 120),
+  Widget _buildCollectionHeader() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final statusBarHeight = MediaQuery.of(context).padding.top;
+    final coverSize = MediaQuery.of(context).size.width * 0.6;
+
+    final info = _collectionInfo;
+    final title = info?.title ?? widget.title;
+    final cover = info?.cover ??
+        ((_videos != null && _videos!.isNotEmpty) ? _videos!.first.cover : null);
+    final upName = info?.upName.isNotEmpty == true
+        ? info!.upName
+        : ((_videos != null && _videos!.isNotEmpty) ? _videos!.first.upName : '');
+    final pCount = info?.mediaCount ?? (_videos?.length ?? 0);
+
+    final subtitleLine = [
+      if (upName.isNotEmpty) upName,
+      if (pCount > 0) '${pCount}P',
+    ].join(' · ');
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(16, statusBarHeight + 16, 16, 24),
+      color: isDark ? ThemeUtils.backgroundColor(context) : const Color(0xFFFFFFFF),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          _buildIntegratedCard(),
-          if (_videos != null && _videos!.isNotEmpty)
-            _buildVideosSection(),
+          Row(
+            children: [
+              IconButton(
+                icon: Icon(
+                  Icons.arrow_back_ios_new,
+                  size: 22,
+                  color: isDark ? Colors.white : Colors.black,
+                ),
+                onPressed: () => Navigator.of(context).pop(),
+                tooltip: '返回',
+              ),
+              const Spacer(),
+              IconButton(
+                icon: Icon(
+                  Icons.more_vert,
+                  size: 22,
+                  color: isDark ? Colors.white : Colors.black,
+                ),
+                onPressed: _showCollectionMenu,
+                tooltip: '更多操作',
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 30,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: UnifiedCoverImage(
+                coverPath: cover,
+                width: coverSize,
+                height: coverSize,
+                borderRadius: 0,
+                isDark: isDark,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (subtitleLine.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              subtitleLine,
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark
+                    ? Colors.white.withOpacity(0.6)
+                    : Colors.black.withOpacity(0.6),
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildGlassButton(
+                onPressed: _playSelectedFromHeader,
+                icon: Icons.play_arrow,
+                label: '播放',
+                isPrimary: true,
+              ),
+              const SizedBox(width: 16),
+              _buildGlassButton(
+                onPressed: _showAddToLibraryDialog,
+                icon: Icons.playlist_add,
+                label: '添加',
+                isPrimary: false,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
         ],
+      ),
+    );
+  }
+
+  void _playSelectedFromHeader() {
+    final videos = _videos;
+    if (videos == null || videos.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('暂无可播放内容')),
+      );
+      return;
+    }
+    final index = _selectedVideoIndex.clamp(0, videos.length - 1);
+    _playVideo(index);
+  }
+
+  void _showCollectionMenu() {
+    final info = _collectionInfo;
+    final cover = info?.cover ??
+        ((_videos != null && _videos!.isNotEmpty) ? _videos!.first.cover : null);
+    final title = info?.title ?? widget.title;
+
+    _showFrostedBottomSheet(
+      initialChildSize: 0.32,
+      minChildSize: 0.2,
+      maxChildSize: 0.6,
+      infoHeader: Row(
+        children: [
+          UnifiedCoverImage(
+            coverPath: cover,
+            width: 48,
+            height: 48,
+            borderRadius: 8,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+      tiles: [
+        ListTile(
+          leading: const Icon(Icons.play_arrow_rounded),
+          title: const Text('播放'),
+          onTap: () {
+            Navigator.pop(context);
+            _playSelectedFromHeader();
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.playlist_add),
+          title: const Text('添加到音乐库'),
+          onTap: () {
+            Navigator.pop(context);
+            _showAddToLibraryDialog();
+          },
+        ),
+      ],
+    );
+  }
+
+  void _showCollectionItemMenu(BilibiliCollectionItem video, int index) {
+    _showFrostedBottomSheet(
+      initialChildSize: 0.28,
+      minChildSize: 0.2,
+      maxChildSize: 0.6,
+      infoHeader: Row(
+        children: [
+          UnifiedCoverImage(
+            coverPath: video.cover,
+            width: 48,
+            height: 48,
+            borderRadius: 8,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  video.title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '时长 ${_formatDuration(video.duration)}',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      tiles: [
+        ListTile(
+          leading: const Icon(Icons.play_arrow_rounded),
+          title: const Text('播放该视频'),
+          onTap: () {
+            Navigator.pop(context);
+            _playVideo(index);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGlassButton({
+    required VoidCallback onPressed,
+    required IconData icon,
+    required String label,
+    required bool isPrimary,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: isPrimary
+                ? Colors.red.withOpacity(0.3)
+                : (isDark
+                    ? Colors.blue.withOpacity(0.15)
+                    : Colors.black.withOpacity(0.1)),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onPressed,
+              splashColor: Colors.white.withOpacity(0.3),
+              highlightColor: Colors.white.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(24),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                decoration: BoxDecoration(
+                  color: isPrimary
+                      ? const Color(0xFFFF3B30).withOpacity(0.9)
+                      : (isDark
+                          ? Colors.white.withOpacity(0.1)
+                          : Colors.white.withOpacity(0.85)),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: isPrimary
+                        ? Colors.transparent
+                        : (isDark
+                            ? Colors.white.withOpacity(0.15)
+                            : Colors.white.withOpacity(0.4)),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      icon,
+                      size: 20,
+                      color: isPrimary
+                          ? Colors.white
+                          : (isDark ? Colors.white : Colors.black),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                        color: isPrimary
+                            ? Colors.white
+                            : (isDark ? Colors.white : Colors.black),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showFrostedBottomSheet({
+    required double initialChildSize,
+    required double minChildSize,
+    required double maxChildSize,
+    Widget? infoHeader,
+    required List<Widget> tiles,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: initialChildSize,
+          minChildSize: minChildSize,
+          maxChildSize: maxChildSize,
+          builder: (context, scrollController) => ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.black.withOpacity(0.3)
+                      : Colors.white.withOpacity(0.5),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(28)),
+                  border: Border.all(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white.withOpacity(0.2)
+                        : Colors.white.withOpacity(0.6),
+                    width: 1.5,
+                  ),
+                ),
+                child: ListView(
+                  controller: scrollController,
+                  children: [
+                    Center(
+                      child: Container(
+                        margin: const EdgeInsets.only(top: 12, bottom: 8),
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white.withOpacity(0.2)
+                              : Colors.black.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(2.5),
+                        ),
+                      ),
+                    ),
+                    if (infoHeader != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        child: infoHeader,
+                      ),
+                    const Divider(height: 1),
+                    ...tiles,
+                    SizedBox(
+                      height: MediaQuery.of(context).padding.bottom + 120,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCollectionContent() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return RefreshIndicator(
+      onRefresh: () async => _loadVideos(loadMore: false),
+      child: Container(
+        // 复刻多P页面的纯色背景逻辑
+        color: isDark ? ThemeUtils.backgroundColor(context) : const Color(0xFFFFFFFF),
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(
+              child: _buildCollectionHeader(),
+            ),
+            if (_videos != null && _videos!.isNotEmpty)
+              _buildVideosSection(),
+            if (_hasMore)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Center(
+                    child: _isLoading
+                        ? const CircularProgressIndicator()
+                        : _buildGlassLoadMoreButton(),
+                  ),
+                ),
+              ),
+            const SliverPadding(
+              padding: EdgeInsets.only(bottom: 180),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -720,116 +1134,46 @@ class _CollectionDetailPageState extends State<CollectionDetailPage> with ShowAw
     );
   }
 
-  Widget _buildVideosSection() {
+  /// 合集视频列表（复刻多P页面的 SliverList + AppleMusicSongTile 样式）
+  SliverList _buildVideosSection() {
     final videos = _videos!;
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
-    // 复刻“多P页面”的列表样式（见 VideoDetailPage._buildPagesSection）。
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.fromLTRB(24, 12, 24, 4),
-          child: Text(
-            '视频列表',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        ...videos.asMap().entries.map((entry) {
-          final index = entry.key;
-          final video = entry.value;
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          final video = videos[index];
           final isSelected = index == _selectedVideoIndex;
 
-          return Column(
-            children: [
-              InkWell(
-                onTap: () => _playVideo(index),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      UnifiedCoverImage(
-                        coverPath: video.cover,
-                        width: 56,
-                        height: 56,
-                        borderRadius: 6,
-                        isDark: isDark,
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              video.title,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                                height: 1.3,
-                                color: isSelected
-                                    ? theme.colorScheme.primary
-                                    : null,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '时长 ${_formatDuration(video.duration)}',
-                              style: TextStyle(
-                                fontSize: 14,
-                                height: 1.2,
-                                color: theme.colorScheme.onSurface
-                                    .withOpacity(0.5),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        isSelected
-                            ? Icons.play_arrow_rounded
-                            : Icons.play_circle_outline,
-                        color: isSelected
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.onSurface.withOpacity(0.5),
-                      ),
-                    ],
-                  ),
+          return AnimatedListItem(
+            index: index,
+            delay: 33,
+            child: Column(
+              children: [
+                AppleMusicSongTile(
+                  title: video.title,
+                  artist: video.upName,
+                  coverUrl: video.cover,
+                  duration: _formatDuration(video.duration),
+                  isPlaying: isSelected,
+                  onTap: () => _playVideo(index),
+                  onMoreTap: () => _showCollectionItemMenu(video, index),
                 ),
-              ),
-              if (index != videos.length - 1)
-                Divider(
-                  height: 1,
-                  thickness: 0.5,
-                  indent: 88,
-                  color: theme.colorScheme.onSurface.withOpacity(0.1),
-                ),
-            ],
-          );
-        }),
-        if (_hasMore)
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Center(
-              child: _isLoading
-                  ? const CircularProgressIndicator()
-                  : _buildGlassLoadMoreButton(),
+                if (index != videos.length - 1)
+                  Divider(
+                    height: 1,
+                    thickness: 0.5,
+                    indent: 88,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.1),
+                  ),
+              ],
             ),
-          ),
-        const SizedBox(height: 24),
-      ],
+          );
+        },
+        childCount: videos.length,
+      ),
     );
   }
 
