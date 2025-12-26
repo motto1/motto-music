@@ -221,49 +221,44 @@ class GlobalTopBar extends StatelessWidget {
           top: 0,
           child: IgnorePointer(
             ignoring: contentOpacity < 0.05,
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: IgnorePointer(
-                    ignoring: true,
-                    child: Material(color: backgroundColor),
-                  ),
-                ),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Opacity(
-                      opacity: contentOpacity,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(height: topPadding),
-                          SizedBox(
-                            height: barHeight,
-                            child: CompactPageHeader(
-                              title: style.title,
-                              textColor: ThemeUtils.textColor(context),
-                              showBackButton: style.showBackButton,
-                              centerTitle: style.centerTitle,
-                              backIconColor: style.backIconColor,
-                              onBack: style.onBack,
-                              trailing: style.trailing,
-                              titleOpacity: style.titleOpacity,
-                              titleTranslateY: style.titleTranslateY,
-                            ),
+            child: Material(
+              // 必须提供 Material 祖先：顶栏内部包含 InkWell/IconButton 等 InkResponse。
+              // 这里使用可透明背景（backgroundOpacity 可为 0），同时维持原有顶栏背景淡入效果。
+              color: backgroundColor,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Opacity(
+                    opacity: contentOpacity,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(height: topPadding),
+                        SizedBox(
+                          height: barHeight,
+                          child: CompactPageHeader(
+                            title: style.title,
+                            textColor: ThemeUtils.textColor(context),
+                            showBackButton: style.showBackButton,
+                            centerTitle: style.centerTitle,
+                            backIconColor: style.backIconColor,
+                            onBack: style.onBack,
+                            trailing: style.trailing,
+                            titleOpacity: style.titleOpacity,
+                            titleTranslateY: style.titleTranslateY,
                           ),
-                          if (style.bottom != null) style.bottom!,
-                        ],
-                      ),
+                        ),
+                        if (style.bottom != null) style.bottom!,
+                      ],
                     ),
-                    if (style.showDivider)
-                      Divider(
-                        height: 1,
-                        color: dividerColor,
-                      ),
-                  ],
-                ),
-              ],
+                  ),
+                  if (style.showDivider)
+                    Divider(
+                      height: 1,
+                      color: dividerColor,
+                    ),
+                ],
+              ),
             ),
           ),
         );
