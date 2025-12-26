@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:motto_music/animations/page_transitions.dart';
 import 'package:motto_music/main.dart';
 import 'package:motto_music/models/bilibili/collection.dart';
@@ -11,8 +12,9 @@ import 'package:motto_music/services/bilibili/cookie_manager.dart';
 import 'package:motto_music/services/cache/page_cache_service.dart';
 import 'package:motto_music/utils/theme_utils.dart';
 import 'package:motto_music/views/bilibili/collection_detail_page.dart';
+import 'package:motto_music/views/bilibili/uploader_song_ranking_page.dart';
 import 'package:motto_music/views/bilibili/video_detail_page.dart';
-import 'package:motto_music/widgets/apple_music_card.dart';
+import 'package:motto_music/widgets/apple_music_song_tile.dart';
 import 'package:motto_music/widgets/global_top_bar.dart';
 import 'package:motto_music/widgets/unified_cover_image.dart';
 
@@ -42,7 +44,6 @@ class UserVideosPage extends StatefulWidget {
 class _UserVideosPageState extends State<UserVideosPage> {
   static const double _heroHeight = 380.0;
   static const double _collapseDistance = 220.0;
-  static const double _topBarHeight = 52.0;
   static const double _topBarBottomHeight = 44.0;
   static const Color _accentColor = Color(0xFFE84C4C);
 
@@ -574,23 +575,31 @@ class _UserVideosPageState extends State<UserVideosPage> {
       SliverToBoxAdapter(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-          child: Row(
-            children: [
-              const Text(
-                '歌曲排行',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+          child: InkWell(
+            onTap: _openSongRankingPage,
+            borderRadius: BorderRadius.circular(10),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    '歌曲排行',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 22,
+                    color: ThemeUtils.textColor(context).withValues(alpha: 0.5),
+                  ),
+                ],
               ),
-              const SizedBox(width: 6),
-              Icon(
-                Icons.chevron_right_rounded,
-                size: 22,
-                color: ThemeUtils.textColor(context).withValues(alpha: 0.5),
-              ),
-            ],
+            ),
           ),
         ),
       ),
-      ..._buildVideosSlivers(),
+      ..._buildSongRankingPreviewSlivers(isDark: isDark),
     ];
   }
 
@@ -677,20 +686,33 @@ class _UserVideosPageState extends State<UserVideosPage> {
     );
   }
 
-  List<Widget> _buildVideosSlivers() {
+  void _openSongRankingPage() {
+    Navigator.of(context).push(
+      NamidaPageRoute(
+        page: UploaderSongRankingPage(
+          mid: widget.mid,
+          artistName: _displayName,
+        ),
+        type: PageTransitionType.slideLeft,
+      ),
+    );
+  }
+
+  List<Widget> _buildSongRankingPreviewSlivers({required bool isDark}) {
     if (_videos == null && _isLoadingVideos) {
       return const [
-        SliverFillRemaining(
-          hasScrollBody: false,
-          child: Center(child: CircularProgressIndicator()),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(child: CircularProgressIndicator()),
+          ),
         ),
       ];
     }
 
     if (_videos == null && _videosError != null) {
       return [
-        SliverFillRemaining(
-          hasScrollBody: false,
+        SliverToBoxAdapter(
           child: _buildErrorView(message: _videosError!, onRetry: _loadVideos),
         ),
       ];
@@ -699,55 +721,156 @@ class _UserVideosPageState extends State<UserVideosPage> {
     final videos = _videos ?? const <BilibiliVideo>[];
     if (videos.isEmpty) {
       return const [
-        SliverFillRemaining(
-          hasScrollBody: false,
-          child: Center(
-            child: Text(
-              '暂无内容',
-              style: TextStyle(color: Colors.grey, fontSize: 14),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: Text(
+                '暂无内容',
+                style: TextStyle(color: Colors.grey, fontSize: 14),
+              ),
             ),
           ),
         ),
       ];
     }
 
+    const maxPreviewCount = 4;
+    final previewCount = videos.length < maxPreviewCount ? videos.length : maxPreviewCount;
+    final dividerColor = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.10);
+
     return [
       SliverList(
         delegate: SliverChildBuilderDelegate(
           (context, index) {
-            final isLoader = index == videos.length;
-            if (isLoader) {
-              if (!_isLoadingVideos && _hasMoreVideos) {
-                _loadVideos(loadMore: true);
-              }
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                child: Center(
-                  child: _hasMoreVideos
-                      ? const CircularProgressIndicator()
-                      : const Text(
-                          '没有更多了',
-                          style: TextStyle(color: Colors.grey, fontSize: 12),
-                        ),
-                ),
-              );
-            }
-
             final video = videos[index];
-            return AppleMusicCard(
-              title: video.title,
-              subtitle: _formatPubdate(video.pubdate),
-              coverUrl: video.pic,
-              margin: EdgeInsets.fromLTRB(16, index == 0 ? 10 : 8, 16, 8),
-              onTap: () => _navigateToVideo(video),
-              trailing:
-                  const Icon(Icons.more_vert_rounded, color: Colors.white54, size: 20),
+            return Column(
+              children: [
+                AppleMusicSongTile(
+                  title: video.title,
+                  artist: _songSubtitleFor(video),
+                  coverUrl: video.pic,
+                  onTap: () => _navigateToVideo(video),
+                  onMoreTap: () => _showVideoMenu(video, isDark: isDark),
+                  trailing: IconButton(
+                    icon: Icon(
+                      Icons.more_vert_rounded,
+                      color: ThemeUtils.textColor(context).withValues(alpha: 0.5),
+                      size: 22,
+                    ),
+                    onPressed: () => _showVideoMenu(video, isDark: isDark),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  ),
+                ),
+                if (index != previewCount - 1)
+                  Divider(
+                    height: 1,
+                    thickness: 0.5,
+                    indent: 88,
+                    endIndent: 16,
+                    color: dividerColor,
+                  ),
+              ],
             );
           },
-          childCount: videos.length + 1,
+          childCount: previewCount,
         ),
       ),
     ];
+  }
+
+  String _songSubtitleFor(BilibiliVideo video) {
+    if (video.pubdate <= 0) return _displayName;
+    final year = DateTime.fromMillisecondsSinceEpoch(video.pubdate * 1000).year;
+    return '$_displayName · $year年';
+  }
+
+  Future<void> _showVideoMenu(BilibiliVideo video, {required bool isDark}) async {
+    final textColor = ThemeUtils.textColor(context);
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: ThemeUtils.backgroundColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+                child: Row(
+                  children: [
+                    UnifiedCoverImage(
+                      coverPath: video.pic,
+                      width: 48,
+                      height: 48,
+                      borderRadius: 8,
+                      fit: BoxFit.cover,
+                      isDark: isDark,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            video.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: textColor,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _songSubtitleFor(video),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: textColor.withValues(alpha: 0.6),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.open_in_new_rounded),
+                title: const Text('打开详情'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _navigateToVideo(video);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.link_rounded),
+                title: const Text('复制 BV 号'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Clipboard.setData(ClipboardData(text: video.bvid));
+                  ScaffoldMessenger.of(this.context).showSnackBar(
+                    const SnackBar(content: Text('已复制 BV 号')),
+                  );
+                },
+              ),
+              SizedBox(height: MediaQuery.of(context).padding.bottom + 12),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   List<Widget> _buildAlbumsSlivers({required bool isDark}) {
@@ -884,7 +1007,7 @@ class _UserVideosPageState extends State<UserVideosPage> {
             Text(
               message,
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
               textAlign: TextAlign.center,
             ),
@@ -924,23 +1047,4 @@ class _UserVideosPageState extends State<UserVideosPage> {
     );
   }
 
-  String _formatPubdate(int timestamp) {
-    final date = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
-    final now = DateTime.now();
-    final diff = now.difference(date);
-
-    if (diff.inDays > 365) {
-      return '${diff.inDays ~/ 365}年前';
-    } else if (diff.inDays > 30) {
-      return '${diff.inDays ~/ 30}个月前';
-    } else if (diff.inDays > 0) {
-      return '${diff.inDays}天前';
-    } else if (diff.inHours > 0) {
-      return '${diff.inHours}小时前';
-    } else if (diff.inMinutes > 0) {
-      return '${diff.inMinutes}分钟前';
-    } else {
-      return '刚刚';
-    }
-  }
 }
