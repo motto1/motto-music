@@ -37,6 +37,11 @@ class UnifiedCoverImage extends StatefulWidget {
   /// 图片填充方式
   final BoxFit fit;
 
+  /// 网络图片请求头（可选）。
+  ///
+  /// 典型用途：B 站图片防盗链场景需要 `Referer` / `User-Agent`。
+  final Map<String, String>? httpHeaders;
+
   /// 自定义占位符（可选）
   final Widget? placeholder;
 
@@ -65,6 +70,7 @@ class UnifiedCoverImage extends StatefulWidget {
     this.height = 56,
     this.borderRadius = 6,
     this.fit = BoxFit.cover,
+    this.httpHeaders,
     this.placeholder,
     this.errorWidget,
     this.isDark,
@@ -252,6 +258,7 @@ class _UnifiedCoverImageState extends State<UnifiedCoverImage> {
         width: widget.width,
         height: widget.height,
         fit: widget.fit,
+        httpHeaders: widget.httpHeaders,
         placeholder: (context, url) =>
             widget.placeholder ?? _buildPlaceholder(isDarkMode),
         errorWidget: (context, url, error) =>

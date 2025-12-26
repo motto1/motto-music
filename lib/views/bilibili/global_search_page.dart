@@ -107,6 +107,12 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
   static const Color _accentColor = Color(0xFFE84C4C);
   static const double _collapseDistance = 64.0;
 
+  static const Map<String, String> _bilibiliImageHeaders = {
+    'Referer': 'https://www.bilibili.com',
+    'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+  };
+
   static const List<Color> _categoryPalette = [
     Color(0xFFE35C84),
     Color(0xFFE0617F),
@@ -381,10 +387,16 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
         if (current >= source.length) return;
         final category = source[current];
 
-        if (_categoryCoverCache.containsKey(category.tid)) {
+        final cachedCoverUrl = _categoryCoverCache[category.tid];
+        if (cachedCoverUrl != null && cachedCoverUrl.isNotEmpty) {
           results[current] =
-              category.copyWith(coverUrl: _categoryCoverCache[category.tid]);
+              category.copyWith(coverUrl: cachedCoverUrl);
           continue;
+        }
+
+        // 避免把失败结果（null）永久缓存：允许下次进入页面时重试。
+        if (cachedCoverUrl == null || cachedCoverUrl.isEmpty) {
+          _categoryCoverCache.remove(category.tid);
         }
 
         String? coverUrl;
@@ -402,7 +414,9 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
           coverUrl = null;
         }
 
-        _categoryCoverCache[category.tid] = coverUrl;
+        if (coverUrl != null && coverUrl.isNotEmpty) {
+          _categoryCoverCache[category.tid] = coverUrl;
+        }
         results[current] = category.copyWith(coverUrl: coverUrl);
       }
     }
@@ -733,10 +747,30 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
                     height: double.infinity,
                     borderRadius: 0,
                     fit: BoxFit.cover,
+                    httpHeaders: _bilibiliImageHeaders,
                     placeholder: Container(
+                      child: Center(
+                        child: SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white.withValues(alpha: 0.75),
+                            ),
+                          ),
+                        ),
+                      ),
                       color: category.overlayColor.withValues(alpha: 0.6),
                     ),
                     errorWidget: Container(
+                      child: Center(
+                        child: Icon(
+                          Icons.broken_image_rounded,
+                          color: Colors.white.withValues(alpha: 0.78),
+                          size: 22,
+                        ),
+                      ),
                       color: category.overlayColor.withValues(alpha: 0.6),
                     ),
                   ),
