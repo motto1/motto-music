@@ -58,17 +58,21 @@ class BilibiliCollection {
       return sum;
     }
 
-    // 兼容 `/x/polymer/web-space/*` 返回的 wrapper 结构：{ season: {...}, seasonStat: {...}, sections: {...} }
+    // 兼容 `/x/polymer/web-space/*` 返回的 wrapper 结构：
+    // - season: {...}（合集/Season）
+    // - series: {...}（列表/Series）
     final season = asMap(json['season']);
+    final series = asMap(json['series']);
     final upper = asMap(json['upper']);
+    final core = season ?? series;
 
     final pubtime = normalizeEpochSeconds(
       asInt(
         json['pubtime'] ??
             json['ptime'] ??
-            season?['pubtime'] ??
-            season?['ctime'] ??
-            season?['mtime'] ??
+            core?['pubtime'] ??
+            core?['ctime'] ??
+            core?['mtime'] ??
             json['ctime'] ??
             json['mtime'],
       ),
@@ -78,7 +82,9 @@ class BilibiliCollection {
           json['media_count'] ??
               json['total'] ??
               json['ep_count'] ??
-              season?['ep_num'],
+              core?['ep_num'] ??
+              core?['count'] ??
+              core?['archives_count'],
         ) ??
         0;
 
@@ -90,14 +96,14 @@ class BilibiliCollection {
     }
 
     return BilibiliCollection(
-      id: asInt(season?['id'] ?? json['id'] ?? json['season_id']) ?? 0,
-      title: (season?['title'] ?? json['title'] ?? json['name']) as String? ?? '',
-      cover: (season?['cover'] ?? json['cover']) as String? ?? '',
-      mid: asInt(season?['mid'] ?? json['mid'] ?? upper?['mid']) ?? 0,
+      id: asInt(core?['id'] ?? json['id'] ?? json['season_id'] ?? json['series_id']) ?? 0,
+      title: (core?['title'] ?? core?['name'] ?? json['title'] ?? json['name']) as String? ?? '',
+      cover: (core?['cover'] ?? json['cover']) as String? ?? '',
+      mid: asInt(core?['mid'] ?? json['mid'] ?? upper?['mid']) ?? 0,
       upName: (upper?['name'] ?? json['up_name']) as String? ?? '',
       mediaCount: mediaCount,
-      intro: (season?['desc'] ??
-              season?['intro'] ??
+      intro: (core?['desc'] ??
+              core?['intro'] ??
               json['intro'] ??
               json['description']) as String? ??
           '',

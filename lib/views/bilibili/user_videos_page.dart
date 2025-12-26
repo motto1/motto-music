@@ -222,11 +222,19 @@ class _UserVideosPageState extends State<UserVideosPage> {
 
     try {
       final raw = await _apiService.getUploaderSeasons(widget.mid);
+      debugPrint('[UserVideosPage] seasons_series_list raw.length=${raw.length}');
+
       final collections = raw
           .whereType<Map<String, dynamic>>()
           .map(BilibiliCollection.fromJson)
           .where((e) => e.id != 0)
           .toList(growable: false);
+
+      debugPrint('[UserVideosPage] collections parsed.length=${collections.length}');
+      if (collections.isNotEmpty) {
+        final c = collections.first;
+        debugPrint('[UserVideosPage] first collection id=${c.id}, title=${c.title}, mid=${c.mid}, mediaCount=${c.mediaCount}');
+      }
 
       if (!mounted) return;
       setState(() {

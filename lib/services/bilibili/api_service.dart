@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:motto_music/models/bilibili/video.dart';
 import 'package:motto_music/models/bilibili/favorite.dart';
@@ -470,60 +472,136 @@ class BilibiliApiService {
       },
     );
 
-    final itemsLists = data['items_lists'] ?? data['items_list'];
+    // 该接口返回结构在不同场景下可能有差异：items_lists/items_list、seasons_list、嵌套 group 等。
+    final itemsLists = data['items_lists'] ??
+        data['items_list'] ??
+        data['itemsLists'] ??
+        data['itemsList'];
 
-    List<dynamic> normalizeSeasons(dynamic direct) {
-      if (direct is List) {
-        final out = <dynamic>[];
-        for (final item in direct) {
-          if (item is Map<String, dynamic>) {
-            final seasons = item['seasons'] ?? item['season_list'];
-            if (seasons is List) {
-              out.addAll(seasons);
-              continue;
-            }
-          }
-          out.add(item);
+    Map<String, dynamic>? asMap(dynamic v) {
+      if (v is Map<String, dynamic>) return v;
+      if (v is Map) {
+        return v.map((key, value) => MapEntry(key.toString(), value));
+      }
+      return null;
+    }
+
+    bool looksLikeSeason(Map<String, dynamic> map) {
+      final id = map['id'] ??
+          map['season_id'] ??
+          map['seasonId'] ??
+          map['series_id'] ??
+          map['seriesId'];
+      final title = map['title'] ?? map['name'] ?? map['season_title'] ?? map['series_title'];
+      // cover 可能为空，但通常存在；用它作为弱条件即可。
+      final cover = map['cover'] ?? map['pic'];
+      return id != null && title != null && (cover != null || map.containsKey('season') || map.containsKey('series'));
+    }
+
+    int? extractSeasonId(dynamic item) {
+      final map = asMap(item);
+      if (map == null) return null;
+      final season = asMap(map['season']);
+      final series = asMap(map['series']);
+      final id = season?['id'] ??
+          series?['id'] ??
+          map['id'] ??
+          map['season_id'] ??
+          map['seasonId'] ??
+          map['series_id'] ??
+          map['seriesId'];
+      if (id is int) return id;
+      return int.tryParse(id?.toString() ?? '');
+    }
+
+    final collected = <dynamic>[];
+
+    void collect(dynamic node) {
+      if (node == null) return;
+
+      if (node is List) {
+        for (final item in node) {
+          collect(item);
         }
-        return out;
+        return;
       }
 
-      if (direct is Map<String, dynamic>) {
-        final seasons = direct['seasons'] ?? direct['season_list'];
-        if (seasons is List) return seasons;
-        return [direct];
+      final map = asMap(node);
+      if (map == null) return;
+
+      // 1) wrapper 结构：{ season: {...}, ... } / { series: {...}, ... }
+      if (map['season'] is Map || map['season'] is Map<String, dynamic>) {
+        collected.add(map);
+      } else if (map['series'] is Map || map['series'] is Map<String, dynamic>) {
+        collected.add(map);
+      } else if (looksLikeSeason(map)) {
+        // 2) 扁平结构：{ id/title/cover/... }
+        collected.add(map);
       }
 
-      return const [];
+      // 3) 递归下探常见容器字段
+      const listKeys = <String>[
+        'seasons_list',
+        'seasons',
+        'season_list',
+        'series_list',
+        'series',
+        'items_lists',
+        'items_list',
+        'items',
+        'list',
+      ];
+      for (final key in listKeys) {
+        final child = map[key];
+        if (child is List || child is Map || child is Map<String, dynamic>) {
+          collect(child);
+        }
+      }
     }
 
-    List<dynamic> collectFromMap(Map<String, dynamic> map) {
-      final direct = map['seasons_list'] ?? map['seasons'] ?? map['list'];
-      return normalizeSeasons(direct);
+    if (itemsLists != null) {
+      collect(itemsLists);
+    } else {
+      // 兜底：部分返回可能直接挂在顶层字段。
+      collect(data['seasons_list'] ?? data['seasons'] ?? data['list']);
     }
 
+    // 去重（按 season id）
     final result = <dynamic>[];
-
-    if (itemsLists is Map<String, dynamic>) {
-      result.addAll(collectFromMap(itemsLists));
-    } else if (itemsLists is List) {
-      for (final entry in itemsLists) {
-        if (entry is Map<String, dynamic>) {
-          result.addAll(collectFromMap(entry));
-        }
+    final seen = <int>{};
+    for (final item in collected) {
+      final id = extractSeasonId(item);
+      if (id == null || id <= 0) {
+        result.add(item);
+        continue;
+      }
+      if (seen.add(id)) {
+        result.add(item);
       }
     }
 
-    // 兜底：部分返回可能直接挂在顶层字段。
-    final topLevel = data['seasons_list'] ?? data['seasons'];
-    if (result.isEmpty && topLevel is List) {
-      result.addAll(topLevel);
-    }
-
+    // 调试信息：用于判断接口是否有返回、结构是否符合预期。
     if (result.isEmpty) {
+      debugPrint('[BilibiliApiService] getUploaderSeasons 空结果: mid=$mid');
+      debugPrint('[BilibiliApiService] keys=${data.keys.toList()}');
+      debugPrint('[BilibiliApiService] itemsListsType=${itemsLists.runtimeType}');
+      try {
+        final raw = jsonEncode(data);
+        final snippet = raw.length > 2000 ? raw.substring(0, 2000) : raw;
+        debugPrint('[BilibiliApiService] raw(snippet)=$snippet');
+      } catch (e) {
+        debugPrint('[BilibiliApiService] raw jsonEncode 失败: $e');
+      }
+    } else {
       debugPrint(
-        '[BilibiliApiService] getUploaderSeasons 空结果: mid=$mid, keys=${data.keys.toList()}',
+        '[BilibiliApiService] getUploaderSeasons: mid=$mid, collected=${collected.length}, result=${result.length}',
       );
+      for (var i = 0; i < result.length && i < 2; i++) {
+        final map = asMap(result[i]);
+        debugPrint('[BilibiliApiService] sample[$i] keys=${map?.keys.toList()}');
+        debugPrint('[BilibiliApiService] sample[$i] seasonKeys=${asMap(map?['season'])?.keys.toList()}');
+        debugPrint('[BilibiliApiService] sample[$i] seriesKeys=${asMap(map?['series'])?.keys.toList()}');
+      }
     }
 
     return result;
