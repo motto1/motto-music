@@ -102,11 +102,16 @@ class GlobalTopBarController extends ChangeNotifier {
   }
 
   void set(GlobalTopBarStyle style) {
+    // 当有页面通过 push() 占用顶栏时（_stack 非空），禁止其它来源的页面用 set() 抢写顶栏。
+    // 否则底层页面的滚动/动画回调会把顶栏覆盖为 opacity=0，导致当前页面出现“顶部空白”。
+    if (_stack.isNotEmpty && style.source != _style.source) return;
     _style = style;
     _notifyListenersSafely();
   }
 
   void hide() {
+    // 顶栏被某个页面 push() 占用时，不允许外部直接清空栈并隐藏，否则 pop() 无法恢复。
+    if (_stack.isNotEmpty) return;
     _stack.clear();
     set(GlobalTopBarStyle.hidden());
   }

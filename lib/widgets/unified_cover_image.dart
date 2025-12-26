@@ -177,7 +177,7 @@ class _UnifiedCoverImageState extends State<UnifiedCoverImage> {
   @override
   void initState() {
     super.initState();
-    _resolvedPath = widget.coverPath;
+    _resolvedPath = _normalizePath(widget.coverPath);
     _maybeResolveBilibiliToLocal();
   }
 
@@ -185,9 +185,16 @@ class _UnifiedCoverImageState extends State<UnifiedCoverImage> {
   void didUpdateWidget(covariant UnifiedCoverImage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.coverPath != widget.coverPath) {
-      _resolvedPath = widget.coverPath;
+      _resolvedPath = _normalizePath(widget.coverPath);
       _maybeResolveBilibiliToLocal();
     }
+  }
+
+  String? _normalizePath(String? path) {
+    if (path == null || path.isEmpty) return path;
+    // 兼容 B 站常见的 `//i0.hdslb.com/...` 形式：统一补齐 https scheme。
+    if (path.startsWith('//')) return 'https:$path';
+    return path;
   }
 
   bool _isNetwork(String? path) {
@@ -199,10 +206,15 @@ class _UnifiedCoverImageState extends State<UnifiedCoverImage> {
 
   bool get _isLocalFile => _resolvedPath != null && !_isNetworkImage;
 
+  static const Map<String, String> _defaultBilibiliHeaders = {
+    'Referer': 'https://www.bilibili.com',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+  };
+
   void _maybeResolveBilibiliToLocal() {
     if (!widget.enableBilibiliLocalCache) return;
 
-    final url = widget.coverPath;
+    final url = _normalizePath(widget.coverPath);
     if (url == null || url.isEmpty) return;
     if (!_isNetwork(url)) return;
     if (!AlbumArtCacheService.isBilibiliImageUrl(url)) return;
@@ -258,7 +270,10 @@ class _UnifiedCoverImageState extends State<UnifiedCoverImage> {
         width: widget.width,
         height: widget.height,
         fit: widget.fit,
-        httpHeaders: widget.httpHeaders,
+        httpHeaders: widget.httpHeaders ??
+            (AlbumArtCacheService.isBilibiliImageUrl(path)
+                ? _defaultBilibiliHeaders
+                : null),
         placeholder: (context, url) =>
             widget.placeholder ?? _buildPlaceholder(isDarkMode),
         errorWidget: (context, url, error) =>

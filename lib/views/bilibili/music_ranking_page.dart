@@ -95,7 +95,7 @@ class _MusicRankingPageState extends State<MusicRankingPage> with RouteAware {
 
   GlobalTopBarStyle _topBarStyle() {
     return GlobalTopBarStyle(
-      source: 'detail',
+      source: 'music-ranking',
       title: widget.title,
       showBackButton: true,
       centerTitle: true,
@@ -440,7 +440,7 @@ class _MusicRankingPageState extends State<MusicRankingPage> with RouteAware {
           crossAxisCount: 2,
           crossAxisSpacing: 16,
           mainAxisSpacing: 20,
-          childAspectRatio: 0.75,
+          childAspectRatio: 0.70,
         ),
         itemCount: _videos.length + (_isLoadingMore ? 2 : 0),
         itemBuilder: (context, index) {
