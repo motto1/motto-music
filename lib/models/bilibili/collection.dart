@@ -61,10 +61,12 @@ class BilibiliCollection {
     // 兼容 `/x/polymer/web-space/*` 返回的 wrapper 结构：
     // - season: {...}（合集/Season）
     // - series: {...}（列表/Series）
+    // - meta: {...}（polymer home/seasons_series: { archives: [...], meta: {...} }）
     final season = asMap(json['season']);
     final series = asMap(json['series']);
+    final meta = asMap(json['meta']);
     final upper = asMap(json['upper']);
-    final core = season ?? series;
+    final core = season ?? series ?? meta;
 
     final pubtime = normalizeEpochSeconds(
       asInt(
@@ -82,6 +84,7 @@ class BilibiliCollection {
           json['media_count'] ??
               json['total'] ??
               json['ep_count'] ??
+              core?['total'] ??
               core?['ep_num'] ??
               core?['count'] ??
               core?['archives_count'],
@@ -96,7 +99,15 @@ class BilibiliCollection {
     }
 
     return BilibiliCollection(
-      id: asInt(core?['id'] ?? json['id'] ?? json['season_id'] ?? json['series_id']) ?? 0,
+      id: asInt(
+            core?['season_id'] ??
+                core?['series_id'] ??
+                core?['id'] ??
+                json['id'] ??
+                json['season_id'] ??
+                json['series_id'],
+          ) ??
+          0,
       title: (core?['title'] ?? core?['name'] ?? json['title'] ?? json['name']) as String? ?? '',
       cover: (core?['cover'] ?? json['cover']) as String? ?? '',
       mid: asInt(core?['mid'] ?? json['mid'] ?? upper?['mid']) ?? 0,
@@ -104,6 +115,7 @@ class BilibiliCollection {
       mediaCount: mediaCount,
       intro: (core?['desc'] ??
               core?['intro'] ??
+              core?['description'] ??
               json['intro'] ??
               json['description']) as String? ??
           '',

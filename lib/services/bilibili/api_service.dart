@@ -487,6 +487,13 @@ class BilibiliApiService {
     }
 
     bool looksLikeSeason(Map<String, dynamic> map) {
+      final meta = asMap(map['meta']);
+      if (meta != null) {
+        final id = meta['season_id'] ?? meta['series_id'] ?? meta['id'];
+        final title = meta['name'] ?? meta['title'];
+        return id != null && title != null;
+      }
+
       final id = map['id'] ??
           map['season_id'] ??
           map['seasonId'] ??
@@ -501,9 +508,15 @@ class BilibiliApiService {
     int? extractSeasonId(dynamic item) {
       final map = asMap(item);
       if (map == null) return null;
+
+      final meta = asMap(map['meta']);
       final season = asMap(map['season']);
       final series = asMap(map['series']);
-      final id = season?['id'] ??
+
+      final id = meta?['season_id'] ??
+          meta?['series_id'] ??
+          meta?['id'] ??
+          season?['id'] ??
           series?['id'] ??
           map['id'] ??
           map['season_id'] ??
@@ -534,8 +547,11 @@ class BilibiliApiService {
         collected.add(map);
       } else if (map['series'] is Map || map['series'] is Map<String, dynamic>) {
         collected.add(map);
+      } else if (map['meta'] is Map || map['meta'] is Map<String, dynamic>) {
+        // 2) polymer home/seasons_series: { archives: [...], meta: {...} }
+        collected.add(map);
       } else if (looksLikeSeason(map)) {
-        // 2) 扁平结构：{ id/title/cover/... }
+        // 3) 扁平结构：{ id/title/cover/... }
         collected.add(map);
       }
 
@@ -585,6 +601,29 @@ class BilibiliApiService {
       debugPrint('[BilibiliApiService] getUploaderSeasons 空结果: mid=$mid');
       debugPrint('[BilibiliApiService] keys=${data.keys.toList()}');
       debugPrint('[BilibiliApiService] itemsListsType=${itemsLists.runtimeType}');
+
+      final itemsMap = asMap(itemsLists);
+      final seasonsList = itemsMap?['seasons_list'];
+      final seriesList = itemsMap?['series_list'];
+      debugPrint('[BilibiliApiService] itemsLists.keys=${itemsMap?.keys.toList()}');
+      debugPrint('[BilibiliApiService] seasons_list.type=${seasonsList.runtimeType}');
+      debugPrint('[BilibiliApiService] series_list.type=${seriesList.runtimeType}');
+
+      if (seasonsList is List && seasonsList.isNotEmpty) {
+        final first = asMap(seasonsList.first);
+        debugPrint('[BilibiliApiService] seasons_list[0].keys=${first?.keys.toList()}');
+        debugPrint('[BilibiliApiService] seasons_list[0].metaKeys=${asMap(first?['meta'])?.keys.toList()}');
+        debugPrint('[BilibiliApiService] seasons_list[0].seasonKeys=${asMap(first?['season'])?.keys.toList()}');
+        debugPrint('[BilibiliApiService] seasons_list[0].seriesKeys=${asMap(first?['series'])?.keys.toList()}');
+        try {
+          final rawItem = jsonEncode(first);
+          final snippet = rawItem.length > 1500 ? rawItem.substring(0, 1500) : rawItem;
+          debugPrint('[BilibiliApiService] seasons_list[0](snippet)=$snippet');
+        } catch (_) {
+          // ignore
+        }
+      }
+
       try {
         final raw = jsonEncode(data);
         final snippet = raw.length > 2000 ? raw.substring(0, 2000) : raw;
@@ -599,12 +638,32 @@ class BilibiliApiService {
       for (var i = 0; i < result.length && i < 2; i++) {
         final map = asMap(result[i]);
         debugPrint('[BilibiliApiService] sample[$i] keys=${map?.keys.toList()}');
+        debugPrint('[BilibiliApiService] sample[$i] metaKeys=${asMap(map?['meta'])?.keys.toList()}');
         debugPrint('[BilibiliApiService] sample[$i] seasonKeys=${asMap(map?['season'])?.keys.toList()}');
         debugPrint('[BilibiliApiService] sample[$i] seriesKeys=${asMap(map?['series'])?.keys.toList()}');
       }
     }
 
-    return result;
+    // 仅返回“合集(season)”数据，以保证后续 `seasons_archives_list` 能正常加载。
+    final seasonOnly = <dynamic>[];
+    for (final item in result) {
+      final map = asMap(item);
+      final meta = asMap(map?['meta']);
+      if (meta != null && (meta['season_id'] != null || meta['seasonId'] != null)) {
+        seasonOnly.add(item);
+        continue;
+      }
+      if (map != null && (map['season_id'] != null || map['seasonId'] != null)) {
+        seasonOnly.add(item);
+        continue;
+      }
+      final season = asMap(map?['season']);
+      if (season != null) {
+        seasonOnly.add(item);
+      }
+    }
+
+    return seasonOnly.isNotEmpty ? seasonOnly : result;
   }
 
   /// 获取合集内容（分页）
