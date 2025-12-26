@@ -11,6 +11,7 @@ class GlobalTopBarStyle {
   final Color? backIconColor;
   final VoidCallback? onBack;
   final Widget? trailing;
+  final Widget? bottom;
   final double opacity;
   final double titleOpacity;
   final double titleTranslateY;
@@ -29,6 +30,7 @@ class GlobalTopBarStyle {
     this.backIconColor,
     this.onBack,
     this.trailing,
+    this.bottom,
     this.showDivider = true,
   });
 
@@ -40,6 +42,7 @@ class GlobalTopBarStyle {
     Color? backIconColor,
     VoidCallback? onBack,
     Widget? trailing,
+    Widget? bottom,
     double? opacity,
     double? titleOpacity,
     double? titleTranslateY,
@@ -54,6 +57,7 @@ class GlobalTopBarStyle {
       backIconColor: backIconColor ?? this.backIconColor,
       onBack: onBack ?? this.onBack,
       trailing: trailing ?? this.trailing,
+      bottom: bottom ?? this.bottom,
       opacity: opacity ?? this.opacity,
       titleOpacity: titleOpacity ?? this.titleOpacity,
       titleTranslateY: titleTranslateY ?? this.titleTranslateY,
@@ -190,6 +194,7 @@ class GlobalTopBar extends StatelessWidget {
                         titleTranslateY: style.titleTranslateY,
                       ),
                     ),
+                    if (style.bottom != null) style.bottom!,
                     if (style.showDivider)
                       const Divider(
                         height: 1,

@@ -76,6 +76,8 @@ class _MusicRankingPageState extends State<MusicRankingPage> with RouteAware {
     'dm': '弹幕',
   };
 
+  static const double _topBarBottomHeight = 44.0;
+
   @override
   void initState() {
     super.initState();
@@ -101,7 +103,21 @@ class _MusicRankingPageState extends State<MusicRankingPage> with RouteAware {
       onBack: () => Navigator.of(context).pop(),
       opacity: 1.0,
       translateY: 0.0,
+      bottom: _buildTopBarBottom(),
       showDivider: true,
+    );
+  }
+
+  Widget _buildTopBarBottom() {
+    return Builder(
+      builder: (context) {
+        final textColor = ThemeUtils.textColor(context);
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return SizedBox(
+          height: _topBarBottomHeight,
+          child: _buildFilters(textColor, isDark),
+        );
+      },
     );
   }
 
@@ -292,8 +308,9 @@ class _MusicRankingPageState extends State<MusicRankingPage> with RouteAware {
       backgroundColor: backgroundColor,
       body: Column(
         children: [
-          SizedBox(height: topPadding + topBarHeight + 1),
-          _buildFilters(textColor, isDark),
+          SizedBox(
+            height: topPadding + topBarHeight + _topBarBottomHeight + 1,
+          ),
           Expanded(
             child: _buildContent(textColor, isDark),
           ),
@@ -303,13 +320,9 @@ class _MusicRankingPageState extends State<MusicRankingPage> with RouteAware {
   }
 
   Widget _buildFilters(Color textColor, bool isDark) {
-    final dividerColor = Colors.black.withValues(alpha: isDark ? 0.15 : 0.08);
     final modeLabel = _browseMode == MusicZoneBrowseMode.rankingV2 ? 'TOP100' : '热榜';
-    return Container(
+    return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: dividerColor, width: 0.6)),
-      ),
       child: Row(
         children: [
           Expanded(
@@ -331,6 +344,7 @@ class _MusicRankingPageState extends State<MusicRankingPage> with RouteAware {
               setState(() {
                 _filterValue = value;
               });
+              _applyTopBarStyle();
               _loadFirstPage();
             },
             itemBuilder: (context) {
