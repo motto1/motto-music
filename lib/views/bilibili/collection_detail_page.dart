@@ -11,7 +11,6 @@ import 'package:motto_music/utils/bilibili_song_utils.dart';
 import 'package:motto_music/widgets/show_aware_page.dart';
 import 'package:motto_music/main.dart';
 import 'dart:ui';
-import 'package:motto_music/widgets/apple_music_card.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:motto_music/services/cache/page_cache_service.dart';
 import 'package:motto_music/services/cache/album_art_cache_service.dart';
@@ -278,16 +277,6 @@ class _CollectionDetailPageState extends State<CollectionDetailPage> with ShowAw
     final minutes = seconds ~/ 60;
     final secs = seconds % 60;
     return '$minutes:${secs.toString().padLeft(2, '0')}';
-  }
-
-  /// 格式化数字（播放量、点赞量）
-  String _formatCount(int count) {
-    if (count >= 10000) {
-      return '${(count / 10000).toStringAsFixed(1)}万';
-    } else if (count >= 1000) {
-      return '${(count / 1000).toStringAsFixed(1)}k';
-    }
-    return count.toString();
   }
 
   Widget _buildHeader(BuildContext context) {
@@ -733,6 +722,10 @@ class _CollectionDetailPageState extends State<CollectionDetailPage> with ShowAw
 
   Widget _buildVideosSection() {
     final videos = _videos!;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    // 复刻“多P页面”的列表样式（见 VideoDetailPage._buildPagesSection）。
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -750,29 +743,80 @@ class _CollectionDetailPageState extends State<CollectionDetailPage> with ShowAw
           final index = entry.key;
           final video = entry.value;
           final isSelected = index == _selectedVideoIndex;
-          final theme = Theme.of(context);
-          
-          // 构建副标题：UP主 • 时长 • 播放量 • 点赞量
-          final subtitleParts = [
-            video.upName,
-            _formatDuration(video.duration),
-            if (video.view > 0) '${_formatCount(video.view)}播放',
-            if (video.like > 0) '${_formatCount(video.like)}赞',
-          ];
-          
-          return AppleMusicCard(
-            title: video.title,
-            subtitle: subtitleParts.join(' • '),
-            coverUrl: video.cover,
-            margin: EdgeInsets.fromLTRB(16, index == 0 ? 12 : 8, 16, 8),
-            accentColor: isSelected ? theme.colorScheme.primary : null,
-            trailing: Icon(
-              isSelected ? Icons.play_arrow_rounded : Icons.play_circle_outline,
-              color: isSelected
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.onSurface.withOpacity(0.6),
-            ),
-            onTap: () => _playVideo(index),
+
+          return Column(
+            children: [
+              InkWell(
+                onTap: () => _playVideo(index),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      UnifiedCoverImage(
+                        coverPath: video.cover,
+                        width: 56,
+                        height: 56,
+                        borderRadius: 6,
+                        isDark: isDark,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              video.title,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                height: 1.3,
+                                color: isSelected
+                                    ? theme.colorScheme.primary
+                                    : null,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '时长 ${_formatDuration(video.duration)}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                height: 1.2,
+                                color: theme.colorScheme.onSurface
+                                    .withOpacity(0.5),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        isSelected
+                            ? Icons.play_arrow_rounded
+                            : Icons.play_circle_outline,
+                        color: isSelected
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurface.withOpacity(0.5),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              if (index != videos.length - 1)
+                Divider(
+                  height: 1,
+                  thickness: 0.5,
+                  indent: 88,
+                  color: theme.colorScheme.onSurface.withOpacity(0.1),
+                ),
+            ],
           );
         }),
         if (_hasMore)
