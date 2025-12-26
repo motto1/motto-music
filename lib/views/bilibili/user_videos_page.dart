@@ -522,17 +522,20 @@ class _UserVideosPageState extends State<UserVideosPage> {
         color: selected ? selectedBg : Colors.transparent,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: selected ? selectedText : unselectedText,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(999),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: selected ? selectedText : unselectedText,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ),
