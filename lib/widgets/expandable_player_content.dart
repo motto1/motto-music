@@ -1,10 +1,8 @@
-import 'dart:io';
 import 'dart:ui';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:motto_music/database/database.dart';
 import 'package:motto_music/services/player_provider.dart';
@@ -16,15 +14,11 @@ import 'package:motto_music/widgets/karaoke_lyrics_view.dart';
 import 'package:motto_music/widgets/player_buttons.dart';
 import 'package:motto_music/widgets/audio_quality_section.dart';
 import 'package:motto_music/widgets/unified_cover_image.dart';
-import 'package:motto_music/models/bilibili/audio_quality.dart';
-import 'package:motto_music/services/bilibili/download_manager.dart';
-import 'package:motto_music/services/bilibili/stream_service.dart';
 import 'package:motto_music/services/bilibili/api_client.dart';
 import 'package:motto_music/services/bilibili/api_service.dart';
 import 'package:motto_music/services/bilibili/cookie_manager.dart';
 import 'package:motto_music/services/bilibili/favorite_sync_notifier.dart';
 import 'package:motto_music/utils/bilibili_song_utils.dart';
-import 'package:motto_music/storage/player_state_storage.dart';
 // 歌词服务和模型
 import 'package:motto_music/services/lyrics/lyric_service.dart';
 import 'package:motto_music/models/lyrics/lyric_models.dart';
@@ -4001,16 +3995,30 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
                                       leading: ClipRRect(
                                         borderRadius: BorderRadius.circular(8),
                                         child: favorite.coverUrl != null && favorite.coverUrl!.isNotEmpty
-                                            ? Image.network(
-                                                favorite.coverUrl!,
+                                            ? UnifiedCoverImage(
+                                                coverPath: favorite.coverUrl,
                                                 width: 48,
                                                 height: 48,
+                                                borderRadius: 0,
                                                 fit: BoxFit.cover,
-                                                errorBuilder: (_, __, ___) => Container(
+                                                isDark: true,
+                                                placeholder: Container(
                                                   width: 48,
                                                   height: 48,
                                                   color: Colors.grey[800],
-                                                  child: const Icon(Icons.folder, color: Colors.white54),
+                                                  child: const Icon(
+                                                    Icons.folder,
+                                                    color: Colors.white54,
+                                                  ),
+                                                ),
+                                                errorWidget: Container(
+                                                  width: 48,
+                                                  height: 48,
+                                                  color: Colors.grey[800],
+                                                  child: const Icon(
+                                                    Icons.folder,
+                                                    color: Colors.white54,
+                                                  ),
                                                 ),
                                               )
                                             : Container(

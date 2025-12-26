@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:motto_music/utils/theme_utils.dart';
 import 'package:motto_music/widgets/compact_page_header.dart';
 
@@ -83,12 +84,31 @@ class GlobalTopBarController extends ChangeNotifier {
 
   GlobalTopBarStyle _style = GlobalTopBarStyle.hidden();
   final List<GlobalTopBarStyle> _stack = [];
+  bool _notifyScheduled = false;
 
   GlobalTopBarStyle get style => _style;
 
+  void _notifyListenersSafely() {
+    final phase = SchedulerBinding.instance.schedulerPhase;
+    final isBuildingFrame = phase == SchedulerPhase.persistentCallbacks ||
+        phase == SchedulerPhase.midFrameMicrotasks;
+
+    if (!isBuildingFrame) {
+      notifyListeners();
+      return;
+    }
+
+    if (_notifyScheduled) return;
+    _notifyScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _notifyScheduled = false;
+      notifyListeners();
+    });
+  }
+
   void set(GlobalTopBarStyle style) {
     _style = style;
-    notifyListeners();
+    _notifyListenersSafely();
   }
 
   void hide() {
@@ -99,13 +119,13 @@ class GlobalTopBarController extends ChangeNotifier {
   void push(GlobalTopBarStyle style) {
     _stack.add(_style);
     _style = style;
-    notifyListeners();
+    _notifyListenersSafely();
   }
 
   void pop() {
     if (_stack.isEmpty) return;
     _style = _stack.removeLast();
-    notifyListeners();
+    _notifyListenersSafely();
   }
 
   void updateHomeProgress(double progress) {
@@ -124,7 +144,7 @@ class GlobalTopBarController extends ChangeNotifier {
       titleTranslateY: titleTranslateY,
       showDivider: showDivider,
     );
-    notifyListeners();
+    _notifyListenersSafely();
   }
 }
 

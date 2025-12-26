@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 import 'package:motto_music/models/bilibili/search_strategy.dart';
 import 'package:motto_music/services/bilibili/api_service.dart';
@@ -15,7 +15,6 @@ import 'package:motto_music/views/bilibili/user_videos_page.dart';
 import 'package:motto_music/utils/theme_utils.dart';
 import 'package:motto_music/widgets/show_aware_page.dart';
 import 'package:motto_music/animations/page_transitions.dart';
-import 'package:motto_music/widgets/apple_music_card.dart';
 import 'package:motto_music/widgets/unified_cover_image.dart';
 import 'package:motto_music/widgets/global_top_bar.dart';
 import 'package:motto_music/router/route_observer.dart';
@@ -26,20 +25,23 @@ class _SearchCategory {
   final int tid;
   final Color overlayColor;
   final String? coverUrl;
+  final bool disabled;
 
   const _SearchCategory({
     required this.title,
     required this.tid,
     required this.overlayColor,
     this.coverUrl,
+    this.disabled = false,
   });
 
-  _SearchCategory copyWith({String? coverUrl}) {
+  _SearchCategory copyWith({String? coverUrl, bool? disabled}) {
     return _SearchCategory(
       title: title,
       tid: tid,
       overlayColor: overlayColor,
       coverUrl: coverUrl ?? this.coverUrl,
+      disabled: disabled ?? this.disabled,
     );
   }
 }
@@ -64,8 +66,9 @@ class _SearchCategoryGroup {
 class _MusicZoneSpec {
   final String title;
   final int tid;
+  final bool disabled;
 
-  const _MusicZoneSpec(this.title, this.tid);
+  const _MusicZoneSpec(this.title, this.tid, {this.disabled = false});
 }
 
 /// 全局智能搜索页面
@@ -157,6 +160,7 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
   @override
   void onPageShow() {
     _applyTopBarStyle();
+    _maybeReloadCategoriesIfSpecChanged();
     if (!_categoriesLoaded) {
       _loadCategories();
     }
@@ -171,6 +175,24 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
         });
       }
     }
+  }
+
+  void _maybeReloadCategoriesIfSpecChanged() {
+    if (!_categoriesLoaded) return;
+    if (_categoryGroups.isEmpty) return;
+
+    final desiredTids = _musicZoneV1.map((e) => e.tid).toList(growable: false);
+    final currentTids = _categoryGroups.first.categories
+        .map((e) => e.tid)
+        .toList(growable: false);
+
+    if (listEquals(currentTids, desiredTids)) return;
+
+    setState(() {
+      _isLoadingCategories = false;
+      _categoriesLoaded = false;
+      _categoryGroups = const [];
+    });
   }
 
   @override
@@ -333,6 +355,7 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
           title: zone.title,
           tid: zone.tid,
           overlayColor: _categoryPalette[index % _categoryPalette.length],
+          disabled: zone.disabled,
         ),
       );
     }
@@ -705,19 +728,19 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
               if (category.coverUrl != null)
                 Positioned.fill(
                   child: UnifiedCoverImage(
-                  coverPath: category.coverUrl!,
+                    coverPath: category.coverUrl!,
                     width: double.infinity,
                     height: double.infinity,
                     borderRadius: 0,
                     fit: BoxFit.cover,
-                  placeholder: Container(
-                    color: category.overlayColor.withValues(alpha: 0.6),
-                  ),
-                  errorWidget: Container(
-                    color: category.overlayColor.withValues(alpha: 0.6),
+                    placeholder: Container(
+                      color: category.overlayColor.withValues(alpha: 0.6),
+                    ),
+                    errorWidget: Container(
+                      color: category.overlayColor.withValues(alpha: 0.6),
+                    ),
                   ),
                 )
-                ),
               else
                 Container(
                   color: category.overlayColor.withValues(alpha: 0.6),
@@ -725,6 +748,32 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
               Container(
                 color: category.overlayColor.withValues(alpha: 0.55),
               ),
+              if (category.disabled)
+                Align(
+                  alignment: Alignment.topRight,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.55),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: const Text(
+                        '已下线',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          height: 1.0,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               Align(
                 alignment: Alignment.bottomLeft,
                 child: Padding(
@@ -750,6 +799,10 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
   }
 
   void _openCategory(_SearchCategory category) {
+    if (category.disabled) {
+      _showMessage('该分区已下线');
+      return;
+    }
     Navigator.of(context).push(
       NamidaPageRoute(
         page: MusicRankingPage(
@@ -757,6 +810,9 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
           accentColor: category.overlayColor,
           zoneTid: category.tid,
           rankingType: 'all',
+          browseMode: category.tid == 3
+              ? MusicZoneBrowseMode.rankingV2
+              : MusicZoneBrowseMode.newListRank,
         ),
         type: PageTransitionType.slideLeft,
       ),

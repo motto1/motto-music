@@ -1,7 +1,6 @@
 import 'cache_manager.dart';
 import '../../models/bilibili/favorite.dart';
 import '../../models/bilibili/video.dart';
-import '../../models/bilibili/user.dart';
 
 /// 页面缓存服务
 /// 负责缓存收藏夹、视频列表、用户信息等页面数据
@@ -17,9 +16,8 @@ class PageCacheService {
       'list_$userId',
       favorites,
       ttl: const Duration(hours: 6),
-      serializer: (data) => (data as List<BilibiliFavorite>)
-          .map((e) => e.toJson())
-          .toList(),
+      serializer: (List<BilibiliFavorite> data) =>
+          data.map((e) => e.toJson()).toList(),
     );
   }
 
@@ -44,9 +42,8 @@ class PageCacheService {
       'detail_$favoriteId',
       items,
       ttl: const Duration(hours: 3),
-      serializer: (data) => (data as List<BilibiliFavoriteItem>)
-          .map((e) => e.toJson())
-          .toList(),
+      serializer: (List<BilibiliFavoriteItem> data) =>
+          data.map((e) => e.toJson()).toList(),
     );
   }
 
@@ -64,15 +61,18 @@ class PageCacheService {
   // ==================== Bilibili 视频缓存 ====================
 
   /// 缓存视频列表
-  Future<void> cacheVideoList(String queryKey, List<BilibiliVideo> videos) async {
+  Future<void> cacheVideoList(
+    String queryKey,
+    List<BilibiliVideo> videos, {
+    Duration ttl = const Duration(hours: 12),
+  }) async {
     await _cache.set(
       'videos',
       queryKey,
       videos,
-      ttl: const Duration(hours: 12),
-      serializer: (data) => (data as List<BilibiliVideo>)
-          .map((e) => e.toJson())
-          .toList(),
+      ttl: ttl,
+      serializer: (List<BilibiliVideo> data) =>
+          data.map((e) => e.toJson()).toList(),
     );
   }
 
@@ -94,7 +94,7 @@ class PageCacheService {
       'detail_$bvid',
       video,
       ttl: const Duration(days: 1),
-      serializer: (data) => (data as BilibiliVideo).toJson(),
+      serializer: (BilibiliVideo data) => data.toJson(),
     );
   }
 
@@ -114,9 +114,8 @@ class PageCacheService {
       'pages_$bvid',
       pages,
       ttl: const Duration(days: 1),
-      serializer: (data) => (data as List<BilibiliVideoPage>)
-          .map((e) => e.toJson())
-          .toList(),
+      serializer: (List<BilibiliVideoPage> data) =>
+          data.map((e) => e.toJson()).toList(),
     );
   }
 
@@ -157,7 +156,7 @@ class PageCacheService {
       'info_${userInfo.mid}',
       userInfo,
       ttl: const Duration(days: 1),
-      serializer: (data) => (data as BilibiliUploader).toJson(),
+      serializer: (BilibiliUploader data) => data.toJson(),
     );
   }
 
@@ -179,9 +178,8 @@ class PageCacheService {
       query,
       results,
       ttl: const Duration(hours: 6),
-      serializer: (data) => (data as List<BilibiliVideo>)
-          .map((e) => e.toJson())
-          .toList(),
+      serializer: (List<BilibiliVideo> data) =>
+          data.map((e) => e.toJson()).toList(),
     );
   }
 

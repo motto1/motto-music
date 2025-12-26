@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:provider/provider.dart';
 import 'dart:async';
@@ -2540,22 +2539,25 @@ class _AddFavoriteBottomSheetState extends State<_AddFavoriteBottomSheet> {
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(8),
                                   child: favorite.cover != null && favorite.cover!.isNotEmpty
-                                      ? CachedNetworkImage(
-                                          imageUrl: favorite.cover!,
+                                      ? UnifiedCoverImage(
+                                          coverPath: favorite.cover,
                                           width: 60,
                                           height: 60,
+                                          borderRadius: 0,
                                           fit: BoxFit.cover,
-                                          placeholder: (context, url) => Container(
+                                          isDark: isDark,
+                                          placeholder: Container(
                                             width: 60,
                                             height: 60,
                                             color: isDark
                                                 ? Colors.white.withOpacity(0.1)
                                                 : Colors.black.withOpacity(0.05),
                                             child: const Center(
-                                              child: CircularProgressIndicator(strokeWidth: 2),
+                                              child:
+                                                  CircularProgressIndicator(strokeWidth: 2),
                                             ),
                                           ),
-                                          errorWidget: (context, url, error) => Container(
+                                          errorWidget: Container(
                                             width: 60,
                                             height: 60,
                                             color: isDark
@@ -2729,12 +2731,14 @@ class _AddFavoriteBottomSheetState extends State<_AddFavoriteBottomSheet> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: favorite.cover != null && favorite.cover!.isNotEmpty
-                          ? CachedNetworkImage(
-                              imageUrl: favorite.cover!,
+                          ? UnifiedCoverImage(
+                              coverPath: favorite.cover,
                               width: 60,
                               height: 60,
+                              borderRadius: 0,
                               fit: BoxFit.cover,
-                              placeholder: (context, url) => Container(
+                              isDark: isDark,
+                              placeholder: Container(
                                 width: 60,
                                 height: 60,
                                 color: isDark
@@ -2744,7 +2748,7 @@ class _AddFavoriteBottomSheetState extends State<_AddFavoriteBottomSheet> {
                                   child: CircularProgressIndicator(strokeWidth: 2),
                                 ),
                               ),
-                              errorWidget: (context, url, error) => Container(
+                              errorWidget: Container(
                                 width: 60,
                                 height: 60,
                                 color: isDark

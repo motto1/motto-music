@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:motto_music/widgets/unified_cover_image.dart';
 import 'package:motto_music/models/bilibili/video.dart';
 import 'package:motto_music/services/bilibili/api_service.dart';

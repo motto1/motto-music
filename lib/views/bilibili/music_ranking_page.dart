@@ -1,13 +1,27 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:motto_music/models/bilibili/video.dart';
 import 'package:motto_music/services/bilibili/api_service.dart';
 import 'package:motto_music/services/bilibili/api_client.dart';
 import 'package:motto_music/services/bilibili/cookie_manager.dart';
+import 'package:motto_music/services/cache/page_cache_service.dart';
 import 'package:motto_music/utils/theme_utils.dart';
 import 'package:motto_music/animations/page_transitions.dart';
 import 'package:motto_music/views/bilibili/video_detail_page.dart';
 import 'package:motto_music/widgets/global_top_bar.dart';
+import 'package:motto_music/widgets/unified_cover_image.dart';
+
+enum MusicZoneBrowseMode {
+  /// 自动选择：主分区用 ranking/v2，子分区用 newlist_rank。
+  auto,
+
+  /// 分区排行榜：`/x/web-interface/ranking/v2`（仅主分区 rid 有意义）。
+  rankingV2,
+
+  /// 分区热榜：`/x/web-interface/newlist_rank`（使用 cate_id，可用于子分区）。
+  newListRank,
+}
 
 /// B站音乐索引页面
 class MusicRankingPage extends StatefulWidget {
@@ -16,6 +30,7 @@ class MusicRankingPage extends StatefulWidget {
   final int zoneTid;
   final String rankingType;
   final int pageSize;
+  final MusicZoneBrowseMode browseMode;
 
   const MusicRankingPage({
     super.key,
@@ -24,6 +39,7 @@ class MusicRankingPage extends StatefulWidget {
     required this.zoneTid,
     this.rankingType = 'all',
     this.pageSize = 30,
+    this.browseMode = MusicZoneBrowseMode.auto,
   });
 
   @override
@@ -33,19 +49,30 @@ class MusicRankingPage extends StatefulWidget {
 class _MusicRankingPageState extends State<MusicRankingPage> {
   late final BilibiliApiService _apiService;
   late final ScrollController _scrollController;
+  final PageCacheService _pageCache = PageCacheService();
 
   final List<BilibiliVideo> _videos = [];
   bool _isLoading = true;
   bool _isLoadingMore = false;
   bool _hasMore = true;
   String? _errorMessage;
-  late String _rankingType;
+  late final MusicZoneBrowseMode _browseMode;
+  late String _filterValue;
   int _page = 1;
+  int _loadGeneration = 0;
 
   static const Map<String, String> _rankingTypeLabels = {
     'all': '综合',
     'rokkie': '新人',
     'origin': '原创',
+  };
+
+  static const Map<String, String> _newListOrderLabels = {
+    'click': '播放',
+    'scores': '评分',
+    'stow': '收藏',
+    'coin': '投币',
+    'dm': '弹幕',
   };
 
   @override
@@ -55,7 +82,10 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
     final apiClient = BilibiliApiClient(cookieManager);
     _apiService = BilibiliApiService(apiClient);
     _scrollController = ScrollController()..addListener(_handleScroll);
-    _rankingType = widget.rankingType;
+    _browseMode = _resolveBrowseMode();
+    _filterValue = _browseMode == MusicZoneBrowseMode.rankingV2
+        ? widget.rankingType
+        : 'click';
     _loadFirstPage();
     GlobalTopBarController.instance.push(
       GlobalTopBarStyle(
@@ -81,7 +111,19 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
     super.dispose();
   }
 
+  MusicZoneBrowseMode _resolveBrowseMode() {
+    final mode = widget.browseMode;
+    if (mode != MusicZoneBrowseMode.auto) return mode;
+
+    // 本页面主要被音乐分区入口调用：tid=3 为主分区，其余为音乐子分区。
+    // ranking/v2 接口仅支持主分区，否则大概率返回空列表。
+    return widget.zoneTid == 3
+        ? MusicZoneBrowseMode.rankingV2
+        : MusicZoneBrowseMode.newListRank;
+  }
+
   Future<void> _loadFirstPage() async {
+    final generation = ++_loadGeneration;
     setState(() {
       _isLoading = true;
       _isLoadingMore = false;
@@ -90,14 +132,23 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
       _page = 1;
     });
 
+    final cacheKey = _cacheKeyForPage(page: 1);
+    final cached = await _pageCache.getCachedVideoList(cacheKey);
+    final hasCached = cached != null && cached.isNotEmpty;
+
+    if (hasCached && mounted && generation == _loadGeneration) {
+      setState(() {
+        _videos
+          ..clear()
+          ..addAll(cached);
+        _isLoading = false;
+        _hasMore = cached.length >= widget.pageSize;
+      });
+    }
+
     try {
-      final videos = await _apiService.getZoneRankingV2(
-        rid: widget.zoneTid,
-        type: _rankingType,
-        page: _page,
-        pageSize: widget.pageSize,
-      );
-      if (mounted) {
+      final videos = await _loadPage(page: _page);
+      if (mounted && generation == _loadGeneration) {
         setState(() {
           _videos
             ..clear()
@@ -105,15 +156,49 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
           _isLoading = false;
           _hasMore = videos.length >= widget.pageSize;
         });
+        await _pageCache.cacheVideoList(cacheKey, videos, ttl: _cacheTtl);
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted && generation == _loadGeneration) {
         setState(() {
-          _errorMessage = '加载失败: $e';
+          if (!hasCached) {
+            _errorMessage = '加载失败: $e';
+          }
           _isLoading = false;
         });
       }
     }
+  }
+
+  Future<List<BilibiliVideo>> _loadPage({required int page}) async {
+    if (_browseMode == MusicZoneBrowseMode.rankingV2) {
+      return _apiService.getZoneRankingV2(
+        rid: widget.zoneTid,
+        type: _filterValue,
+        page: page,
+        pageSize: widget.pageSize,
+      );
+    }
+
+    return _apiService.getZoneRankList(
+      cateId: widget.zoneTid,
+      order: _filterValue,
+      page: page,
+      pageSize: widget.pageSize,
+    );
+  }
+
+  String _cacheKeyForPage({required int page}) {
+    final modeKey = _browseMode == MusicZoneBrowseMode.rankingV2
+        ? 'ranking_v2'
+        : 'newlist_rank';
+    return 'music_zone:$modeKey:tid=${widget.zoneTid}:filter=$_filterValue:page=$page:pageSize=${widget.pageSize}';
+  }
+
+  Duration get _cacheTtl {
+    return _browseMode == MusicZoneBrowseMode.rankingV2
+        ? const Duration(hours: 1)
+        : const Duration(minutes: 30);
   }
 
   void _handleScroll() {
@@ -128,34 +213,49 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
 
   Future<void> _loadMore() async {
     if (_isLoading || _isLoadingMore || !_hasMore) return;
+    final generation = _loadGeneration;
     setState(() {
       _isLoadingMore = true;
     });
 
     try {
       final nextPage = _page + 1;
-      final videos = await _apiService.getZoneRankingV2(
-        rid: widget.zoneTid,
-        type: _rankingType,
-        page: nextPage,
-        pageSize: widget.pageSize,
-      );
-      if (!mounted) return;
+      final cacheKey = _cacheKeyForPage(page: nextPage);
+      final cached = await _pageCache.getCachedVideoList(cacheKey);
+      if (!mounted || generation != _loadGeneration) return;
+      if (cached != null && cached.isNotEmpty) {
+        setState(() {
+          _page = nextPage;
+          _videos.addAll(cached);
+          _isLoadingMore = false;
+          _hasMore = cached.length >= widget.pageSize;
+        });
+        return;
+      }
+
+      final videos = await _loadPage(page: nextPage);
+      if (!mounted || generation != _loadGeneration) return;
       setState(() {
         _page = nextPage;
         _videos.addAll(videos);
         _isLoadingMore = false;
         _hasMore = videos.length >= widget.pageSize;
       });
+      await _pageCache.cacheVideoList(cacheKey, videos, ttl: _cacheTtl);
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || generation != _loadGeneration) return;
       setState(() {
         _isLoadingMore = false;
       });
     }
   }
 
-  String get _rankingTypeLabel => _rankingTypeLabels[_rankingType] ?? _rankingType;
+  String get _filterLabel {
+    if (_browseMode == MusicZoneBrowseMode.rankingV2) {
+      return _rankingTypeLabels[_filterValue] ?? _filterValue;
+    }
+    return _newListOrderLabels[_filterValue] ?? _filterValue;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -181,6 +281,7 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
 
   Widget _buildFilters(Color textColor, bool isDark) {
     final dividerColor = Colors.black.withValues(alpha: isDark ? 0.15 : 0.08);
+    final modeLabel = _browseMode == MusicZoneBrowseMode.rankingV2 ? 'TOP100' : '热榜';
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
       decoration: BoxDecoration(
@@ -190,7 +291,7 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
         children: [
           Expanded(
             child: Text(
-              'TOP100 · $_rankingTypeLabel',
+              '$modeLabel · $_filterLabel',
               style: TextStyle(
                 color: textColor.withValues(alpha: 0.78),
                 fontSize: 13,
@@ -201,16 +302,19 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
             ),
           ),
           PopupMenuButton<String>(
-            initialValue: _rankingType,
+            initialValue: _filterValue,
             onSelected: (value) {
-              if (value == _rankingType) return;
+              if (value == _filterValue) return;
               setState(() {
-                _rankingType = value;
+                _filterValue = value;
               });
               _loadFirstPage();
             },
             itemBuilder: (context) {
-              return _rankingTypeLabels.entries
+              final entries = _browseMode == MusicZoneBrowseMode.rankingV2
+                  ? _rankingTypeLabels.entries
+                  : _newListOrderLabels.entries;
+              return entries
                   .map(
                     (e) => PopupMenuItem<String>(
                       value: e.key,
@@ -221,7 +325,7 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
             },
             child: _buildFilterChip(
               icon: Icons.filter_list_rounded,
-              label: '类型',
+              label: _browseMode == MusicZoneBrowseMode.rankingV2 ? '类型' : '排序',
               isDark: isDark,
             ),
           ),
@@ -365,17 +469,33 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
       child: Stack(
         children: [
           Positioned.fill(
-            child: CachedNetworkImage(
-              imageUrl: imageUrl,
-              fit: BoxFit.cover,
-              placeholder: (context, url) => Container(
-                color: isDark ? Colors.grey[800] : Colors.grey[200],
-                child: const Icon(Icons.music_note, color: Colors.grey, size: 24),
-              ),
-              errorWidget: (context, url, error) => Container(
-                color: isDark ? Colors.grey[800] : Colors.grey[200],
-                child: const Icon(Icons.broken_image, color: Colors.grey, size: 24),
-              ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return UnifiedCoverImage(
+                  coverPath: imageUrl,
+                  width: constraints.maxWidth,
+                  height: constraints.maxHeight,
+                  borderRadius: 0,
+                  fit: BoxFit.cover,
+                  isDark: isDark,
+                  placeholder: Container(
+                    color: isDark ? Colors.grey[800] : Colors.grey[200],
+                    child: const Icon(
+                      Icons.music_note,
+                      color: Colors.grey,
+                      size: 24,
+                    ),
+                  ),
+                  errorWidget: Container(
+                    color: isDark ? Colors.grey[800] : Colors.grey[200],
+                    child: const Icon(
+                      Icons.broken_image,
+                      color: Colors.grey,
+                      size: 24,
+                    ),
+                  ),
+                );
+              },
             ),
           ),
           Positioned.fill(
@@ -443,13 +563,17 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
           ),
         ),
         child: ClipOval(
-          child: CachedNetworkImage(
-            imageUrl: imageUrl,
+          child: UnifiedCoverImage(
+            coverPath: imageUrl,
+            width: size,
+            height: size,
+            borderRadius: 0,
             fit: BoxFit.cover,
-            placeholder: (context, url) => Container(
+            isDark: isDark,
+            placeholder: Container(
               color: isDark ? Colors.grey[800] : Colors.grey[200],
             ),
-            errorWidget: (context, url, error) => Container(
+            errorWidget: Container(
               color: isDark ? Colors.grey[800] : Colors.grey[200],
             ),
           ),

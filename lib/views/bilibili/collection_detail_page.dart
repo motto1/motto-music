@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:motto_music/models/bilibili/collection.dart';
 import 'package:motto_music/database/database.dart' as db;
 import 'package:motto_music/services/bilibili/api_service.dart';
@@ -16,6 +15,7 @@ import 'package:motto_music/widgets/apple_music_card.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:motto_music/services/cache/page_cache_service.dart';
 import 'package:motto_music/services/cache/album_art_cache_service.dart';
+import 'package:motto_music/widgets/unified_cover_image.dart';
 
 /// 合集详情页面（参考视频详情页设计）
 class CollectionDetailPage extends StatefulWidget {
@@ -662,10 +662,14 @@ class _CollectionDetailPageState extends State<CollectionDetailPage> with ShowAw
       child: coverUrl != null
           ? ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: CachedNetworkImage(
-                imageUrl: coverUrl,
+              child: UnifiedCoverImage(
+                coverPath: coverUrl,
+                width: 70,
+                height: 70,
+                borderRadius: 0,
                 fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
+                isDark: isDark,
+                placeholder: Container(
                   color: isDark
                       ? const Color(0xFF3A3A3C)
                       : const Color(0xFFFFFFFF),
@@ -673,7 +677,7 @@ class _CollectionDetailPageState extends State<CollectionDetailPage> with ShowAw
                     child: CircularProgressIndicator(strokeWidth: 2),
                   ),
                 ),
-                errorWidget: (context, url, error) => Icon(
+                errorWidget: Icon(
                   Icons.folder_outlined,
                   size: 32,
                   color: isDark
