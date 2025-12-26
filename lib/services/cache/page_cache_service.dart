@@ -147,6 +147,32 @@ class PageCacheService {
     return pages;
   }
 
+  // ==================== 音乐分区封面缓存 ====================
+
+  Future<void> cacheMusicZoneCover(
+    int tid,
+    String coverUrl, {
+    Duration ttl = const Duration(hours: 12),
+  }) async {
+    await _cache.init();
+    await _cache.set<String>(
+      'music_zone',
+      'cover_tid_$tid',
+      coverUrl,
+      ttl: ttl,
+      serializer: (String data) => data,
+    );
+  }
+
+  Future<String?> getCachedMusicZoneCover(int tid) async {
+    await _cache.init();
+    return await _cache.get<String>(
+      'music_zone',
+      'cover_tid_$tid',
+      deserializer: (data) => data as String,
+    );
+  }
+
   // ==================== 用户信息缓存 ====================
 
   /// 缓存用户信息

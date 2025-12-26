@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 
@@ -6,6 +8,7 @@ import 'package:motto_music/services/bilibili/api_service.dart';
 import 'package:motto_music/services/bilibili/api_client.dart';
 import 'package:motto_music/services/bilibili/cookie_manager.dart';
 import 'package:motto_music/services/bilibili/url_parser_service.dart';
+import 'package:motto_music/services/cache/page_cache_service.dart';
 import 'package:motto_music/views/bilibili/global_search_result_page.dart';
 import 'package:motto_music/views/bilibili/music_ranking_page.dart';
 import 'package:motto_music/views/bilibili/video_detail_page.dart';
@@ -94,6 +97,7 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
   late final ScrollController _scrollController;
   late final BilibiliUrlParserService _urlParser;
   late final BilibiliApiService _apiService;
+  final PageCacheService _pageCache = PageCacheService();
   
   bool _isLoading = false;
   String? _errorMessage;
@@ -396,6 +400,15 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
           continue;
         }
 
+        final diskCachedCoverUrl =
+            await _pageCache.getCachedMusicZoneCover(category.tid);
+        if (diskCachedCoverUrl != null && diskCachedCoverUrl.isNotEmpty) {
+          _categoryCoverCache[category.tid] = diskCachedCoverUrl;
+          results[current] =
+              category.copyWith(coverUrl: diskCachedCoverUrl);
+          continue;
+        }
+
         // 避免把失败结果（null）永久缓存：允许下次进入页面时重试。
         if (cachedCoverUrl == null || cachedCoverUrl.isEmpty) {
           _categoryCoverCache.remove(category.tid);
@@ -409,6 +422,7 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
             order: 'click',
             page: 1,
             pageSize: 1,
+            rangeDays: 30,
           );
           if (list.isNotEmpty && list.first.pic.isNotEmpty) {
             coverUrl = list.first.pic;
@@ -426,6 +440,7 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
 
         if (coverUrl != null && coverUrl.isNotEmpty) {
           _categoryCoverCache[category.tid] = coverUrl;
+          unawaited(_pageCache.cacheMusicZoneCover(category.tid, coverUrl));
         }
         results[current] = category.copyWith(coverUrl: coverUrl);
       }
@@ -792,6 +807,14 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
               Container(
                 color: category.overlayColor.withValues(alpha: 0.55),
               ),
+              if (category.coverUrl == null)
+                Center(
+                  child: Icon(
+                    Icons.image_not_supported_rounded,
+                    color: Colors.white.withValues(alpha: 0.78),
+                    size: 22,
+                  ),
+                ),
               if (category.disabled)
                 Align(
                   alignment: Alignment.topRight,

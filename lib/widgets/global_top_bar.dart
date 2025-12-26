@@ -89,15 +89,6 @@ class GlobalTopBarController extends ChangeNotifier {
   GlobalTopBarStyle get style => _style;
 
   void _notifyListenersSafely() {
-    final phase = SchedulerBinding.instance.schedulerPhase;
-    final isBuildingFrame = phase == SchedulerPhase.persistentCallbacks ||
-        phase == SchedulerPhase.midFrameMicrotasks;
-
-    if (!isBuildingFrame) {
-      notifyListeners();
-      return;
-    }
-
     if (_notifyScheduled) return;
     _notifyScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
