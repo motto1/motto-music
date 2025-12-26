@@ -12,6 +12,19 @@ class GlobalTopBarStyle {
   final Widget? trailing;
   final Widget? bottom;
   final double opacity;
+
+  /// 背景（Material + 分割线）透明度。
+  ///
+  /// - null: 使用 [opacity]（保持现有行为）。
+  /// - 0~1: 仅背景淡入淡出，内容可保持不透明。
+  final double? backgroundOpacity;
+
+  /// 内容（返回/标题/按钮/bottom）透明度。
+  ///
+  /// - null: 使用 [opacity]（保持现有行为）。
+  /// - 0~1: 可实现“背景透明但按钮可见”的效果。
+  final double? contentOpacity;
+
   final double titleOpacity;
   final double titleTranslateY;
   final double translateY;
@@ -23,6 +36,8 @@ class GlobalTopBarStyle {
     required this.showBackButton,
     required this.centerTitle,
     required this.opacity,
+    this.backgroundOpacity,
+    this.contentOpacity,
     this.titleOpacity = 1.0,
     this.titleTranslateY = 0.0,
     required this.translateY,
@@ -43,6 +58,8 @@ class GlobalTopBarStyle {
     Widget? trailing,
     Widget? bottom,
     double? opacity,
+    double? backgroundOpacity,
+    double? contentOpacity,
     double? titleOpacity,
     double? titleTranslateY,
     double? translateY,
@@ -58,6 +75,8 @@ class GlobalTopBarStyle {
       trailing: trailing ?? this.trailing,
       bottom: bottom ?? this.bottom,
       opacity: opacity ?? this.opacity,
+      backgroundOpacity: backgroundOpacity ?? this.backgroundOpacity,
+      contentOpacity: contentOpacity ?? this.contentOpacity,
       titleOpacity: titleOpacity ?? this.titleOpacity,
       titleTranslateY: titleTranslateY ?? this.titleTranslateY,
       translateY: translateY ?? this.translateY,
@@ -72,6 +91,8 @@ class GlobalTopBarStyle {
       showBackButton: false,
       centerTitle: true,
       opacity: 0.0,
+      backgroundOpacity: 0.0,
+      contentOpacity: 0.0,
       titleOpacity: 0.0,
       titleTranslateY: 0.0,
       translateY: 0.0,
@@ -179,50 +200,70 @@ class GlobalTopBar extends StatelessWidget {
       animation: controller,
       builder: (context, child) {
         final style = controller.style;
-        if (style.opacity <= 0.0 && style.showDivider == false) {
+        final contentOpacity = (style.contentOpacity ?? style.opacity)
+            .clamp(0.0, 1.0);
+        final backgroundOpacity = (style.backgroundOpacity ?? style.opacity)
+            .clamp(0.0, 1.0);
+
+        if (contentOpacity <= 0.0 && style.showDivider == false) {
           return const SizedBox.shrink();
         }
 
         final topPadding = MediaQuery.of(context).padding.top;
-        final backgroundColor = ThemeUtils.backgroundColor(context);
+        final backgroundColor = ThemeUtils.backgroundColor(context)
+            .withValues(alpha: backgroundOpacity);
+        final dividerColor = const Color(0xFFD3D3D3)
+            .withValues(alpha: backgroundOpacity);
 
         return Positioned(
           left: 0,
           right: 0,
           top: 0,
           child: IgnorePointer(
-            ignoring: style.opacity < 0.05,
-            child: Opacity(
-              opacity: style.opacity,
-              child: Material(
-                color: backgroundColor,
-                child: Column(
+            ignoring: contentOpacity < 0.05,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: IgnorePointer(
+                    ignoring: true,
+                    child: Material(color: backgroundColor),
+                  ),
+                ),
+                Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    SizedBox(height: topPadding),
-                    SizedBox(
-                      height: barHeight,
-                      child: CompactPageHeader(
-                        title: style.title,
-                        textColor: ThemeUtils.textColor(context),
-                        showBackButton: style.showBackButton,
-                        centerTitle: style.centerTitle,
-                        backIconColor: style.backIconColor,
-                        onBack: style.onBack,
-                        trailing: style.trailing,
-                        titleOpacity: style.titleOpacity,
-                        titleTranslateY: style.titleTranslateY,
+                    Opacity(
+                      opacity: contentOpacity,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(height: topPadding),
+                          SizedBox(
+                            height: barHeight,
+                            child: CompactPageHeader(
+                              title: style.title,
+                              textColor: ThemeUtils.textColor(context),
+                              showBackButton: style.showBackButton,
+                              centerTitle: style.centerTitle,
+                              backIconColor: style.backIconColor,
+                              onBack: style.onBack,
+                              trailing: style.trailing,
+                              titleOpacity: style.titleOpacity,
+                              titleTranslateY: style.titleTranslateY,
+                            ),
+                          ),
+                          if (style.bottom != null) style.bottom!,
+                        ],
                       ),
                     ),
-                    if (style.bottom != null) style.bottom!,
                     if (style.showDivider)
-                      const Divider(
+                      Divider(
                         height: 1,
-                        color: Color(0xFFD3D3D3),
+                        color: dividerColor,
                       ),
                   ],
                 ),
-              ),
+              ],
             ),
           ),
         );
