@@ -319,11 +319,41 @@ class _MusicRankingPageState extends State<MusicRankingPage> with RouteAware {
     );
   }
 
+  IconData _iconForFilterKey(String key) {
+    if (_browseMode == MusicZoneBrowseMode.rankingV2) {
+      switch (key) {
+        case 'all':
+          return Icons.grid_view_rounded;
+        case 'rokkie':
+          return Icons.fiber_new_rounded;
+        case 'origin':
+          return Icons.auto_awesome_rounded;
+      }
+      return Icons.local_fire_department_rounded;
+    }
+
+    switch (key) {
+      case 'click':
+        return Icons.play_arrow_rounded;
+      case 'scores':
+        return Icons.star_rounded;
+      case 'stow':
+        return Icons.bookmark_rounded;
+      case 'coin':
+        return Icons.monetization_on_rounded;
+      case 'dm':
+        return Icons.chat_bubble_rounded;
+    }
+    return Icons.sort_rounded;
+  }
+
   Widget _buildFilters(Color textColor, bool isDark) {
     final modeLabel = _browseMode == MusicZoneBrowseMode.rankingV2 ? 'TOP100' : '热榜';
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+      // 顶栏 bottom 区域固定高度为 44：这里的上下内边距必须收敛，否则会导致按钮被裁切。
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
             child: Text(
@@ -355,7 +385,13 @@ class _MusicRankingPageState extends State<MusicRankingPage> with RouteAware {
                   .map(
                     (e) => PopupMenuItem<String>(
                       value: e.key,
-                      child: Text(e.value),
+                      child: Row(
+                        children: [
+                          Icon(_iconForFilterKey(e.key), size: 18),
+                          const SizedBox(width: 10),
+                          Text(e.value),
+                        ],
+                      ),
                     ),
                   )
                   .toList();
@@ -379,7 +415,7 @@ class _MusicRankingPageState extends State<MusicRankingPage> with RouteAware {
     final borderColor = Colors.black.withValues(alpha: isDark ? 0.22 : 0.12);
     final background = Colors.black.withValues(alpha: isDark ? 0.18 : 0.04);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(999),
