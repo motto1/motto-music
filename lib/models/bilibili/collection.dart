@@ -29,19 +29,79 @@ class BilibiliCollection {
       return int.tryParse(v.toString());
     }
 
-    final timeValue = asInt(
-      json['pubtime'] ?? json['ptime'] ?? json['ctime'] ?? json['mtime'],
+    Map<String, dynamic>? asMap(dynamic v) {
+      if (v is Map<String, dynamic>) return v;
+      if (v is Map) {
+        return v.map(
+          (key, value) => MapEntry(key.toString(), value),
+        );
+      }
+      return null;
+    }
+
+    int? normalizeEpochSeconds(int? value) {
+      if (value == null) return null;
+      // 毫秒时间戳（13位）转为秒（10位）
+      if (value > 20000000000) return value ~/ 1000;
+      return value;
+    }
+
+    int countFromSections() {
+      final sections = asMap(json['sections']);
+      final sectionList = sections?['sections'];
+      if (sectionList is! List) return 0;
+      var sum = 0;
+      for (final item in sectionList) {
+        final section = asMap(item);
+        sum += asInt(section?['epCount'] ?? section?['ep_count']) ?? 0;
+      }
+      return sum;
+    }
+
+    // 兼容 `/x/polymer/web-space/*` 返回的 wrapper 结构：{ season: {...}, seasonStat: {...}, sections: {...} }
+    final season = asMap(json['season']);
+    final upper = asMap(json['upper']);
+
+    final pubtime = normalizeEpochSeconds(
+      asInt(
+        json['pubtime'] ??
+            json['ptime'] ??
+            season?['pubtime'] ??
+            season?['ctime'] ??
+            season?['mtime'] ??
+            json['ctime'] ??
+            json['mtime'],
+      ),
     );
 
+    var mediaCount = asInt(
+          json['media_count'] ??
+              json['total'] ??
+              json['ep_count'] ??
+              season?['ep_num'],
+        ) ??
+        0;
+
+    if (mediaCount <= 0) {
+      final fromSections = countFromSections();
+      if (fromSections > 0) {
+        mediaCount = fromSections;
+      }
+    }
+
     return BilibiliCollection(
-      id: json['id'] as int? ?? json['season_id'] as int? ?? 0,
-      title: json['title'] as String? ?? json['name'] as String? ?? '',
-      cover: json['cover'] as String? ?? '',
-      mid: json['mid'] as int? ?? json['upper']?['mid'] as int? ?? 0,
-      upName: json['upper']?['name'] as String? ?? json['up_name'] as String? ?? '',
-      mediaCount: json['media_count'] as int? ?? json['total'] as int? ?? 0,
-      intro: json['intro'] as String? ?? json['description'] as String? ?? '',
-      pubtime: timeValue,
+      id: asInt(season?['id'] ?? json['id'] ?? json['season_id']) ?? 0,
+      title: (season?['title'] ?? json['title'] ?? json['name']) as String? ?? '',
+      cover: (season?['cover'] ?? json['cover']) as String? ?? '',
+      mid: asInt(season?['mid'] ?? json['mid'] ?? upper?['mid']) ?? 0,
+      upName: (upper?['name'] ?? json['up_name']) as String? ?? '',
+      mediaCount: mediaCount,
+      intro: (season?['desc'] ??
+              season?['intro'] ??
+              json['intro'] ??
+              json['description']) as String? ??
+          '',
+      pubtime: pubtime,
     );
   }
 }
