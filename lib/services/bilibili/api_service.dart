@@ -472,10 +472,34 @@ class BilibiliApiService {
 
     final itemsLists = data['items_lists'] ?? data['items_list'];
 
+    List<dynamic> normalizeSeasons(dynamic direct) {
+      if (direct is List) {
+        final out = <dynamic>[];
+        for (final item in direct) {
+          if (item is Map<String, dynamic>) {
+            final seasons = item['seasons'] ?? item['season_list'];
+            if (seasons is List) {
+              out.addAll(seasons);
+              continue;
+            }
+          }
+          out.add(item);
+        }
+        return out;
+      }
+
+      if (direct is Map<String, dynamic>) {
+        final seasons = direct['seasons'] ?? direct['season_list'];
+        if (seasons is List) return seasons;
+        return [direct];
+      }
+
+      return const [];
+    }
+
     List<dynamic> collectFromMap(Map<String, dynamic> map) {
       final direct = map['seasons_list'] ?? map['seasons'] ?? map['list'];
-      if (direct is List) return direct;
-      return const [];
+      return normalizeSeasons(direct);
     }
 
     final result = <dynamic>[];
