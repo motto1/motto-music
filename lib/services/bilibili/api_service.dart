@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:motto_music/models/bilibili/user.dart';
 import 'package:motto_music/models/bilibili/video.dart';
 import 'package:motto_music/models/bilibili/favorite.dart';
 import 'api_client.dart';
@@ -459,7 +458,7 @@ class BilibiliApiService {
   }
 
   /// 获取UP主的合集列表
-  /// 
+  ///
   /// [mid] UP主ID
   Future<List<dynamic>> getUploaderSeasons(int mid) async {
     final data = await _client.get<Map<String, dynamic>>(
@@ -470,12 +469,40 @@ class BilibiliApiService {
         'page_size': '20',
       },
     );
-    
-    final itemsList = data['items_lists'] as Map<String, dynamic>?;
-    if (itemsList == null) return [];
-    
-    final seasonsList = itemsList['seasons_list'] as List<dynamic>? ?? [];
-    return seasonsList;
+
+    final itemsLists = data['items_lists'] ?? data['items_list'];
+
+    List<dynamic> collectFromMap(Map<String, dynamic> map) {
+      final direct = map['seasons_list'] ?? map['seasons'] ?? map['list'];
+      if (direct is List) return direct;
+      return const [];
+    }
+
+    final result = <dynamic>[];
+
+    if (itemsLists is Map<String, dynamic>) {
+      result.addAll(collectFromMap(itemsLists));
+    } else if (itemsLists is List) {
+      for (final entry in itemsLists) {
+        if (entry is Map<String, dynamic>) {
+          result.addAll(collectFromMap(entry));
+        }
+      }
+    }
+
+    // 兜底：部分返回可能直接挂在顶层字段。
+    final topLevel = data['seasons_list'] ?? data['seasons'];
+    if (result.isEmpty && topLevel is List) {
+      result.addAll(topLevel);
+    }
+
+    if (result.isEmpty) {
+      debugPrint(
+        '[BilibiliApiService] getUploaderSeasons 空结果: mid=$mid, keys=${data.keys.toList()}',
+      );
+    }
+
+    return result;
   }
 
   /// 获取合集内容（分页）

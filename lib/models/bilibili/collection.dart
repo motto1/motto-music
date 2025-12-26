@@ -1,17 +1,16 @@
-import 'package:flutter/foundation.dart';
-
-/// Bilibili 合集相关数据模型
+// Bilibili 合集相关数据模型
 
 /// 合集基本信息
 class BilibiliCollection {
-  final int id;              // 合集ID
-  final String title;        // 合集标题
-  final String cover;        // 合集封面
-  final int mid;             // UP主ID
-  final String upName;       // UP主名称
-  final int mediaCount;      // 视频数量
-  final String intro;        // 合集简介
-  
+  final int id; // 合集ID
+  final String title; // 合集标题
+  final String cover; // 合集封面
+  final int mid; // UP主ID
+  final String upName; // UP主名称
+  final int mediaCount; // 视频数量
+  final String intro; // 合集简介
+  final int? pubtime; // 合集时间戳（可能为秒/毫秒，部分接口返回）
+
   BilibiliCollection({
     required this.id,
     required this.title,
@@ -20,9 +19,20 @@ class BilibiliCollection {
     required this.upName,
     required this.mediaCount,
     required this.intro,
+    this.pubtime,
   });
-  
+
   factory BilibiliCollection.fromJson(Map<String, dynamic> json) {
+    int? asInt(dynamic v) {
+      if (v == null) return null;
+      if (v is int) return v;
+      return int.tryParse(v.toString());
+    }
+
+    final timeValue = asInt(
+      json['pubtime'] ?? json['ptime'] ?? json['ctime'] ?? json['mtime'],
+    );
+
     return BilibiliCollection(
       id: json['id'] as int? ?? json['season_id'] as int? ?? 0,
       title: json['title'] as String? ?? json['name'] as String? ?? '',
@@ -31,6 +41,7 @@ class BilibiliCollection {
       upName: json['upper']?['name'] as String? ?? '',
       mediaCount: json['media_count'] as int? ?? json['total'] as int? ?? 0,
       intro: json['intro'] as String? ?? json['description'] as String? ?? '',
+      pubtime: timeValue,
     );
   }
 }

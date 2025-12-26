@@ -553,6 +553,16 @@ class _UserVideosPageState extends State<UserVideosPage> {
     return '$_displayName · $year年';
   }
 
+  String _albumSubtitle(BilibiliCollection collection) {
+    final t = collection.pubtime;
+    if (t != null && t > 0) {
+      final isMillis = t > 20000000000; // 粗略判断：毫秒时间戳通常远大于秒
+      final dt = DateTime.fromMillisecondsSinceEpoch(isMillis ? t : t * 1000);
+      return '${dt.year}';
+    }
+    return '${collection.mediaCount} 个内容';
+  }
+
   Future<void> _showVideoMenu(BilibiliVideo video, {required bool isDark}) async {
     final textColor = ThemeUtils.textColor(context);
 
@@ -745,7 +755,7 @@ class _UserVideosPageState extends State<UserVideosPage> {
           ),
           const SizedBox(height: 2),
           Text(
-            '${collection.mediaCount} 个内容',
+            _albumSubtitle(collection),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
