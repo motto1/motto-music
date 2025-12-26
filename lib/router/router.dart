@@ -137,6 +137,8 @@ class MenuManager {
 
     final playerState = await PlayerStateStorage.getInstance();
     currentPage.value = playerState.currentPage;
+    GlobalTopBarController.instance
+        .setActiveBaseSource(_topBarSourceForPage(currentPage.value));
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final itemIndex = items.indexWhere((item) => item.key == currentPage.value);
@@ -186,12 +188,38 @@ class MenuManager {
     return subItems.map((item) => item.routeName).toList();
   }
 
+  String _topBarSourceForPage(PlayerPage page) {
+    switch (page) {
+      case PlayerPage.home:
+        return 'home';
+      case PlayerPage.bilibili:
+        return 'bilibili-library';
+      case PlayerPage.globalSearch:
+        return 'global-search';
+      case PlayerPage.favorite:
+        return 'favorites';
+      case PlayerPage.settings:
+        return 'settings';
+      default:
+        // 非底部 tab 页面：交由 push/pop 栈（详情页）处理。
+        return 'hidden';
+    }
+  }
+
+  void notifyCurrentPageShow() {
+    final itemIndex = items.indexWhere((item) => item.key == currentPage.value);
+    if (itemIndex == -1) return;
+    _notifyPageShow(items[itemIndex].pageKey);
+  }
+
   void setPage(PlayerPage page, {BuildContext? context}) {
     if (page == currentPage.value) return;
     final oldPage = currentPage.value;
     currentPage.value = page;
 
-    GlobalTopBarController.instance.hide();
+    // 工业级：切换 tab 不强制 hide 顶栏，避免出现“空白/闪烁/偶发不显示”。
+    // 由新页面的 onPageShow 主动设置顶栏样式。
+    GlobalTopBarController.instance.setActiveBaseSource(_topBarSourceForPage(page));
 
     PlayerStateStorage.getInstance().then((s) => s.setCurrentPage(page));
 
@@ -215,6 +243,8 @@ class MenuManager {
     // 根据key查找新页面项
     final newItemIndex = items.indexWhere((item) => item.key == page);
     if (newItemIndex != -1) {
+      // 尽量立即触发一次（若 state 还未挂载则由 postFrame 再兜底一次）。
+      _notifyPageShow(items[newItemIndex].pageKey);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _notifyPageShow(items[newItemIndex].pageKey);
       });

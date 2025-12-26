@@ -167,7 +167,8 @@ class HomePageWrapper extends StatefulWidget {
   State<HomePageWrapper> createState() => _HomePageWrapperState();
 }
 
-class _HomePageWrapperState extends State<HomePageWrapper> {
+class _HomePageWrapperState extends State<HomePageWrapper>
+    with WidgetsBindingObserver {
   final GlobalKey<ExpandablePlayerState> _playerKey = GlobalKey();
   final menuManager = MenuManager();
   OverlayEntry? _playerOverlay;
@@ -180,10 +181,22 @@ class _HomePageWrapperState extends State<HomePageWrapper> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     menuManager.init(navigatorKey: GlobalKey<NavigatorState>());
     _playerBottomNotifier = ValueNotifier(0.0);
     // 注册全局播放器 Key
     GlobalPlayerManager.setPlayerKey(_playerKey);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // 工业级：应用从后台回到前台时，主动让当前页面重置顶栏样式。
+    // 否则顶部样式可能因之前 hide/opacity 状态停留而表现为“随机消失”。
+    if (state == AppLifecycleState.resumed) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        menuManager.notifyCurrentPageShow();
+      });
+    }
   }
 
   @override
@@ -320,6 +333,7 @@ class _HomePageWrapperState extends State<HomePageWrapper> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _playerOverlay?.remove();
     _playerOverlay = null;
     _navBarOverlay?.remove();

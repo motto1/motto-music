@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:motto_music/utils/theme_utils.dart';
 import 'package:motto_music/widgets/compact_page_header.dart';
 
@@ -88,9 +87,18 @@ class GlobalTopBarController extends ChangeNotifier {
 
   GlobalTopBarStyle _style = GlobalTopBarStyle.hidden();
   final List<GlobalTopBarStyle> _stack = [];
+
+  // 当前主页面（tab）允许写入顶栏的 source。
+  // 用于防止 IndexedStack 中后台页面的滚动/回调抢写顶栏，造成“随机消失/错乱”。
+  String? _activeBaseSource;
+
   bool _notifyScheduled = false;
 
   GlobalTopBarStyle get style => _style;
+
+  void setActiveBaseSource(String? source) {
+    _activeBaseSource = source;
+  }
 
   void _notifyListenersSafely() {
     if (_notifyScheduled) return;
@@ -102,9 +110,16 @@ class GlobalTopBarController extends ChangeNotifier {
   }
 
   void set(GlobalTopBarStyle style) {
-    // 当有页面通过 push() 占用顶栏时（_stack 非空），禁止其它来源的页面用 set() 抢写顶栏。
-    // 否则底层页面的滚动/动画回调会把顶栏覆盖为 opacity=0，导致当前页面出现“顶部空白”。
+    // 顶栏栈占用（push 进入详情页）时：禁止其它来源抢写。
     if (_stack.isNotEmpty && style.source != _style.source) return;
+
+    // 主页面（tab）场景：仅允许当前激活页面写入。
+    if (_stack.isEmpty &&
+        _activeBaseSource != null &&
+        style.source != _activeBaseSource) {
+      return;
+    }
+
     _style = style;
     _notifyListenersSafely();
   }
