@@ -360,6 +360,8 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
     final categories = <_SearchCategory>[];
     for (var index = 0; index < _musicZoneV1.length; index++) {
       final zone = _musicZoneV1[index];
+      // 电音分区（tid=194）已下线：UI 不再展示该入口。
+      if (zone.tid == 194) continue;
       categories.add(
         _SearchCategory(
           title: zone.title,

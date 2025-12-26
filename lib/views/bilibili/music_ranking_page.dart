@@ -11,6 +11,7 @@ import 'package:motto_music/animations/page_transitions.dart';
 import 'package:motto_music/views/bilibili/video_detail_page.dart';
 import 'package:motto_music/widgets/global_top_bar.dart';
 import 'package:motto_music/widgets/unified_cover_image.dart';
+import 'package:motto_music/router/route_observer.dart';
 
 enum MusicZoneBrowseMode {
   /// 自动选择：主分区用 ranking/v2，子分区用 newlist_rank。
@@ -46,7 +47,7 @@ class MusicRankingPage extends StatefulWidget {
   State<MusicRankingPage> createState() => _MusicRankingPageState();
 }
 
-class _MusicRankingPageState extends State<MusicRankingPage> {
+class _MusicRankingPageState extends State<MusicRankingPage> with RouteAware {
   late final BilibiliApiService _apiService;
   late final ScrollController _scrollController;
   final PageCacheService _pageCache = PageCacheService();
@@ -87,23 +88,45 @@ class _MusicRankingPageState extends State<MusicRankingPage> {
         ? widget.rankingType
         : 'click';
     _loadFirstPage();
-    GlobalTopBarController.instance.push(
-      GlobalTopBarStyle(
-        source: 'detail',
-        title: widget.title,
-        showBackButton: true,
-        centerTitle: true,
-        backIconColor: widget.accentColor,
-        onBack: () => Navigator.of(context).pop(),
-        opacity: 1.0,
-        translateY: 0.0,
-        showDivider: true,
-      ),
+    GlobalTopBarController.instance.push(_topBarStyle());
+  }
+
+  GlobalTopBarStyle _topBarStyle() {
+    return GlobalTopBarStyle(
+      source: 'detail',
+      title: widget.title,
+      showBackButton: true,
+      centerTitle: true,
+      backIconColor: widget.accentColor,
+      onBack: () => Navigator.of(context).pop(),
+      opacity: 1.0,
+      translateY: 0.0,
+      showDivider: true,
     );
+  }
+
+  void _applyTopBarStyle() {
+    GlobalTopBarController.instance.set(_topBarStyle());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null) {
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didPopNext() {
+    // 从子页面返回时，确保恢复统一顶栏样式。
+    _applyTopBarStyle();
   }
 
   @override
   void dispose() {
+    routeObserver.unsubscribe(this);
     _scrollController
       ..removeListener(_handleScroll)
       ..dispose();
