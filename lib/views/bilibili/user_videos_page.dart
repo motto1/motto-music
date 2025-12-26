@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:motto_music/animations/page_transitions.dart';
@@ -22,9 +20,9 @@ import 'package:motto_music/widgets/unified_cover_image.dart';
 ///
 /// 目标：复刻参考图的交互与布局：
 /// - 顶部大封面 + 名称
-/// - 名称位置的「歌曲/专辑」切换
-/// - 歌曲=视频列表，专辑=合集列表
-/// - 使用统一顶栏，滚动时背景淡入，切换控件上移到顶栏
+/// - 歌曲排行（预览）+ 查看全部
+/// - 专辑区块在歌曲排行下方
+/// - 使用统一顶栏，滚动时背景淡入
 class UserVideosPage extends StatefulWidget {
   final int mid;
   final String userName;
@@ -44,7 +42,6 @@ class UserVideosPage extends StatefulWidget {
 class _UserVideosPageState extends State<UserVideosPage> {
   static const double _heroHeight = 380.0;
   static const double _collapseDistance = 220.0;
-  static const double _topBarBottomHeight = 44.0;
   static const Color _accentColor = Color(0xFFE84C4C);
 
   late final BilibiliApiService _apiService;
@@ -52,9 +49,6 @@ class _UserVideosPageState extends State<UserVideosPage> {
 
   late final ScrollController _scrollController;
   double _collapseProgress = 0.0;
-
-  // tab: 0 = 歌曲(视频), 1 = 专辑(合集)
-  int _selectedTab = 0;
 
   // 视频
   bool _isLoadingVideos = false;
@@ -140,9 +134,6 @@ class _UserVideosPageState extends State<UserVideosPage> {
     final titleOpacity = Curves.easeOutCubic.transform(
       ((progress - 0.18) / 0.52).clamp(0.0, 1.0),
     );
-    final bottomOpacity = Curves.easeOutCubic.transform(
-      ((progress - 0.22) / 0.42).clamp(0.0, 1.0),
-    );
     final iconColor = _topBarIconColor(backgroundOpacity, isDark);
 
     return GlobalTopBarStyle(
@@ -161,16 +152,6 @@ class _UserVideosPageState extends State<UserVideosPage> {
       translateY: 0.0,
       showDivider: backgroundOpacity > 0.7,
       trailing: _buildTopBarTrailing(iconColor),
-      bottom: SizedBox(
-        height: _topBarBottomHeight,
-        child: Opacity(
-          opacity: bottomOpacity,
-          child: _buildSwitchControl(
-            overImage: false,
-            isDark: isDark,
-          ),
-        ),
-      ),
     );
   }
 
@@ -326,7 +307,8 @@ class _UserVideosPageState extends State<UserVideosPage> {
               SliverToBoxAdapter(
                 child: _buildHeroHeader(isDark: isDark),
               ),
-              ..._buildTabContentSlivers(isDark: isDark),
+              ..._buildSongsSlivers(isDark: isDark),
+              ..._buildAlbumsSlivers(isDark: isDark),
               const SliverPadding(
                 padding: EdgeInsets.only(bottom: 160),
               ),
@@ -340,10 +322,6 @@ class _UserVideosPageState extends State<UserVideosPage> {
   Widget _buildHeroHeader({required bool isDark}) {
     final avatar = _displayAvatar;
     final name = _displayName;
-
-    final headerSwitchOpacity = (1.0 - Curves.easeOutCubic.transform(
-      ((_collapseProgress - 0.16) / 0.52).clamp(0.0, 1.0),
-    ));
 
     return SizedBox(
       height: _heroHeight,
@@ -396,11 +374,6 @@ class _UserVideosPageState extends State<UserVideosPage> {
                     height: 1.05,
                   ),
                 ),
-                const SizedBox(height: 10),
-                Opacity(
-                  opacity: headerSwitchOpacity,
-                  child: _buildSwitchControl(overImage: true, isDark: isDark),
-                ),
               ],
             ),
           ),
@@ -446,135 +419,9 @@ class _UserVideosPageState extends State<UserVideosPage> {
     );
   }
 
-  Widget _buildSwitchControl({required bool overImage, required bool isDark}) {
-    final baseBg = overImage
-        ? Colors.white.withValues(alpha: isDark ? 0.10 : 0.18)
-        : Colors.black.withValues(alpha: isDark ? 0.22 : 0.05);
-    final borderColor = overImage
-        ? Colors.white.withValues(alpha: 0.22)
-        : Colors.black.withValues(alpha: isDark ? 0.25 : 0.10);
-
-    final selectedBg = overImage
-        ? Colors.white.withValues(alpha: 0.28)
-        : Colors.black.withValues(alpha: isDark ? 0.22 : 0.06);
-
-    final selectedText = overImage ? Colors.white : ThemeUtils.textColor(context);
-    final unselectedText = overImage
-        ? Colors.white.withValues(alpha: 0.7)
-        : ThemeUtils.textColor(context).withValues(alpha: 0.75);
-
-    final child = Container(
-      height: 34,
-      padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        color: baseBg,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: borderColor, width: 0.8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildSwitchItem(
-            label: '歌曲',
-            selected: _selectedTab == 0,
-            selectedBg: selectedBg,
-            selectedText: selectedText,
-            unselectedText: unselectedText,
-            onTap: () => _selectTab(0),
-          ),
-          _buildSwitchItem(
-            label: '专辑',
-            selected: _selectedTab == 1,
-            selectedBg: selectedBg,
-            selectedText: selectedText,
-            unselectedText: unselectedText,
-            onTap: () => _selectTab(1),
-          ),
-        ],
-      ),
-    );
-
-    if (!overImage) {
-      return child;
-    }
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(999),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-        child: child,
-      ),
-    );
-  }
-
-  Widget _buildSwitchItem({
-    required String label,
-    required bool selected,
-    required Color selectedBg,
-    required Color selectedText,
-    required Color unselectedText,
-    required VoidCallback onTap,
-  }) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOutCubic,
-      decoration: BoxDecoration(
-        color: selected ? selectedBg : Colors.transparent,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Material(
-        type: MaterialType.transparency,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(999),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            child: Text(
-              label,
-              style: TextStyle(
-                color: selected ? selectedText : unselectedText,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _selectTab(int index) {
-    if (_selectedTab == index) return;
-    setState(() {
-      _selectedTab = index;
-    });
-
-    // 切换后立即刷新顶栏 bottom 的选中态。
-    GlobalTopBarController.instance.set(_topBarStyle(progress: _collapseProgress));
-
-    // 专辑页签首次切换时，确保已加载。
-    if (index == 1 && _collections == null && !_isLoadingCollections) {
-      _loadCollections();
-    }
-  }
-
-  List<Widget> _buildTabContentSlivers({required bool isDark}) {
-    return _selectedTab == 0
-        ? _buildSongsSlivers(isDark: isDark)
-        : _buildAlbumsSlivers(isDark: isDark);
-  }
 
   List<Widget> _buildSongsSlivers({required bool isDark}) {
-    final collections = _collections;
-
     return [
-      if (collections != null && collections.isNotEmpty)
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: _buildFeaturedCollection(collections.first, isDark: isDark),
-          ),
-        ),
       SliverToBoxAdapter(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
@@ -604,89 +451,6 @@ class _UserVideosPageState extends State<UserVideosPage> {
       ),
       ..._buildSongRankingPreviewSlivers(isDark: isDark),
     ];
-  }
-
-  Widget _buildFeaturedCollection(BilibiliCollection collection, {required bool isDark}) {
-    final textColor = ThemeUtils.textColor(context);
-    final borderColor = Colors.black.withValues(alpha: isDark ? 0.22 : 0.10);
-    final bg = Colors.black.withValues(alpha: isDark ? 0.18 : 0.03);
-
-    return InkWell(
-      onTap: () => _openCollection(collection),
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: borderColor, width: 0.8),
-        ),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: UnifiedCoverImage(
-                coverPath: collection.cover,
-                width: 64,
-                height: 64,
-                borderRadius: 0,
-                fit: BoxFit.cover,
-                isDark: isDark,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    collection.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: textColor,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${collection.mediaCount} 个内容',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: textColor.withValues(alpha: 0.6),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: _accentColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.add_rounded, size: 18, color: _accentColor),
-                  SizedBox(width: 4),
-                  Text(
-                    '添加',
-                    style: TextStyle(
-                      color: _accentColor,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   void _openSongRankingPage() {
@@ -892,13 +656,14 @@ class _UserVideosPageState extends State<UserVideosPage> {
         ),
       ),
       if (_collections == null && _isLoadingCollections)
-        const SliverFillRemaining(
-          hasScrollBody: false,
-          child: Center(child: CircularProgressIndicator()),
+        const SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(child: CircularProgressIndicator()),
+          ),
         )
       else if (_collections == null && _collectionsError != null)
-        SliverFillRemaining(
-          hasScrollBody: false,
+        SliverToBoxAdapter(
           child: _buildErrorView(
             message: _collectionsError!,
             onRetry: _loadCollections,
@@ -912,12 +677,14 @@ class _UserVideosPageState extends State<UserVideosPage> {
   Widget _buildCollectionsGrid({required bool isDark}) {
     final collections = _collections ?? const <BilibiliCollection>[];
     if (collections.isEmpty) {
-      return const SliverFillRemaining(
-        hasScrollBody: false,
-        child: Center(
-          child: Text(
-            '暂无专辑',
-            style: TextStyle(color: Colors.grey, fontSize: 14),
+      return const SliverToBoxAdapter(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 24),
+          child: Center(
+            child: Text(
+              '暂无专辑',
+              style: TextStyle(color: Colors.grey, fontSize: 14),
+            ),
           ),
         ),
       );
