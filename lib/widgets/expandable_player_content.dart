@@ -2861,6 +2861,36 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
                             if (showQualitySection)
                               AudioQualitySection(song: song),
 
+                            // 睡眠定时
+                            ListTile(
+                              leading: const Icon(Icons.bedtime_outlined),
+                              title: const Text('睡眠定时'),
+                              trailing: ValueListenableBuilder<Duration?>(
+                                valueListenable:
+                                    playerProvider.sleepTimerRemainingNotifier,
+                                builder: (context, remaining, _) {
+                                  final text = remaining == null
+                                      ? '未开启'
+                                      : _formatSleepTimerRemaining(remaining);
+                                  return Text(
+                                    text,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withOpacity(0.6),
+                                    ),
+                                  );
+                                },
+                              ),
+                              onTap: () async {
+                                await _hideOverlay();
+                                if (!mounted) return;
+                                await _showSleepTimerSheet(playerProvider);
+                              },
+                            ),
+
                             // 查看制作人员
                             ListTile(
                               leading: const Icon(Icons.info_outline_rounded),
@@ -2878,6 +2908,165 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
                     ),
                   ),
                 ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatSleepTimerRemaining(Duration remaining) {
+    final totalSeconds = remaining.inSeconds;
+    if (totalSeconds <= 0) return '00:00';
+
+    final hours = remaining.inHours;
+    final minutes = remaining.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = remaining.inSeconds.remainder(60).toString().padLeft(2, '0');
+
+    if (hours > 0) {
+      return '${hours.toString().padLeft(2, '0')}:$minutes:$seconds';
+    }
+    return '$minutes:$seconds';
+  }
+
+  Future<void> _showSleepTimerSheet(PlayerProvider playerProvider) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.45,
+        minChildSize: 0.30,
+        maxChildSize: 0.70,
+        builder: (context, scrollController) => ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+            child: Container(
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.black.withOpacity(0.3)
+                    : Colors.white.withOpacity(0.5),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.1)
+                      : Colors.white.withOpacity(0.5),
+                  width: 1.5,
+                ),
+              ),
+              child: ListView(
+                controller: scrollController,
+                children: [
+                  const SizedBox(height: 12),
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).dividerColor.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: ValueListenableBuilder<Duration?>(
+                      valueListenable: playerProvider.sleepTimerRemainingNotifier,
+                      builder: (context, remaining, _) {
+                        return Row(
+                          children: [
+                            const Icon(Icons.bedtime_outlined, size: 20),
+                            const SizedBox(width: 10),
+                            const Text(
+                              '睡眠定时',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              remaining == null
+                                  ? '未开启'
+                                  : '剩余 ${_formatSleepTimerRemaining(remaining)}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.6),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.timer_outlined),
+                    title: const Text('15 分钟'),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      playerProvider.startSleepTimer(const Duration(minutes: 15));
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.timer_outlined),
+                    title: const Text('30 分钟'),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      playerProvider.startSleepTimer(const Duration(minutes: 30));
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.timer_outlined),
+                    title: const Text('45 分钟'),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      playerProvider.startSleepTimer(const Duration(minutes: 45));
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.timer_outlined),
+                    title: const Text('60 分钟'),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      playerProvider.startSleepTimer(const Duration(minutes: 60));
+                    },
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.music_note_outlined),
+                    title: const Text('播放完当前歌曲'),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      playerProvider.startSleepTimerUntilEndOfTrack();
+                    },
+                  ),
+                  ValueListenableBuilder<Duration?>(
+                    valueListenable: playerProvider.sleepTimerRemainingNotifier,
+                    builder: (context, remaining, _) {
+                      if (remaining == null) return const SizedBox.shrink();
+                      return ListTile(
+                        leading: const Icon(Icons.timer_off_outlined),
+                        title: const Text('关闭睡眠定时'),
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          playerProvider.cancelSleepTimer();
+                        },
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                ],
               ),
             ),
           ),

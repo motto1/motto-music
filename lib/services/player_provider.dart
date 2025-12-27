@@ -61,6 +61,18 @@ class PlayerProvider with ChangeNotifier {
   final ValueNotifier<List<Song>> playlistNotifier =
       ValueNotifier<List<Song>>(<Song>[]);
 
+  // ==================== 睡眠定时（Sleep Timer） ====================
+  Timer? _sleepTimer;
+  DateTime? _sleepTimerEndAt;
+  String? _sleepTimerBoundTrackKey; // 仅用于“播放完当前歌曲”
+  bool _sleepTimerUntilEndOfTrack = false;
+
+  /// 剩余时间（null 表示未开启）
+  final ValueNotifier<Duration?> sleepTimerRemainingNotifier =
+      ValueNotifier<Duration?>(null);
+
+  bool get isSleepTimerActive => sleepTimerRemainingNotifier.value != null;
+
   // 索引映射架构：单一歌曲列表 + 播放顺序索引
   List<Song> _songs = [];
   List<int> _playOrder = [];
@@ -335,6 +347,12 @@ class PlayerProvider with ChangeNotifier {
     // ⭐ 监听队列索引变化（关键修复：自动切歌时更新界面）
     _audioHandler!.currentIndex.addListener(() {
       debugPrint('[PlayerProvider] 🔄 队列索引变化: ${_audioHandler!.currentIndex.value}');
+
+      // 若启用了“播放完当前歌曲”睡眠定时，切歌时自动取消，避免误暂停下一首
+      if (_sleepTimerUntilEndOfTrack) {
+        debugPrint('[SleepTimer] ℹ️ 队列索引变化，自动取消“到曲末”睡眠定时');
+        cancelSleepTimer();
+      }
       _updateCurrentSongFromHandler();
       _notifySongChange();
     });
@@ -1240,7 +1258,115 @@ class PlayerProvider with ChangeNotifier {
     }
   }
 
+  Future<void> pause() async {
+    if (_audioHandler == null) return;
+    await _audioHandler!.pause();
+  }
+
+  /// 开启倒计时睡眠定时：到点自动暂停（复用 AudioHandler 的淡出暂停）
+  void startSleepTimer(Duration duration) {
+    if (duration.inSeconds <= 0) {
+      debugPrint('[SleepTimer] ⚠️ duration<=0，忽略 startSleepTimer($duration)');
+      return;
+    }
+
+    _sleepTimerUntilEndOfTrack = false;
+    _sleepTimerBoundTrackKey = null;
+    _startSleepTimerInternal(duration);
+  }
+
+  /// 播放完当前歌曲后暂停（基于当前 position/duration 计算剩余时间）
+  void startSleepTimerUntilEndOfTrack() {
+    final song = _currentSong;
+    if (song == null) {
+      debugPrint('[SleepTimer] ⚠️ 当前无歌曲，无法设置“播放完当前歌曲”');
+      return;
+    }
+
+    final boundKey = _trackKeyForSong(song);
+    final currentPos = _position.value;
+    final currentDur = _duration;
+
+    if (currentDur <= Duration.zero) {
+      debugPrint('[SleepTimer] ⚠️ 当前歌曲 duration 不可用，无法设置“到曲末”：dur=$currentDur');
+      return;
+    }
+
+    final remaining = currentDur - currentPos;
+    if (remaining <= Duration.zero) {
+      debugPrint('[SleepTimer] ℹ️ 当前已接近/到达曲末，立即暂停');
+      unawaited(pause());
+      return;
+    }
+
+    _sleepTimerUntilEndOfTrack = true;
+    _sleepTimerBoundTrackKey = boundKey;
+    _startSleepTimerInternal(remaining);
+
+    debugPrint(
+      '[SleepTimer] ✅ 设置“播放完当前歌曲”：title=${song.title}, remaining=${remaining.inSeconds}s, bound=$boundKey',
+    );
+  }
+
+  void cancelSleepTimer() {
+    _sleepTimer?.cancel();
+    _sleepTimer = null;
+    _sleepTimerEndAt = null;
+    _sleepTimerBoundTrackKey = null;
+    _sleepTimerUntilEndOfTrack = false;
+    sleepTimerRemainingNotifier.value = null;
+    debugPrint('[SleepTimer] 🛑 已取消睡眠定时');
+  }
+
+  void _startSleepTimerInternal(Duration duration) {
+    _sleepTimer?.cancel();
+
+    final endAt = DateTime.now().add(duration);
+    _sleepTimerEndAt = endAt;
+
+    // 立即刷新一次（避免 UI 等待 1s）
+    sleepTimerRemainingNotifier.value = duration;
+
+    debugPrint('[SleepTimer] ▶️ 开始倒计时：${duration.inSeconds}s, endAt=$endAt');
+
+    _sleepTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
+      final endTime = _sleepTimerEndAt;
+      if (endTime == null) return;
+
+      final remaining = endTime.difference(DateTime.now());
+      if (remaining <= Duration.zero) {
+        sleepTimerRemainingNotifier.value = Duration.zero;
+
+        final untilEndOfTrack = _sleepTimerUntilEndOfTrack;
+        final boundKey = _sleepTimerBoundTrackKey;
+        final currentKey = _trackKeyForSong(_currentSong);
+
+        // 先停止定时器本身，避免重复触发
+        _sleepTimer?.cancel();
+        _sleepTimer = null;
+        _sleepTimerEndAt = null;
+
+        if (untilEndOfTrack && boundKey != null && boundKey != currentKey) {
+          debugPrint(
+            '[SleepTimer] ℹ️ 到点但曲目已变化（bound=$boundKey, current=$currentKey），不执行暂停',
+          );
+          cancelSleepTimer();
+          return;
+        }
+
+        debugPrint('[SleepTimer] ⏰ 到点，执行暂停');
+        await pause();
+        cancelSleepTimer();
+        return;
+      }
+
+      // 仅更新细粒度 notifier，避免触发全局 rebuild
+      sleepTimerRemainingNotifier.value = remaining;
+    });
+  }
+
   Future<void> stop() async {
+    cancelSleepTimer();
     await _audioHandler?.stop();
     _currentSong = null;
     _currentLyrics = null;
@@ -1464,6 +1590,8 @@ class PlayerProvider with ChangeNotifier {
     currentSongNotifier.dispose();
     isPlayingNotifier.dispose();
     playlistNotifier.dispose();
+    _sleepTimer?.cancel();
+    sleepTimerRemainingNotifier.dispose();
     super.dispose();
   }
 
