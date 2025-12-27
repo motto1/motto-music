@@ -30,6 +30,11 @@ class PlayerStateStorage {
   static const String _fadeOutDurationKey = 'fade_out_duration_ms';
   static const String _gaplessEnabledKey = 'gapless_enabled';
 
+  // 睡眠定时（持久化 endAt，避免进程挂起导致 Timer 不准）
+  static const String _sleepTimerEndAtEpochMsKey = 'sleep_timer_end_at_epoch_ms';
+  static const String _sleepTimerUntilEndOfTrackKey = 'sleep_timer_until_end_of_track';
+  static const String _sleepTimerBoundTrackKeyKey = 'sleep_timer_bound_track_key';
+
   // 私有成员
   bool _isPlaying = false;
   Duration _position = Duration.zero;
@@ -46,6 +51,10 @@ class PlayerStateStorage {
   int _fadeInDurationMs = 500; // 默认500ms淡入
   int _fadeOutDurationMs = 500; // 默认500ms淡出
   bool _gaplessEnabled = true; // 默认启用无缝播放
+
+  int? _sleepTimerEndAtEpochMs;
+  bool _sleepTimerUntilEndOfTrack = false;
+  String? _sleepTimerBoundTrackKey;
 
   /// 对外只读属性
   bool get isPlaying => _isPlaying;
@@ -64,6 +73,10 @@ class PlayerStateStorage {
   int get fadeInDurationMs => _fadeInDurationMs;
   int get fadeOutDurationMs => _fadeOutDurationMs;
   bool get gaplessEnabled => _gaplessEnabled;
+
+  int? get sleepTimerEndAtEpochMs => _sleepTimerEndAtEpochMs;
+  bool get sleepTimerUntilEndOfTrack => _sleepTimerUntilEndOfTrack;
+  String? get sleepTimerBoundTrackKey => _sleepTimerBoundTrackKey;
 
   /// 启动时初始化，从本地读取
   static Future<PlayerStateStorage> _load() async {
@@ -112,6 +125,11 @@ class PlayerStateStorage {
     state._fadeInDurationMs = prefs.getInt(_fadeInDurationKey) ?? 500;
     state._fadeOutDurationMs = prefs.getInt(_fadeOutDurationKey) ?? 500;
     state._gaplessEnabled = prefs.getBool(_gaplessEnabledKey) ?? true;
+
+    state._sleepTimerEndAtEpochMs = prefs.getInt(_sleepTimerEndAtEpochMsKey);
+    state._sleepTimerUntilEndOfTrack =
+        prefs.getBool(_sleepTimerUntilEndOfTrackKey) ?? false;
+    state._sleepTimerBoundTrackKey = prefs.getString(_sleepTimerBoundTrackKeyKey);
 
     final pageIndex = prefs.getInt(_pageKey);
     if (pageIndex != null &&
@@ -300,5 +318,38 @@ extension PlayerStateSetters on PlayerStateStorage {
     _gaplessEnabled = enabled;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(PlayerStateStorage._gaplessEnabledKey, enabled);
+  }
+
+  Future<void> setSleepTimer({
+    required int endAtEpochMs,
+    required bool untilEndOfTrack,
+    String? boundTrackKey,
+  }) async {
+    _sleepTimerEndAtEpochMs = endAtEpochMs;
+    _sleepTimerUntilEndOfTrack = untilEndOfTrack;
+    _sleepTimerBoundTrackKey = boundTrackKey;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(PlayerStateStorage._sleepTimerEndAtEpochMsKey, endAtEpochMs);
+    await prefs.setBool(
+      PlayerStateStorage._sleepTimerUntilEndOfTrackKey,
+      untilEndOfTrack,
+    );
+    if (boundTrackKey == null || boundTrackKey.isEmpty) {
+      await prefs.remove(PlayerStateStorage._sleepTimerBoundTrackKeyKey);
+    } else {
+      await prefs.setString(PlayerStateStorage._sleepTimerBoundTrackKeyKey, boundTrackKey);
+    }
+  }
+
+  Future<void> clearSleepTimer() async {
+    _sleepTimerEndAtEpochMs = null;
+    _sleepTimerUntilEndOfTrack = false;
+    _sleepTimerBoundTrackKey = null;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(PlayerStateStorage._sleepTimerEndAtEpochMsKey);
+    await prefs.remove(PlayerStateStorage._sleepTimerUntilEndOfTrackKey);
+    await prefs.remove(PlayerStateStorage._sleepTimerBoundTrackKeyKey);
   }
 }

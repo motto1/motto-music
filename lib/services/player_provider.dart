@@ -241,6 +241,7 @@ class PlayerProvider with ChangeNotifier {
 
     _initializeListeners();
     await _restoreState();
+    await _restoreSleepTimerFromStorage();
     _migrateAlbumArtCache();
   }
 
@@ -1273,6 +1274,7 @@ class PlayerProvider with ChangeNotifier {
     _sleepTimerUntilEndOfTrack = false;
     _sleepTimerBoundTrackKey = null;
     _startSleepTimerInternal(duration);
+    _persistSleepTimerState();
   }
 
   /// 播放完当前歌曲后暂停（基于当前 position/duration 计算剩余时间）
@@ -1302,6 +1304,7 @@ class PlayerProvider with ChangeNotifier {
     _sleepTimerUntilEndOfTrack = true;
     _sleepTimerBoundTrackKey = boundKey;
     _startSleepTimerInternal(remaining);
+    _persistSleepTimerState();
 
     debugPrint(
       '[SleepTimer] ✅ 设置“播放完当前歌曲”：title=${song.title}, remaining=${remaining.inSeconds}s, bound=$boundKey',
@@ -1315,19 +1318,94 @@ class PlayerProvider with ChangeNotifier {
     _sleepTimerBoundTrackKey = null;
     _sleepTimerUntilEndOfTrack = false;
     sleepTimerRemainingNotifier.value = null;
+    _clearPersistedSleepTimerState();
     debugPrint('[SleepTimer] 🛑 已取消睡眠定时');
   }
 
   void _startSleepTimerInternal(Duration duration) {
-    _sleepTimer?.cancel();
+    _startSleepTimerTo(DateTime.now().add(duration));
+  }
 
-    final endAt = DateTime.now().add(duration);
+  void _persistSleepTimerState() {
+    final endAt = _sleepTimerEndAt;
+    if (endAt == null) return;
+
+    Future<PlayerStateStorage> storageFuture;
+    if (playerState != null) {
+      storageFuture = Future.value(playerState!);
+    } else {
+      storageFuture = PlayerStateStorage.getInstance();
+    }
+
+    unawaited(storageFuture.then((storage) async {
+      playerState ??= storage;
+      await storage.setSleepTimer(
+        endAtEpochMs: endAt.millisecondsSinceEpoch,
+        untilEndOfTrack: _sleepTimerUntilEndOfTrack,
+        boundTrackKey: _sleepTimerBoundTrackKey,
+      );
+    }));
+  }
+
+  void _clearPersistedSleepTimerState() {
+    final storage = playerState;
+    if (storage != null) {
+      unawaited(storage.clearSleepTimer());
+      return;
+    }
+    unawaited(PlayerStateStorage.getInstance().then((s) => s.clearSleepTimer()));
+  }
+
+  Future<void> _restoreSleepTimerFromStorage() async {
+    final storage = playerState;
+    if (storage == null) return;
+
+    final endAtMs = storage.sleepTimerEndAtEpochMs;
+    if (endAtMs == null || endAtMs <= 0) return;
+
+    final endAt = DateTime.fromMillisecondsSinceEpoch(endAtMs);
+    final remaining = endAt.difference(DateTime.now());
+
+    if (remaining <= Duration.zero) {
+      debugPrint('[SleepTimer] ⏰ 恢复时已过期，执行暂停并清理');
+      await pause();
+      await storage.clearSleepTimer();
+      return;
+    }
+
+    _sleepTimerUntilEndOfTrack = storage.sleepTimerUntilEndOfTrack;
+    _sleepTimerBoundTrackKey = storage.sleepTimerBoundTrackKey;
+
+    if (_sleepTimerUntilEndOfTrack) {
+      final currentKey = _trackKeyForSong(_currentSong);
+      if (_sleepTimerBoundTrackKey == null ||
+          _sleepTimerBoundTrackKey!.isEmpty ||
+          _sleepTimerBoundTrackKey != currentKey) {
+        debugPrint(
+          '[SleepTimer] ℹ️ “到曲末”恢复校验失败（bound=$_sleepTimerBoundTrackKey, current=$currentKey），清理持久化状态',
+        );
+        _sleepTimerUntilEndOfTrack = false;
+        _sleepTimerBoundTrackKey = null;
+        await storage.clearSleepTimer();
+        return;
+      }
+    }
+
+    _startSleepTimerTo(endAt);
+    debugPrint('[SleepTimer] 🔁 已恢复睡眠定时：剩余 ${remaining.inSeconds}s');
+  }
+
+  void _startSleepTimerTo(DateTime endAt) {
+    _sleepTimer?.cancel();
     _sleepTimerEndAt = endAt;
 
-    // 立即刷新一次（避免 UI 等待 1s）
-    sleepTimerRemainingNotifier.value = duration;
+    final initialRemaining = endAt.difference(DateTime.now());
+    sleepTimerRemainingNotifier.value =
+        initialRemaining <= Duration.zero ? Duration.zero : initialRemaining;
 
-    debugPrint('[SleepTimer] ▶️ 开始倒计时：${duration.inSeconds}s, endAt=$endAt');
+    debugPrint(
+      '[SleepTimer] ▶️ 开始倒计时：${sleepTimerRemainingNotifier.value?.inSeconds ?? 0}s, endAt=$endAt',
+    );
 
     _sleepTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
       final endTime = _sleepTimerEndAt;
@@ -1360,7 +1438,6 @@ class PlayerProvider with ChangeNotifier {
         return;
       }
 
-      // 仅更新细粒度 notifier，避免触发全局 rebuild
       sleepTimerRemainingNotifier.value = remaining;
     });
   }
