@@ -715,7 +715,8 @@ class _UserVideosPageState extends State<UserVideosPage> {
           crossAxisCount: 2,
           crossAxisSpacing: 14,
           mainAxisSpacing: 14,
-          childAspectRatio: 0.78,
+          // 预留更多高度，避免小屏/字体缩放导致 1-2px overflow。
+          childAspectRatio: 0.75,
         ),
         delegate: SliverChildBuilderDelegate(
           (context, index) {

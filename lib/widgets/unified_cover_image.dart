@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -192,8 +193,16 @@ class _UnifiedCoverImageState extends State<UnifiedCoverImage> {
 
   String? _normalizePath(String? path) {
     if (path == null || path.isEmpty) return path;
+
     // 兼容 B 站常见的 `//i0.hdslb.com/...` 形式：统一补齐 https scheme。
     if (path.startsWith('//')) return 'https:$path';
+
+    // iOS 下 http 资源可能被 ATS 拦截；对 B 站图片域名尽量升级到 https。
+    if (path.startsWith('http://') &&
+        (path.contains('.hdslb.com') || path.contains('.biliimg.com'))) {
+      return path.replaceFirst('http://', 'https://');
+    }
+
     return path;
   }
 
@@ -238,14 +247,20 @@ class _UnifiedCoverImageState extends State<UnifiedCoverImage> {
     );
   }
 
+  double? _safeDimension(double value) {
+    if (!value.isFinite) return null;
+    if (value <= 0) return null;
+    return value;
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode =
         widget.isDark ?? Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      width: widget.width,
-      height: widget.height,
+      width: _safeDimension(widget.width),
+      height: _safeDimension(widget.height),
       decoration: BoxDecoration(
         color: isDarkMode ? const Color(0xFF3A3A3C) : const Color(0xFFFFFFFF),
         borderRadius: BorderRadius.circular(widget.borderRadius),
@@ -267,8 +282,8 @@ class _UnifiedCoverImageState extends State<UnifiedCoverImage> {
     if (_isNetworkImage) {
       return CachedNetworkImage(
         imageUrl: path,
-        width: widget.width,
-        height: widget.height,
+        width: _safeDimension(widget.width),
+        height: _safeDimension(widget.height),
         fit: widget.fit,
         httpHeaders: widget.httpHeaders ??
             (AlbumArtCacheService.isBilibiliImageUrl(path)
@@ -285,8 +300,8 @@ class _UnifiedCoverImageState extends State<UnifiedCoverImage> {
       if (widget.skipAsyncFileCheck) {
         return Image.file(
           File(path),
-          width: widget.width,
-          height: widget.height,
+          width: _safeDimension(widget.width),
+          height: _safeDimension(widget.height),
           fit: widget.fit,
           errorBuilder: (context, error, stackTrace) {
             return widget.errorWidget ?? _buildDefaultIcon(isDarkMode);
@@ -304,8 +319,8 @@ class _UnifiedCoverImageState extends State<UnifiedCoverImage> {
           if (snapshot.data == true) {
             return Image.file(
               File(path),
-              width: widget.width,
-              height: widget.height,
+              width: _safeDimension(widget.width),
+              height: _safeDimension(widget.height),
               fit: widget.fit,
               errorBuilder: (context, error, stackTrace) {
                 return widget.errorWidget ?? _buildDefaultIcon(isDarkMode);
@@ -338,36 +353,62 @@ class _UnifiedCoverImageState extends State<UnifiedCoverImage> {
   }
 
   Widget _buildPlaceholder(bool isDarkMode) {
-    return Container(
-      width: widget.width,
-      height: widget.height,
-      color: isDarkMode ? const Color(0xFF3A3A3C) : const Color(0xFFFFFFFF),
-      child: Center(
-        child: SizedBox(
-          width: widget.width * 0.3,
-          height: widget.width * 0.3,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            valueColor: AlwaysStoppedAnimation<Color>(
-              isDarkMode
-                  ? Colors.white.withOpacity(0.3)
-                  : Colors.black.withOpacity(0.3),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : (widget.width.isFinite ? widget.width : 56.0);
+        final maxHeight = constraints.maxHeight.isFinite
+            ? constraints.maxHeight
+            : (widget.height.isFinite ? widget.height : 56.0);
+        final side = math.min(maxWidth, maxHeight);
+        final indicatorSize = (side * 0.3).clamp(12.0, 40.0);
+
+        return Container(
+          width: double.infinity,
+          height: double.infinity,
+          color: isDarkMode ? const Color(0xFF3A3A3C) : const Color(0xFFFFFFFF),
+          child: Center(
+            child: SizedBox(
+              width: indicatorSize,
+              height: indicatorSize,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  isDarkMode
+                      ? Colors.white.withOpacity(0.3)
+                      : Colors.black.withOpacity(0.3),
+                ),
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
   Widget _buildDefaultIcon(bool isDarkMode) {
-    return Center(
-      child: Icon(
-        Icons.music_note,
-        size: widget.width * 0.4,
-        color: isDarkMode
-            ? Colors.white.withOpacity(0.3)
-            : Colors.black.withOpacity(0.3),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : (widget.width.isFinite ? widget.width : 56.0);
+        final maxHeight = constraints.maxHeight.isFinite
+            ? constraints.maxHeight
+            : (widget.height.isFinite ? widget.height : 56.0);
+        final side = math.min(maxWidth, maxHeight);
+        final iconSize = (side * 0.45).clamp(18.0, 64.0);
+
+        return Center(
+          child: Icon(
+            Icons.music_note,
+            size: iconSize,
+            color: isDarkMode
+                ? Colors.white.withOpacity(0.3)
+                : Colors.black.withOpacity(0.3),
+          ),
+        );
+      },
     );
   }
 }
