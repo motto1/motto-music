@@ -2780,10 +2780,7 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
             alignment: Alignment.bottomCenter,
             child: SlideTransition(
               position: _lyricsMenuSlideAnimation,
-              child: GestureDetector(
-                onHorizontalDragUpdate: (details) {},
-                onHorizontalDragEnd: (details) {},
-                child: ClipRRect(
+              child: ClipRRect(
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(28),
                   ),
@@ -2933,7 +2930,9 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
                                 },
                               ),
                               onTap: () async {
+                                debugPrint('[PlayerMenu] 点击：睡眠定时');
                                 await _hideOverlay();
+                                debugPrint('[PlayerMenu] 已关闭菜单，准备打开睡眠定时面板');
                                 if (!mounted) return;
                                 await _showSleepTimerSheet(playerProvider);
                               },
@@ -2979,10 +2978,12 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
   }
 
   Future<void> _showSleepTimerSheet(PlayerProvider playerProvider) async {
+    debugPrint('[SleepTimerSheet] open');
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     await showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       backgroundColor: Colors.transparent,
       barrierColor: Colors.transparent,
       isScrollControlled: true,
