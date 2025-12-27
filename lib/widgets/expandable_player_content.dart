@@ -2780,13 +2780,13 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
 
   /// 构建播放器菜单叠加层(从底部滑入,三点窗口)
   Widget _buildPlayerMenuOverlay() {
-    if (_overlayCurrentSong == null || _overlayPlayerProvider == null) {
+    final song = _overlayCurrentSong;
+    final playerProvider = _overlayPlayerProvider;
+    if (song == null || playerProvider == null) {
       return const SizedBox.shrink();
     }
 
-    final song = _overlayCurrentSong!;
-    final playerProvider = _overlayPlayerProvider!;
-    // 检查音质选择区域的条件
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final showQualitySection = song.source == 'bilibili' && song.bvid != null;
 
     return Positioned.fill(
@@ -2794,7 +2794,8 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
         children: [
           Positioned.fill(
             child: GestureDetector(
-              onTap: _hideOverlay, // 点击遮罩关闭
+              onTap: _hideOverlay,
+              behavior: HitTestBehavior.opaque,
               child: Container(color: Colors.black54),
             ),
           ),
@@ -2803,176 +2804,175 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
             child: SlideTransition(
               position: _lyricsMenuSlideAnimation,
               child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(28),
-                ),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(28)),
                 child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.black.withOpacity(0.5)
-                            : Colors.white.withOpacity(0.6),
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(28),
-                        ),
-                        border: Border.all(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white.withOpacity(0.1)
-                              : Colors.white.withOpacity(0.5),
-                          width: 1.5,
-                        ),
+                  filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.black.withOpacity(0.5)
+                          : Colors.white.withOpacity(0.6),
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(28)),
+                      border: Border.all(
+                        color: isDark
+                            ? Colors.white.withOpacity(0.1)
+                            : Colors.white.withOpacity(0.5),
+                        width: 1.5,
                       ),
-                      child: SafeArea(
-                        top: false,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // 顶部拖动条（仅手柄区域支持下滑关闭，避免影响菜单项点击）
-                            GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onVerticalDragUpdate: (details) {
-                                final screenHeight = MediaQuery.of(context).size.height;
-                                final delta = -details.delta.dy / (screenHeight * 0.5);
-                                _lyricsMenuController.value =
-                                    (_lyricsMenuController.value + delta).clamp(0.0, 1.0);
-                              },
-                              onVerticalDragEnd: (details) {
-                                final velocity = details.velocity.pixelsPerSecond.dy;
-                                final position = _lyricsMenuController.value;
+                    ),
+                    child: SafeArea(
+                      top: false,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onVerticalDragUpdate: (details) {
+                              final screenHeight =
+                                  MediaQuery.of(context).size.height;
+                              final delta =
+                                  -details.delta.dy / (screenHeight * 0.5);
+                              _lyricsMenuController.value =
+                                  (_lyricsMenuController.value + delta)
+                                      .clamp(0.0, 1.0);
+                            },
+                            onVerticalDragEnd: (details) {
+                              final velocity =
+                                  details.velocity.pixelsPerSecond.dy;
+                              final position = _lyricsMenuController.value;
 
-                                if (velocity > 300 || position < 0.5) {
-                                  _hideOverlay();
-                                } else {
-                                  _lyricsMenuController.forward();
-                                }
-                              },
-                              child: Container(
-                                margin: const EdgeInsets.only(top: 12, bottom: 8),
-                                width: 40,
-                                height: 4,
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).dividerColor.withOpacity(0.5),
-                                  borderRadius: BorderRadius.circular(2),
+                              if (velocity > 300 || position < 0.5) {
+                                _hideOverlay();
+                              } else {
+                                _lyricsMenuController.forward();
+                              }
+                            },
+                            child: Container(
+                              margin:
+                                  const EdgeInsets.only(top: 12, bottom: 8),
+                              width: 40,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: Theme.of(context)
+                                    .dividerColor
+                                    .withOpacity(0.5),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: SizedBox(
+                                    width: 56,
+                                    height: 56,
+                                    child: _buildSongCover(song, context),
+                                  ),
                                 ),
-                              ),
-                            ),
-
-                            // 歌曲信息
-                            Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Row(
-                                children: [
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: SizedBox(
-                                      width: 56,
-                                      height: 56,
-                                      child: _buildSongCover(song, context),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          song.title,
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        song.title,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
                                         ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          song.artist ?? '未知艺术家',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        song.artist ?? '未知艺术家',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withOpacity(0.6),
                                         ),
-                                      ],
-                                    ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                              // 喜欢按钮
-                            ListTile(
-                              leading: Icon(
-                                song.isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                                color: song.isFavorite ? Colors.red : null,
-                              ),
-                              title: Text(song.isFavorite ? '取消喜欢' : '喜欢'),
-                              onTap: () {
-                                _hideOverlay();
-                                _toggleFavorite(song, playerProvider);
+                          ),
+                          ListTile(
+                            leading: Icon(
+                              song.isFavorite
+                                  ? Icons.favorite_rounded
+                                  : Icons.favorite_border_rounded,
+                              color: song.isFavorite ? Colors.red : null,
+                            ),
+                            title: Text(song.isFavorite ? '取消喜欢' : '喜欢'),
+                            onTap: () {
+                              _hideOverlay();
+                              _toggleFavorite(song, playerProvider);
+                            },
+                          ),
+                          ListTile(
+                            leading:
+                                const Icon(Icons.folder_special_rounded),
+                            title: const Text('添加到收藏夹'),
+                            onTap: () {
+                              _hideOverlay();
+                              _addToFavorite(song, playerProvider);
+                            },
+                          ),
+                          if (showQualitySection)
+                            AudioQualitySection(song: song),
+                          ListTile(
+                            leading: const Icon(Icons.bedtime_outlined),
+                            title: const Text('睡眠定时'),
+                            trailing:
+                                ValueListenableBuilder<Duration?>(
+                              valueListenable:
+                                  playerProvider.sleepTimerRemainingNotifier,
+                              builder: (context, remaining, _) {
+                                final text = remaining == null
+                                    ? '未开启'
+                                    : _formatSleepTimerRemaining(remaining);
+                                return Text(
+                                  text,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withOpacity(0.6),
+                                  ),
+                                );
                               },
                             ),
-
-                            // 添加到收藏夹
-                            ListTile(
-                              leading: const Icon(Icons.folder_special_rounded),
-                              title: const Text('添加到收藏夹'),
-                              onTap: () {
-                                _hideOverlay();
-                                _addToFavorite(song, playerProvider);
-                              },
-                            ),
-
-                            // 音质选择和下载区域(仅Bilibili歌曲)
-                            if (showQualitySection)
-                              AudioQualitySection(song: song),
-
-                            // 睡眠定时
-                            ListTile(
-                              leading: const Icon(Icons.bedtime_outlined),
-                              title: const Text('睡眠定时'),
-                              trailing: ValueListenableBuilder<Duration?>(
-                                valueListenable:
-                                    playerProvider.sleepTimerRemainingNotifier,
-                                builder: (context, remaining, _) {
-                                  final text = remaining == null
-                                      ? '未开启'
-                                      : _formatSleepTimerRemaining(remaining);
-                                  return Text(
-                                    text,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withOpacity(0.6),
-                                    ),
-                                  );
-                                },
-                              ),
-                              onTap: () async {
-                                debugPrint('[PlayerMenu] 点击：睡眠定时');
-                                await _hideOverlay();
-                                debugPrint('[PlayerMenu] 已关闭菜单，准备打开睡眠定时面板');
-                                if (!mounted) return;
-                                _showSleepTimerOverlay(playerProvider);
-                              },
-                            ),
-
-                            // 查看制作人员
-                            ListTile(
-                              leading: const Icon(Icons.info_outline_rounded),
-                              title: const Text('查看制作人员'),
-                              onTap: () {
-                                _hideOverlay();
-                                _showCredits(context, song);
-                              },
-                            ),
-
-                            const SizedBox(height: 20),
-                          ],
-                        ),
+                            onTap: () async {
+                              debugPrint('[PlayerMenu] 点击：睡眠定时');
+                              await _hideOverlay();
+                              if (!mounted) return;
+                              _showSleepTimerOverlay(playerProvider);
+                            },
+                          ),
+                          ListTile(
+                            leading:
+                                const Icon(Icons.info_outline_rounded),
+                            title: const Text('查看制作人员'),
+                            onTap: () {
+                              _hideOverlay();
+                              _showCredits(context, song);
+                            },
+                          ),
+                          const SizedBox(height: 20),
+                        ],
                       ),
                     ),
                   ),
