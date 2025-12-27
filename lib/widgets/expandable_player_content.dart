@@ -35,6 +35,7 @@ enum PlayerOverlayType {
   playlist,          // 显示播放列表
   lyricsMenu,        // 显示歌词菜单
   playerMenu,        // 显示播放器菜单(三点窗口)
+  sleepTimer,        // 睡眠定时
   searchLyrics,      // 显示手动搜索歌词
   editLyrics,        // 显示编辑歌词
   adjustLyricsOffset,// 显示调整歌词偏移量
@@ -637,6 +638,21 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
     expandableState.animateToState(true);
   }
 
+  void _showSleepTimerOverlay(PlayerProvider playerProvider) {
+    setState(() {
+      _currentOverlay = PlayerOverlayType.none;
+      _overlayPlayerProvider = playerProvider;
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _currentOverlay = PlayerOverlayType.sleepTimer;
+      });
+      _lyricsMenuController.forward(from: 0.0);
+    });
+  }
+
   /// 显示手动搜索歌词
   void _showSearchLyrics(Song song, PlayerProvider playerProvider) {
     if (_currentOverlay == PlayerOverlayType.searchLyrics) return;
@@ -702,7 +718,9 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
     if (overlayToHide == PlayerOverlayType.playlist) {
       await _playlistController.reverse();
     } else if (overlayToHide == PlayerOverlayType.lyricsMenu ||
-               overlayToHide == PlayerOverlayType.playerMenu) {
+               overlayToHide == PlayerOverlayType.playerMenu ||
+               overlayToHide == PlayerOverlayType.sleepTimer ||
+               overlayToHide == PlayerOverlayType.favoriteSelection) {
       await _lyricsMenuController.reverse();
     } else if (overlayToHide == PlayerOverlayType.searchLyrics ||
                overlayToHide == PlayerOverlayType.editLyrics ||
@@ -1007,8 +1025,12 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
                   // ============ 调整偏移量叠加层(z-index: 9,对话框样式) ============
                   if (_currentOverlay == PlayerOverlayType.adjustLyricsOffset && widget.percentage > 0.7)
                     _buildAdjustOffsetOverlay(),
+
+                  // ============ 睡眠定时叠加层(z-index: 10,从底部滑入) ============
+                  if (_currentOverlay == PlayerOverlayType.sleepTimer && widget.percentage > 0.7)
+                    _buildSleepTimerOverlay(),
                   
-                  // ============ 收藏夹选择叠加层(z-index: 10,从底部滑入) ============
+                  // ============ 收藏夹选择叠加层(z-index: 11,从底部滑入) ============
                   if (_currentOverlay == PlayerOverlayType.favoriteSelection && widget.percentage > 0.7)
                     _buildFavoriteSelectionOverlay(),
                 ],
@@ -2934,11 +2956,7 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
                                 await _hideOverlay();
                                 debugPrint('[PlayerMenu] 已关闭菜单，准备打开睡眠定时面板');
                                 if (!mounted) return;
-
-                                WidgetsBinding.instance.addPostFrameCallback((_) {
-                                  if (!mounted) return;
-                                  _showSleepTimerSheet(playerProvider);
-                                });
+                                _showSleepTimerOverlay(playerProvider);
                               },
                             ),
 
@@ -2963,6 +2981,201 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSleepTimerOverlay() {
+    final playerProvider = _overlayPlayerProvider;
+    if (playerProvider == null) {
+      return const SizedBox.shrink();
+    }
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Positioned.fill(
+      child: GestureDetector(
+        onTap: _hideOverlay, // 点击遮罩关闭
+        child: Container(
+          color: Colors.black54,
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: SlideTransition(
+              position: _lyricsMenuSlideAnimation,
+              child: GestureDetector(
+                onTap: () {}, // 阻止点击穿透
+                // iOS风格拖拽关闭功能
+                onVerticalDragUpdate: (details) {
+                  final screenHeight = MediaQuery.of(context).size.height;
+                  final delta = -details.delta.dy / (screenHeight * 0.5);
+                  _lyricsMenuController.value =
+                      (_lyricsMenuController.value + delta).clamp(0.0, 1.0);
+                },
+                onVerticalDragEnd: (details) {
+                  final velocity = details.velocity.pixelsPerSecond.dy;
+                  final position = _lyricsMenuController.value;
+
+                  if (velocity > 300 || position < 0.5) {
+                    _hideOverlay();
+                  } else {
+                    _lyricsMenuController.forward();
+                  }
+                },
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(28),
+                  ),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? Colors.black.withOpacity(0.5)
+                            : Colors.white.withOpacity(0.6),
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(28),
+                        ),
+                        border: Border.all(
+                          color: isDark
+                              ? Colors.white.withOpacity(0.1)
+                              : Colors.white.withOpacity(0.5),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: SafeArea(
+                        top: false,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SizedBox(height: 12),
+                            Center(
+                              child: Container(
+                                width: 40,
+                                height: 4,
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context)
+                                      .dividerColor
+                                      .withOpacity(0.5),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: ValueListenableBuilder<Duration?>(
+                                valueListenable:
+                                    playerProvider.sleepTimerRemainingNotifier,
+                                builder: (context, remaining, _) {
+                                  return Row(
+                                    children: [
+                                      const Icon(Icons.bedtime_outlined, size: 20),
+                                      const SizedBox(width: 10),
+                                      const Text(
+                                        '睡眠定时',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      Text(
+                                        remaining == null
+                                            ? '未开启'
+                                            : '剩余 ${_formatSleepTimerRemaining(remaining)}',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withOpacity(0.6),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            const Divider(height: 1),
+                            ListTile(
+                              leading: const Icon(Icons.timer_outlined),
+                              title: const Text('15 分钟'),
+                              onTap: () async {
+                                await _hideOverlay();
+                                playerProvider.startSleepTimer(
+                                  const Duration(minutes: 15),
+                                );
+                              },
+                            ),
+                            ListTile(
+                              leading: const Icon(Icons.timer_outlined),
+                              title: const Text('30 分钟'),
+                              onTap: () async {
+                                await _hideOverlay();
+                                playerProvider.startSleepTimer(
+                                  const Duration(minutes: 30),
+                                );
+                              },
+                            ),
+                            ListTile(
+                              leading: const Icon(Icons.timer_outlined),
+                              title: const Text('45 分钟'),
+                              onTap: () async {
+                                await _hideOverlay();
+                                playerProvider.startSleepTimer(
+                                  const Duration(minutes: 45),
+                                );
+                              },
+                            ),
+                            ListTile(
+                              leading: const Icon(Icons.timer_outlined),
+                              title: const Text('60 分钟'),
+                              onTap: () async {
+                                await _hideOverlay();
+                                playerProvider.startSleepTimer(
+                                  const Duration(minutes: 60),
+                                );
+                              },
+                            ),
+                            const Divider(height: 1),
+                            ListTile(
+                              leading: const Icon(Icons.music_note_outlined),
+                              title: const Text('播放完当前歌曲'),
+                              onTap: () async {
+                                await _hideOverlay();
+                                playerProvider.startSleepTimerUntilEndOfTrack();
+                              },
+                            ),
+                            ValueListenableBuilder<Duration?>(
+                              valueListenable:
+                                  playerProvider.sleepTimerRemainingNotifier,
+                              builder: (context, remaining, _) {
+                                if (remaining == null) {
+                                  return const SizedBox.shrink();
+                                }
+                                return ListTile(
+                                  leading:
+                                      const Icon(Icons.timer_off_outlined),
+                                  title: const Text('关闭睡眠定时'),
+                                  onTap: () async {
+                                    await _hideOverlay();
+                                    playerProvider.cancelSleepTimer();
+                                  },
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
