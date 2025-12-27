@@ -2726,32 +2726,19 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
     final showQualitySection = song.source == 'bilibili' && song.bvid != null;
 
     return Positioned.fill(
-      child: GestureDetector(
-        onTap: _hideOverlay, // 点击遮罩关闭
-        child: Container(
-          color: Colors.black54, // 半透明遮罩
-          child: Align(
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: _hideOverlay, // 点击遮罩关闭
+              child: Container(color: Colors.black54),
+            ),
+          ),
+          Align(
             alignment: Alignment.bottomCenter,
             child: SlideTransition(
               position: _lyricsMenuSlideAnimation,
               child: GestureDetector(
-                onTap: () {}, // 阻止点击穿透
-                // iOS风格拖拽关闭功能(支持双向拖动)
-                onVerticalDragUpdate: (details) {
-                  final screenHeight = MediaQuery.of(context).size.height;
-                  final delta = -details.delta.dy / (screenHeight * 0.5);
-                  _lyricsMenuController.value = (_lyricsMenuController.value + delta).clamp(0.0, 1.0);
-                },
-                onVerticalDragEnd: (details) {
-                  final velocity = details.velocity.pixelsPerSecond.dy;
-                  final position = _lyricsMenuController.value;
-
-                  if (velocity > 300 || position < 0.5) {
-                    _hideOverlay();
-                  } else {
-                    _lyricsMenuController.forward();
-                  }
-                },
                 onHorizontalDragUpdate: (details) {},
                 onHorizontalDragEnd: (details) {},
                 child: ClipRRect(
@@ -2780,14 +2767,33 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // 顶部拖动条
-                            Container(
-                              margin: const EdgeInsets.only(top: 12, bottom: 8),
-                              width: 40,
-                              height: 4,
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).dividerColor.withOpacity(0.5),
-                                borderRadius: BorderRadius.circular(2),
+                            // 顶部拖动条（仅手柄区域支持下滑关闭，避免影响菜单项点击）
+                            GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onVerticalDragUpdate: (details) {
+                                final screenHeight = MediaQuery.of(context).size.height;
+                                final delta = -details.delta.dy / (screenHeight * 0.5);
+                                _lyricsMenuController.value =
+                                    (_lyricsMenuController.value + delta).clamp(0.0, 1.0);
+                              },
+                              onVerticalDragEnd: (details) {
+                                final velocity = details.velocity.pixelsPerSecond.dy;
+                                final position = _lyricsMenuController.value;
+
+                                if (velocity > 300 || position < 0.5) {
+                                  _hideOverlay();
+                                } else {
+                                  _lyricsMenuController.forward();
+                                }
+                              },
+                              child: Container(
+                                margin: const EdgeInsets.only(top: 12, bottom: 8),
+                                width: 40,
+                                height: 4,
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).dividerColor.withOpacity(0.5),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
                               ),
                             ),
 
