@@ -14,6 +14,7 @@ import 'package:motto_music/widgets/karaoke_lyrics_view.dart';
 import 'package:motto_music/widgets/player_buttons.dart';
 import 'package:motto_music/widgets/audio_quality_section.dart';
 import 'package:motto_music/widgets/unified_cover_image.dart';
+import 'package:motto_music/widgets/expandable_player.dart';
 import 'package:motto_music/services/bilibili/api_client.dart';
 import 'package:motto_music/services/bilibili/api_service.dart';
 import 'package:motto_music/services/bilibili/cookie_manager.dart';
@@ -98,6 +99,9 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
   Song? _overlayCurrentSong;
   PlayerProvider? _overlayPlayerProvider;
   List<BilibiliFavorite>? _overlayFavorites; // 收藏夹列表
+
+  Song? _pendingPlayerMenuSong;
+  PlayerProvider? _pendingPlayerMenuProvider;
 
   // ========== 搜索歌词状态 ==========
   late TextEditingController _searchLyricsController;
@@ -611,6 +615,28 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
     _lyricsMenuController.forward(from: 0.0); // 复用歌词菜单的动画控制器
   }
 
+  void _requestShowPlayerMenuOverlay(Song song, PlayerProvider playerProvider) {
+    if (_currentOverlay == PlayerOverlayType.playerMenu) return;
+
+    // 叠加层仅在全屏（>0.7）渲染；若当前未到阈值，先触发展开，再在 build 中延迟显示菜单
+    if (widget.percentage > 0.7) {
+      _showPlayerMenuOverlay(song, playerProvider);
+      return;
+    }
+
+    _pendingPlayerMenuSong = song;
+    _pendingPlayerMenuProvider = playerProvider;
+
+    final expandableState = context.findAncestorStateOfType<ExpandablePlayerState>();
+    if (expandableState == null) {
+      debugPrint('[PlayerMenu] ⚠️ 未找到 ExpandablePlayerState，直接尝试显示菜单');
+      _showPlayerMenuOverlay(song, playerProvider);
+      return;
+    }
+
+    expandableState.animateToState(true);
+  }
+
   /// 显示手动搜索歌词
   void _showSearchLyrics(Song song, PlayerProvider playerProvider) {
     if (_currentOverlay == PlayerOverlayType.searchLyrics) return;
@@ -865,6 +891,22 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
         builder: (context, playerProvider, child) {
           final currentSong = playerProvider.currentSong;
           final isPlaying = playerProvider.isPlaying;
+
+          if (_pendingPlayerMenuSong != null &&
+              _pendingPlayerMenuProvider != null &&
+              widget.percentage > 0.7 &&
+              _currentOverlay == PlayerOverlayType.none) {
+            final pendingSong = _pendingPlayerMenuSong!;
+            final pendingProvider = _pendingPlayerMenuProvider!;
+            _pendingPlayerMenuSong = null;
+            _pendingPlayerMenuProvider = null;
+
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                _showPlayerMenuOverlay(pendingSong, pendingProvider);
+              }
+            });
+          }
 
           // ⭐ 检测歌曲变化并自动加载歌词
           if (currentSong != null && currentSong.id != _lastSongId) {
@@ -1745,7 +1787,7 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
                           constraints: const BoxConstraints(),
                           onPressed: currentSong != null
                               ? () {
-                                  _showPlayerMenuOverlay(currentSong, playerProvider);
+                                  _requestShowPlayerMenuOverlay(currentSong, playerProvider);
                                 }
                               : null,
                           tooltip: '更多',
@@ -2917,7 +2959,7 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

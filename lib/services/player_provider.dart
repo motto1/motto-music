@@ -35,9 +35,11 @@ import 'package:path/path.dart' as p;
 /// 播放器状态管理
 /// 
 /// 负责整合 AudioHandler 和应用业务逻辑
-class PlayerProvider with ChangeNotifier {
+class PlayerProvider with ChangeNotifier, WidgetsBindingObserver {
   MottoAudioHandler? _audioHandler;
-  
+
+  bool _lifecycleObserverRegistered = false;
+
   PlayerStateStorage? playerState;
   late final BilibiliStreamService _bilibiliStreamService;
   late final BilibiliAudioCacheService _bilibiliAudioCacheService;
@@ -213,6 +215,11 @@ class PlayerProvider with ChangeNotifier {
   Future<void> initWithAudioHandler(MottoAudioHandler? handler) async {
     _audioHandler = handler;
 
+    if (!_lifecycleObserverRegistered) {
+      WidgetsBinding.instance.addObserver(this);
+      _lifecycleObserverRegistered = true;
+    }
+
     // 初始化 Bilibili 相关服务
     final cookieManager = CookieManager();
     _cookieManager = cookieManager;
@@ -243,6 +250,31 @@ class PlayerProvider with ChangeNotifier {
     await _restoreState();
     await _restoreSleepTimerFromStorage();
     _migrateAlbumArtCache();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+
+    // 目标：退后台/恢复后仍按 endAt 计算剩余时间；若已到点则立刻暂停
+    final endAt = _sleepTimerEndAt;
+    if (endAt == null) {
+      if (playerState != null && playerState!.sleepTimerEndAtEpochMs != null) {
+        unawaited(_restoreSleepTimerFromStorage());
+      }
+      return;
+    }
+
+    final remaining = endAt.difference(DateTime.now());
+    if (remaining <= Duration.zero) {
+      debugPrint('[SleepTimer] ⏰ 应用恢复时已到点，执行暂停并清理');
+      unawaited(pause());
+      cancelSleepTimer();
+      return;
+    }
+
+    sleepTimerRemainingNotifier.value = remaining;
+    debugPrint('[SleepTimer] 🔄 应用恢复，剩余 ${remaining.inSeconds}s');
   }
 
   /// 懒加载解析回调：根据 MediaItem 中的信息解析音频源
@@ -1662,6 +1694,11 @@ class PlayerProvider with ChangeNotifier {
 
   @override
   void dispose() {
+    if (_lifecycleObserverRegistered) {
+      WidgetsBinding.instance.removeObserver(this);
+      _lifecycleObserverRegistered = false;
+    }
+
     _positionSub?.cancel();
     _playbackStateSub?.cancel();
     currentSongNotifier.dispose();
