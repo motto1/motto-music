@@ -2781,10 +2781,10 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
             child: SlideTransition(
               position: _lyricsMenuSlideAnimation,
               child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(28),
-                  ),
-                  child: BackdropFilter(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28),
+                ),
+                child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
                     child: Container(
                       decoration: BoxDecoration(
@@ -2934,7 +2934,11 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
                                 await _hideOverlay();
                                 debugPrint('[PlayerMenu] 已关闭菜单，准备打开睡眠定时面板');
                                 if (!mounted) return;
-                                await _showSleepTimerSheet(playerProvider);
+
+                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  if (!mounted) return;
+                                  _showSleepTimerSheet(playerProvider);
+                                });
                               },
                             ),
 
