@@ -5,6 +5,7 @@ import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:motto_music/services/bilibili/cookie_manager.dart';
 import 'package:motto_music/services/cache/album_art_cache_service.dart';
 
 /// 统一封面图片组件
@@ -104,7 +105,32 @@ class _BilibiliCoverLocalCache {
 
   static bool _drainScheduled = false;
 
+  // SESSDATA 等 Cookie 获取较贵（SharedPreferences），这里做短 TTL 缓存。
+  static String? _cookieCache;
+  static DateTime? _cookieCacheAt;
+  static const Duration _cookieCacheTtl = Duration(minutes: 3);
+
   static String? getResolved(String url) => _resolved[url];
+
+  static Future<String?> _getCookie() async {
+    final now = DateTime.now();
+    final cached = _cookieCache;
+    final at = _cookieCacheAt;
+    if (cached != null && at != null && now.difference(at) < _cookieCacheTtl) {
+      return cached;
+    }
+
+    try {
+      final cookie = await CookieManager().getCookieString();
+      _cookieCache = cookie;
+      _cookieCacheAt = now;
+      return cookie;
+    } catch (_) {
+      _cookieCache = '';
+      _cookieCacheAt = now;
+      return '';
+    }
+  }
 
   static Future<String?> resolve(String url) {
     final cached = _resolved[url];
@@ -151,7 +177,11 @@ class _BilibiliCoverLocalCache {
     try {
       String? resolved;
       try {
-        final local = await AlbumArtCacheService.instance.ensureLocalPath(url);
+        final cookie = await _getCookie();
+        final local = await AlbumArtCacheService.instance.ensureLocalPath(
+          url,
+          cookie: cookie,
+        );
         if (local != null && local.isNotEmpty && local != url) {
           resolved = local;
         }
