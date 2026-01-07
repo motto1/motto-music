@@ -17,6 +17,7 @@ import 'package:motto_music/services/cache/album_art_cache_service.dart';
 import 'package:motto_music/widgets/animated_list_item.dart';
 import 'package:motto_music/widgets/apple_music_song_tile.dart';
 import 'package:motto_music/widgets/unified_cover_image.dart';
+import 'package:motto_music/widgets/frosted_bottom_sheet.dart';
 
 /// 合集详情页面（参考视频详情页设计）
 class CollectionDetailPage extends StatefulWidget {
@@ -387,12 +388,15 @@ class _CollectionDetailPageState extends State<CollectionDetailPage> with ShowAw
           final playerKey = GlobalPlayerManager.playerKey;
           final playerState = playerKey?.currentState;
           final percentage = playerState?.percentage ?? -1;
+          debugPrint('[CollectionDetailPage PopScope] 播放器展开百分比: ${(percentage * 100).toStringAsFixed(1)}%');
 
           if (playerState != null && percentage >= 0.9) {
+            debugPrint('[CollectionDetailPage PopScope] ✓拦截返回，缩小播放器');
             playerState.animateToState(false);
             return;
           }
 
+          debugPrint('[CollectionDetailPage PopScope] → 返回上一页');
           Navigator.of(context).pop();
         }
       },
@@ -597,32 +601,23 @@ class _CollectionDetailPageState extends State<CollectionDetailPage> with ShowAw
     final cover = info?.cover ??
         ((_videos != null && _videos!.isNotEmpty) ? _videos!.first.cover : null);
     final title = info?.title ?? widget.title;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    _showFrostedBottomSheet(
+    FrostedBottomSheet.show(
+      context: context,
       initialChildSize: 0.32,
       minChildSize: 0.2,
       maxChildSize: 0.6,
-      infoHeader: Row(
-        children: [
-          UnifiedCoverImage(
-            coverPath: cover,
-            width: 48,
-            height: 48,
-            borderRadius: 8,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
+      header: buildFrostedSheetHeader(
+        context: context,
+        cover: UnifiedCoverImage(
+          coverPath: cover,
+          width: 48,
+          height: 48,
+          borderRadius: 8,
+          isDark: isDark,
+        ),
+        title: title,
       ),
       tiles: [
         ListTile(
@@ -646,47 +641,24 @@ class _CollectionDetailPageState extends State<CollectionDetailPage> with ShowAw
   }
 
   void _showCollectionItemMenu(BilibiliCollectionItem video, int index) {
-    _showFrostedBottomSheet(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    FrostedBottomSheet.show(
+      context: context,
       initialChildSize: 0.28,
       minChildSize: 0.2,
       maxChildSize: 0.6,
-      infoHeader: Row(
-        children: [
-          UnifiedCoverImage(
-            coverPath: video.cover,
-            width: 48,
-            height: 48,
-            borderRadius: 8,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  video.title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '时长 ${_formatDuration(video.duration)}',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withOpacity(0.6),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+      header: buildFrostedSheetHeader(
+        context: context,
+        cover: UnifiedCoverImage(
+          coverPath: video.cover,
+          width: 48,
+          height: 48,
+          borderRadius: 8,
+          isDark: isDark,
+        ),
+        title: video.title,
+        subtitle: '时长 ${_formatDuration(video.duration)}',
       ),
       tiles: [
         ListTile(
@@ -781,80 +753,6 @@ class _CollectionDetailPageState extends State<CollectionDetailPage> with ShowAw
           ),
         ),
       ),
-    );
-  }
-
-  void _showFrostedBottomSheet({
-    required double initialChildSize,
-    required double minChildSize,
-    required double maxChildSize,
-    Widget? infoHeader,
-    required List<Widget> tiles,
-  }) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      barrierColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) {
-        return DraggableScrollableSheet(
-          initialChildSize: initialChildSize,
-          minChildSize: minChildSize,
-          maxChildSize: maxChildSize,
-          builder: (context, scrollController) => ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.black.withOpacity(0.3)
-                      : Colors.white.withOpacity(0.5),
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(28)),
-                  border: Border.all(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white.withOpacity(0.2)
-                        : Colors.white.withOpacity(0.6),
-                    width: 1.5,
-                  ),
-                ),
-                child: ListView(
-                  controller: scrollController,
-                  children: [
-                    Center(
-                      child: Container(
-                        margin: const EdgeInsets.only(top: 12, bottom: 8),
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white.withOpacity(0.2)
-                              : Colors.black.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(2.5),
-                        ),
-                      ),
-                    ),
-                    if (infoHeader != null)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        child: infoHeader,
-                      ),
-                    const Divider(height: 1),
-                    ...tiles,
-                    SizedBox(
-                      height: MediaQuery.of(context).padding.bottom + 120,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 

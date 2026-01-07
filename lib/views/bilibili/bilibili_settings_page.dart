@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:motto_music/services/bilibili/download_manager.dart';
 import 'package:motto_music/models/bilibili/audio_quality.dart';
-import 'package:motto_music/widgets/frosted_page_header.dart';
 import 'package:motto_music/utils/theme_utils.dart';
 import 'package:open_filex/open_filex.dart';
 import 'dart:ui';
@@ -18,49 +17,171 @@ import 'package:path/path.dart' as p;
 /// - 音质设置区域
 /// - 下载设置区域
 /// - 账号管理区域
-class BilibiliSettingsPage extends StatelessWidget {
+class BilibiliSettingsPage extends StatefulWidget {
   const BilibiliSettingsPage({super.key});
+
+  @override
+  State<BilibiliSettingsPage> createState() => _BilibiliSettingsPageState();
+}
+
+class _BilibiliSettingsPageState extends State<BilibiliSettingsPage> {
+  final ScrollController _scrollController = ScrollController();
+  double _collapseProgress = 0.0;
+  static const double _collapseDistance = 40.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_handleScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_handleScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _handleScroll() {
+    if (!_scrollController.hasClients) return;
+    final progress = (_scrollController.offset / _collapseDistance).clamp(0.0, 1.0);
+    if ((progress - _collapseProgress).abs() > 0.01) {
+      setState(() => _collapseProgress = progress);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final topPadding = MediaQuery.of(context).padding.top;
+    const topBarHeight = 52.0;
 
     return Scaffold(
       backgroundColor: isDark
           ? ThemeUtils.backgroundColor(context)
           : const Color(0xFFF2F2F7),
-      body: NotificationListener<OverscrollIndicatorNotification>(
-        onNotification: (notification) {
-          notification.disallowIndicator();
-          return true;
-        },
-        child: CustomScrollView(
-          physics: const ClampingScrollPhysics(),
-          slivers: [
-          // 液态玻璃头部
-          SliverToBoxAdapter(
-            child: FrostedPageHeader(
-              title: 'Bilibili 设置',
+      body: Stack(
+        children: [
+          NotificationListener<OverscrollIndicatorNotification>(
+            onNotification: (notification) {
+              notification.disallowIndicator();
+              return true;
+            },
+            child: CustomScrollView(
+              controller: _scrollController,
+              physics: const ClampingScrollPhysics(),
+              slivers: [
+                SliverToBoxAdapter(
+                  child: SizedBox(height: topPadding + topBarHeight + 1),
+                ),
+                SliverToBoxAdapter(
+                  child: _buildLargeTitle(),
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 24, 16, 150),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      _buildQualitySection(isDark),
+                      const SizedBox(height: 32),
+                      _buildDownloadSection(isDark),
+                      const SizedBox(height: 32),
+                      _buildAccountSection(isDark),
+                    ]),
+                  ),
+                ),
+              ],
             ),
           ),
-
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 24, 16, 150),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                _buildQualitySection(isDark),
-                const SizedBox(height: 32),
-                _buildDownloadSection(isDark),
-                const SizedBox(height: 32),
-                _buildAccountSection(isDark),
-              ]),
-            ),
-          ),
+          _buildTopBar(topPadding, topBarHeight, isDark),
         ],
-      ),
       ),
     );
   }
+
+  Widget _buildTopBar(double topPadding, double topBarHeight, bool isDark) {
+    final eased = Curves.easeOutCubic.transform(_collapseProgress);
+    final bgOpacity = (eased * 0.95).clamp(0.0, 0.95);
+    final titleOpacity = eased.clamp(0.0, 1.0);
+
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20 * eased, sigmaY: 20 * eased),
+          child: Container(
+            height: topPadding + topBarHeight,
+            decoration: BoxDecoration(
+              color: isDark
+                  ? ThemeUtils.backgroundColor(context).withOpacity(bgOpacity)
+                  : const Color(0xFFF2F2F7).withOpacity(bgOpacity),
+              border: Border(
+                bottom: BorderSide(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.08 * eased)
+                      : Colors.black.withOpacity(0.08 * eased),
+                  width: 0.5,
+                ),
+              ),
+            ),
+            child: SafeArea(
+              bottom: false,
+              child: SizedBox(
+                height: topBarHeight,
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_ios, size: 20),
+                      onPressed: () => Navigator.of(context).pop(),
+                      tooltip: '返回',
+                    ),
+                    Expanded(
+                      child: Opacity(
+                        opacity: titleOpacity,
+                        child: const Text(
+                          'Bilibili 设置',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 48), // 右侧占位
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLargeTitle() {
+    final eased = Curves.easeOutCubic.transform(_collapseProgress);
+    final opacity = (1 - eased).clamp(0.0, 1.0);
+    final translateY = -14 * eased;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),
+      child: Transform.translate(
+        offset: Offset(0, translateY),
+        child: Opacity(
+          opacity: opacity,
+          child: const Text(
+            'Bilibili 设置',
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.w700,
+              height: 1.05,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   // 构建音质设置分组
   Widget _buildQualitySection(bool isDark) {
     return Consumer<DownloadManager>(
@@ -438,7 +559,7 @@ class BilibiliSettingsPage extends StatelessWidget {
   }
 
   /// 显示音质选择器
-  static void _showQualityPicker(
+  void _showQualityPicker(
     BuildContext context, {
     required String title,
     required BilibiliAudioQuality currentQuality,
@@ -518,7 +639,7 @@ class BilibiliSettingsPage extends StatelessWidget {
   }
 
   /// 选择下载目录
-  static Future<void> _selectDownloadDirectory(BuildContext context, DownloadManager downloadManager) async {
+  Future<void> _selectDownloadDirectory(BuildContext context, DownloadManager downloadManager) async {
     try {
       final result = await FilePicker.platform.getDirectoryPath();
       if (result != null) {
@@ -539,7 +660,7 @@ class BilibiliSettingsPage extends StatelessWidget {
   }
 
   /// 打开当前下载目录
-  static Future<void> _openDownloadDirectory(
+  Future<void> _openDownloadDirectory(
     BuildContext context,
     DownloadManager downloadManager,
   ) async {
@@ -568,20 +689,20 @@ class BilibiliSettingsPage extends StatelessWidget {
   }
 
   /// 获取缓存大小
-  static Future<String> _getCacheSize(DownloadManager downloadManager) async {
+  Future<String> _getCacheSize(DownloadManager downloadManager) async {
     try {
       final appCacheDir = await getApplicationCacheDirectory();
       final cacheDir = p.join(appCacheDir.path, 'bilibili_auto');
       final dir = Directory(cacheDir);
       if (!await dir.exists()) return '0 MB';
-      
+
       int totalSize = 0;
       await for (final entity in dir.list(recursive: true)) {
         if (entity is File) {
           totalSize += await entity.length();
         }
       }
-      
+
       final sizeInMB = totalSize / (1024 * 1024);
       if (sizeInMB < 1024) {
         return '${sizeInMB.toStringAsFixed(2)} MB';
@@ -594,12 +715,12 @@ class BilibiliSettingsPage extends StatelessWidget {
   }
 
   /// 打开缓存目录
-  static Future<void> _openCacheDirectory(BuildContext context, DownloadManager downloadManager) async {
+  Future<void> _openCacheDirectory(BuildContext context, DownloadManager downloadManager) async {
     try {
       final appCacheDir = await getApplicationCacheDirectory();
       final cacheDir = p.join(appCacheDir.path, 'bilibili_auto');
       final result = await OpenFilex.open(cacheDir);
-      
+
       if (!context.mounted) return;
       if (result.type != ResultType.done) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -615,7 +736,7 @@ class BilibiliSettingsPage extends StatelessWidget {
   }
 
   /// 清空缓存
-  static Future<void> _clearCache(BuildContext context, DownloadManager downloadManager) async {
+  Future<void> _clearCache(BuildContext context, DownloadManager downloadManager) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -644,7 +765,7 @@ class BilibiliSettingsPage extends StatelessWidget {
         await dir.delete(recursive: true);
         await dir.create();
       }
-      
+
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('缓存已清空')),

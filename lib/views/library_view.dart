@@ -5,12 +5,11 @@ import '../database/database.dart';
 import '../services/player_provider.dart';
 import '../widgets/show_aware_page.dart';
 import '../utils/theme_utils.dart';
-import '../widgets/motto_toast.dart';
 import '../widgets/music_import_dialog.dart';
-import '../widgets/apple_music_card.dart';
 import '../widgets/apple_music_song_tile.dart';
 import '../widgets/animated_list_item.dart';
 import '../widgets/unified_cover_image.dart';
+import '../widgets/motto_search_field.dart';
 import '../main.dart';
 
 /// 本地音乐库页面
@@ -22,17 +21,25 @@ class LibraryView extends StatefulWidget {
 }
 
 class LibraryViewState extends State<LibraryView> with ShowAwarePage {
+  static const Color _accentColor = Color(0xFFE84C4C);
+
   late final TextEditingController _searchController;
-  
+  late final ScrollController _scrollController;
+  late final FocusNode _searchFocusNode;
+
   List<Song> _songs = [];
   List<Song>? _filteredSongs;
   String _searchQuery = '';
   bool _isLoading = false;
+  double _collapseProgress = 0.0;
 
   @override
   void initState() {
     super.initState();
     _searchController = TextEditingController();
+    _scrollController = ScrollController();
+    _searchFocusNode = FocusNode();
+    _scrollController.addListener(_onScroll);
     _loadSongs();
   }
 
@@ -44,7 +51,19 @@ class LibraryViewState extends State<LibraryView> with ShowAwarePage {
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    const collapseThreshold = 40.0;
+    final offset = _scrollController.offset.clamp(0.0, collapseThreshold);
+    final progress = offset / collapseThreshold;
+    if ((progress - _collapseProgress).abs() > 0.01) {
+      setState(() => _collapseProgress = progress);
+    }
   }
 
   /// 加载歌曲
@@ -133,6 +152,11 @@ class LibraryViewState extends State<LibraryView> with ShowAwarePage {
 
   @override
   Widget build(BuildContext context) {
+    final topPadding = MediaQuery.of(context).padding.top;
+    final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
+    final bottomSpacerHeight = keyboardVisible ? 16.0 : 120.0;
+    const topBarHeight = 52.0;
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
@@ -141,229 +165,122 @@ class LibraryViewState extends State<LibraryView> with ShowAwarePage {
           final playerKey = GlobalPlayerManager.playerKey;
           final playerState = playerKey?.currentState;
           final percentage = playerState?.percentage ?? -1;
-          
+
           debugPrint('[LibraryView PopScope] 播放器展开百分比: ${(percentage * 100).toStringAsFixed(1)}%');
-          
+
           if (playerState != null && percentage >= 0.9) {
             // 播放器全屏，优先缩小播放器
             debugPrint('[LibraryView PopScope] ✓ 拦截返回，缩小播放器');
             playerState.animateToState(false);
             return;
           }
-          
+
           // 播放器非全屏，正常返回上一页
           debugPrint('[LibraryView PopScope] → 返回上一页');
           Navigator.of(context).pop();
         }
       },
       child: Scaffold(
+        resizeToAvoidBottomInset: false,
         backgroundColor: Theme.of(context).brightness == Brightness.dark
             ? ThemeUtils.backgroundColor(context)
             : const Color(0xFFFFFFFF),
-        body: CustomScrollView(
-          slivers: [
-            // 液态玻璃头部容器（AppBar + 搜索框）
-            SliverToBoxAdapter(
-              child: _buildHeaderWithSearch(),
-            ),
-            
-            // 内容
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height - 200,
-                child: _buildBody(),
+        body: Stack(
+          children: [
+            RefreshIndicator(
+              onRefresh: _loadSongs,
+              child: CustomScrollView(
+                controller: _scrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: SizedBox(height: topPadding + topBarHeight + 1),
+                  ),
+                  SliverToBoxAdapter(
+                    child: _buildLargeTitle(),
+                  ),
+                  SliverToBoxAdapter(
+                    child: _buildSearchField(),
+                  ),
+                  SliverToBoxAdapter(
+                    child: _buildActionButtons(),
+                  ),
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: 12),
+                  ),
+                  ..._buildContentSlivers(),
+                  SliverToBoxAdapter(
+                    child: SizedBox(height: bottomSpacerHeight),
+                  ),
+                ],
               ),
             ),
+            _buildTopBar(topPadding, topBarHeight),
           ],
         ),
       ),
     );
   }
 
-  /// 构建整合的头部（AppBar + 搜索框）
-  Widget _buildHeaderWithSearch() {
+  Widget _buildTopBar(double topPadding, double topBarHeight) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final statusBarHeight = MediaQuery.of(context).padding.top;
-    
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(20),
-          bottomRight: Radius.circular(20),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isDark
-                ? Colors.blue.withOpacity(0.15)
-                : Colors.blue.withOpacity(0.2),
-            blurRadius: 20,
-            spreadRadius: 0,
-            offset: const Offset(0, 4),
-          ),
-          if (!isDark)
-            BoxShadow(
-              color: Colors.blue.withOpacity(0.08),
-              blurRadius: 30,
-              spreadRadius: 2,
-              offset: const Offset(0, 6),
-            ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(20),
-          bottomRight: Radius.circular(20),
-        ),
+    final eased = Curves.easeOutCubic.transform(_collapseProgress);
+    final bgOpacity = (eased * 0.95).clamp(0.0, 0.95);
+    final titleOpacity = eased.clamp(0.0, 1.0);
+
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: ClipRect(
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          filter: ImageFilter.blur(sigmaX: 20 * eased, sigmaY: 20 * eased),
           child: Container(
+            height: topPadding + topBarHeight,
             decoration: BoxDecoration(
               color: isDark
-                  ? ThemeUtils.backgroundColor(context).withOpacity(0.97)
-                  : Colors.white.withOpacity(0.95),
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-              ),
-              border: Border.all(
-                color: isDark
-                    ? Colors.white.withOpacity(0.12)
-                    : Colors.white.withOpacity(0.3),
-                width: 1,
+                  ? ThemeUtils.backgroundColor(context).withOpacity(bgOpacity)
+                  : Colors.white.withOpacity(bgOpacity),
+              border: Border(
+                bottom: BorderSide(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.08 * eased)
+                      : Colors.black.withOpacity(0.08 * eased),
+                  width: 0.5,
+                ),
               ),
             ),
-            child: Column(
-              children: [
-                SizedBox(height: statusBarHeight),
-                
-                // AppBar 部分
-                SizedBox(
-                  height: 56,
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back_ios, size: 20),
-                        onPressed: () => Navigator.of(context).pop(),
-                        tooltip: '返回',
-                      ),
-                      const Expanded(
-                        child: Text(
+            child: SafeArea(
+              bottom: false,
+              child: SizedBox(
+                height: topBarHeight,
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_ios, size: 20),
+                      onPressed: () => Navigator.of(context).pop(),
+                      tooltip: '返回',
+                    ),
+                    Expanded(
+                      child: Opacity(
+                        opacity: titleOpacity,
+                        child: const Text(
                           '本地音乐库',
                           style: TextStyle(
-                            fontSize: 20,
+                            fontSize: 17,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.autorenew, size: 22),
-                        onPressed: _loadSongs,
-                        tooltip: '刷新',
-                      ),
-                    ],
-                  ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.autorenew, size: 22),
+                      onPressed: _loadSongs,
+                      tooltip: '刷新',
+                    ),
+                  ],
                 ),
-                
-                // 搜索框部分
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                  child: Row(
-                    children: [
-                      // iOS 风格搜索框
-                      Expanded(
-                        child: Container(
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? const Color(0xFF1C1C1E)
-                                : const Color(0xFFE5E5EA),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Row(
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(left: 8),
-                                child: Icon(
-                                  Icons.search,
-                                  size: 20,
-                                  color: isDark
-                                      ? Colors.white.withOpacity(0.5)
-                                      : Colors.black.withOpacity(0.5),
-                                ),
-                              ),
-                              Expanded(
-                                child: Center(
-                                  child: TextField(
-                                    controller: _searchController,
-                                    onChanged: (query) => _filterSongs(query),
-                                    style: TextStyle(
-                                      fontSize: 17,
-                                      color: isDark ? Colors.white : Colors.black,
-                                    ),
-                                    decoration: InputDecoration(
-                                      hintText: '搜索',
-                                      hintStyle: TextStyle(
-                                        fontSize: 17,
-                                        color: isDark
-                                            ? Colors.white.withOpacity(0.3)
-                                            : Colors.black.withOpacity(0.3),
-                                      ),
-                                      border: InputBorder.none,
-                                      contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 0,
-                                      ),
-                                      isDense: true,
-                                    ),
-                                    textAlignVertical: TextAlignVertical.center,
-                                  ),
-                                ),
-                              ),
-                              if (_searchQuery.isNotEmpty)
-                                IconButton(
-                                  icon: Icon(
-                                    Icons.cancel,
-                                    size: 18,
-                                    color: isDark
-                                        ? Colors.white.withOpacity(0.5)
-                                        : Colors.black.withOpacity(0.5),
-                                  ),
-                                  onPressed: _clearSearch,
-                                  tooltip: '清除',
-                                  padding: const EdgeInsets.all(8),
-                                  constraints: const BoxConstraints(),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      
-                      // 导入按钮
-                      const SizedBox(width: 12),
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: _showImportOptions,
-                          borderRadius: BorderRadius.circular(20),
-                          child: Container(
-                            width: 36,
-                            height: 36,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFFF3B30),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.add,
-                              size: 24,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -371,16 +288,238 @@ class LibraryViewState extends State<LibraryView> with ShowAwarePage {
     );
   }
 
-  Widget _buildBody() {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+  Widget _buildLargeTitle() {
+    final eased = Curves.easeOutCubic.transform(_collapseProgress);
+    final opacity = (1 - eased).clamp(0.0, 1.0);
+    final translateY = -14 * eased;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),
+      child: Transform.translate(
+        offset: Offset(0, translateY),
+        child: Opacity(
+          opacity: opacity,
+          child: const Text(
+            '本地音乐库',
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.w700,
+              height: 1.05,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchField() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: MottoSearchField(
+              controller: _searchController,
+              focusNode: _searchFocusNode,
+              hintText: '搜索歌曲',
+              onChanged: (value) {
+                setState(() {});
+                _filterSongs(value);
+              },
+              onSubmitted: (value) => _filterSongs(value),
+              onClear: _clearSearch,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: _showImportOptions,
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: const BoxDecoration(
+                  color: _accentColor,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.add,
+                  size: 24,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildActionButton(
+              icon: Icons.play_arrow_rounded,
+              label: '播放',
+              onTap: () => _playAllSongs(shuffle: false),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildActionButton(
+              icon: Icons.shuffle_rounded,
+              label: '随机播放',
+              onTap: () => _playAllSongs(shuffle: true),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF2F2F2);
+    const textColor = _accentColor;
+    return Material(
+      color: bgColor,
+      borderRadius: BorderRadius.circular(22),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+        onTap: onTap,
+        child: SizedBox(
+          height: 44,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 20, color: textColor),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: textColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _playAllSongs({required bool shuffle}) async {
+    final songs = _filteredSongs ?? _songs;
+    if (songs.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('暂无可播放的歌曲')),
+        );
+      }
+      return;
     }
-    
+
+    final playerProvider = Provider.of<PlayerProvider>(context, listen: false);
+    if (shuffle) {
+      final shuffled = List<Song>.from(songs)..shuffle();
+      await playerProvider.playSong(
+        shuffled.first,
+        playlist: shuffled,
+        index: 0,
+        playNow: true,
+      );
+    } else {
+      await playerProvider.playSong(
+        songs.first,
+        playlist: songs,
+        index: 0,
+        playNow: true,
+      );
+    }
+  }
+
+  List<Widget> _buildContentSlivers() {
+    if (_isLoading && _songs.isEmpty) {
+      return const [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ];
+    }
+
     if (_filteredSongs == null || _filteredSongs!.isEmpty) {
-      return _buildEmptyView();
+      return [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: _buildEmptyView(),
+        ),
+      ];
     }
-    
-    return _buildSongsList();
+
+    return [
+      SliverPadding(
+        padding: const EdgeInsets.symmetric(horizontal: 0),
+        sliver: _buildSongsSliverList(),
+      ),
+    ];
+  }
+
+  SliverList _buildSongsSliverList() {
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          final song = _filteredSongs![index];
+          return _buildSongItem(song, index);
+        },
+        childCount: _filteredSongs!.length,
+      ),
+    );
+  }
+
+  Widget _buildSongItem(Song song, int index) {
+    return Consumer<PlayerProvider>(
+      builder: (context, playerProvider, child) {
+        final isPlaying = playerProvider.currentSong?.id == song.id;
+        return AnimatedListItem(
+          index: index,
+          delay: 33,
+          child: Column(
+            children: [
+              AppleMusicSongTile(
+                title: song.title,
+                artist: song.artist ?? '未知艺术家',
+                coverUrl: song.albumArtPath,
+                duration: song.duration != null
+                    ? formatDuration(song.duration!)
+                    : null,
+                isPlaying: isPlaying,
+                isFavorite: song.isFavorite,
+                onTap: () {
+                  playerProvider.playSong(song, playlist: _filteredSongs!, index: index);
+                },
+                onFavoriteTap: () => _toggleFavorite(song),
+                onMoreTap: () => _showSongMenu(song, index),
+              ),
+              Divider(
+                height: 1,
+                thickness: 0.5,
+                indent: 88,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   /// 构建空视图
@@ -417,53 +556,6 @@ class LibraryViewState extends State<LibraryView> with ShowAwarePage {
           ],
         ),
       ),
-    );
-  }
-
-  /// 构建歌曲列表
-  Widget _buildSongsList() {
-    return Consumer<PlayerProvider>(
-      builder: (context, playerProvider, child) {
-        return ListView.builder(
-          padding: const EdgeInsets.only(top: 8, bottom: 180),
-          itemCount: _filteredSongs!.length,
-          itemBuilder: (context, index) {
-            final song = _filteredSongs![index];
-            final isPlaying = playerProvider.currentSong?.id == song.id;
-
-            return AnimatedListItem(
-              index: index,
-              delay: 33,
-              child: Column(
-                children: [
-                  AppleMusicSongTile(
-                    title: song.title,
-                    artist: song.artist ?? '未知艺术家',
-                    coverUrl: song.albumArtPath,
-                    duration: song.duration != null
-                        ? formatDuration(song.duration!)
-                        : null,
-                    isPlaying: isPlaying,
-                    isFavorite: song.isFavorite,
-                    onTap: () {
-                      playerProvider.playSong(song, playlist: _filteredSongs!, index: index);
-                    },
-                    onFavoriteTap: () => _toggleFavorite(song),
-                    onMoreTap: () => _showSongMenu(song, index),
-                  ),
-                  // Apple Music 风格分隔线
-                  Divider(
-                    height: 1,
-                    thickness: 0.5,
-                    indent: 88, // 左侧缩进（封面宽度 + padding）
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
     );
   }
 

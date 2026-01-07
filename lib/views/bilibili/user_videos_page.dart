@@ -15,6 +15,7 @@ import 'package:motto_music/views/bilibili/video_detail_page.dart';
 import 'package:motto_music/widgets/apple_music_song_tile.dart';
 import 'package:motto_music/widgets/global_top_bar.dart';
 import 'package:motto_music/widgets/unified_cover_image.dart';
+import 'package:motto_music/widgets/frosted_bottom_sheet.dart';
 
 /// 制作人员 / 作者页面（基于 Bilibili UP 主）
 ///
@@ -572,89 +573,44 @@ class _UserVideosPageState extends State<UserVideosPage> {
   }
 
   Future<void> _showVideoMenu(BilibiliVideo video, {required bool isDark}) async {
-    final textColor = ThemeUtils.textColor(context);
-
-    await showModalBottomSheet<void>(
+    await FrostedBottomSheet.show(
       context: context,
-      backgroundColor: ThemeUtils.backgroundColor(context),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      initialChildSize: 0.3,
+      minChildSize: 0.2,
+      maxChildSize: 0.5,
+      header: buildFrostedSheetHeader(
+        context: context,
+        cover: UnifiedCoverImage(
+          coverPath: video.pic,
+          width: 48,
+          height: 48,
+          borderRadius: 8,
+          isDark: isDark,
+        ),
+        title: video.title,
+        subtitle: _songSubtitleFor(video),
       ),
-      builder: (context) {
-        return SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
-                child: Row(
-                  children: [
-                    UnifiedCoverImage(
-                      coverPath: video.pic,
-                      width: 48,
-                      height: 48,
-                      borderRadius: 8,
-                      fit: BoxFit.cover,
-                      isDark: isDark,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            video.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: textColor,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            _songSubtitleFor(video),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: textColor.withValues(alpha: 0.6),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.open_in_new_rounded),
-                title: const Text('打开详情'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _navigateToVideo(video);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.link_rounded),
-                title: const Text('复制 BV 号'),
-                onTap: () {
-                  Navigator.pop(context);
-                  Clipboard.setData(ClipboardData(text: video.bvid));
-                  ScaffoldMessenger.of(this.context).showSnackBar(
-                    const SnackBar(content: Text('已复制 BV 号')),
-                  );
-                },
-              ),
-              SizedBox(height: MediaQuery.of(context).padding.bottom + 12),
-            ],
-          ),
-        );
-      },
+      tiles: [
+        ListTile(
+          leading: const Icon(Icons.open_in_new_rounded),
+          title: const Text('打开详情'),
+          onTap: () {
+            Navigator.pop(context);
+            _navigateToVideo(video);
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.link_rounded),
+          title: const Text('复制 BV 号'),
+          onTap: () {
+            Navigator.pop(context);
+            Clipboard.setData(ClipboardData(text: video.bvid));
+            ScaffoldMessenger.of(this.context).showSnackBar(
+              const SnackBar(content: Text('已复制 BV 号')),
+            );
+          },
+        ),
+      ],
     );
   }
 

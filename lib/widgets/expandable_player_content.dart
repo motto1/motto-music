@@ -3225,22 +3225,38 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
                   width: 1.5,
                 ),
               ),
-              child: ListView(
-                controller: scrollController,
+              child: Column(
                 children: [
-                  const SizedBox(height: 12),
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).dividerColor.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
+                  // 拖动把手区域（不在ListView内，可直接拖动调整弹窗高度）
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onVerticalDragUpdate: (details) {
+                      // 手势会被DraggableScrollableSheet捕获处理
+                    },
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 12),
+                        Center(
+                          child: Container(
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).dividerColor.withOpacity(0.5),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  Padding(
+                  // 可滚动内容区域
+                  Expanded(
+                    child: ListView(
+                      controller: scrollController,
+                      padding: EdgeInsets.zero,
+                      children: [
+                        Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: ValueListenableBuilder<Duration?>(
                       valueListenable: playerProvider.sleepTimerRemainingNotifier,
@@ -3332,6 +3348,9 @@ class _ExpandablePlayerContentState extends State<ExpandablePlayerContent>
                     },
                   ),
                   const SizedBox(height: 16),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),

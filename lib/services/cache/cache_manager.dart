@@ -37,7 +37,7 @@ class CacheConfig {
 
   const CacheConfig({
     this.defaultTTL = const Duration(hours: 1),
-    this.maxMemoryCacheSize = 100,
+    this.maxMemoryCacheSize = 200,
     this.cleanupInterval = const Duration(minutes: 5),
   });
 }

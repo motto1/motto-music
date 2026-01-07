@@ -21,6 +21,8 @@ import 'package:motto_music/services/cache/page_cache_service.dart';
 import 'package:motto_music/services/cache/album_art_cache_service.dart';
 import 'package:motto_music/views/bilibili/search_strategy_navigator.dart';
 import 'package:motto_music/widgets/motto_search_field.dart';
+import 'package:motto_music/widgets/unified_cover_image.dart';
+import 'package:motto_music/widgets/frosted_bottom_sheet.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// 全局搜索结果页
@@ -1050,47 +1052,55 @@ class _GlobalSearchResultPageState extends State<GlobalSearchResultPage>
   }
 
   Future<void> _showResultMenu(BilibiliVideo video, int index) async {
-    await showModalBottomSheet<void>(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    await FrostedBottomSheet.show(
       context: context,
-      showDragHandle: true,
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.play_arrow_rounded),
-                title: const Text('播放'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _playVideo(video, index);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.open_in_new_rounded),
-                title: const Text('查看详情'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _navigateToVideoDetail(video);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.person_outline_rounded),
-                title: const Text('查看UP主'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _navigateToUploader(
-                    video.owner.mid,
-                    video.owner.name.isEmpty ? 'UP主' : video.owner.name,
-                    video.owner.face,
-                  );
-                },
-              ),
-              SizedBox(height: MediaQuery.of(context).padding.bottom),
-            ],
-          ),
-        );
-      },
+      initialChildSize: 0.35,
+      minChildSize: 0.2,
+      maxChildSize: 0.6,
+      header: buildFrostedSheetHeader(
+        context: context,
+        cover: UnifiedCoverImage(
+          coverPath: video.pic,
+          width: 48,
+          height: 48,
+          borderRadius: 8,
+          isDark: isDark,
+        ),
+        title: video.title,
+        subtitle: video.owner.name,
+      ),
+      tiles: [
+        ListTile(
+          leading: const Icon(Icons.play_arrow_rounded),
+          title: const Text('播放'),
+          onTap: () {
+            Navigator.pop(context);
+            _playVideo(video, index);
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.open_in_new_rounded),
+          title: const Text('查看详情'),
+          onTap: () {
+            Navigator.pop(context);
+            _navigateToVideoDetail(video);
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.person_outline_rounded),
+          title: const Text('查看UP主'),
+          onTap: () {
+            Navigator.pop(context);
+            _navigateToUploader(
+              video.owner.mid,
+              video.owner.name.isEmpty ? 'UP主' : video.owner.name,
+              video.owner.face,
+            );
+          },
+        ),
+      ],
     );
   }
 

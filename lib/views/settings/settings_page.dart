@@ -167,9 +167,7 @@ class SettingsPageState extends State<SettingsPage> with ShowAwarePage {
                       delegate: SliverChildListDelegate([
                         _buildThemeSection(themeProvider, isDark),
                         const SizedBox(height: 32),
-                        _buildStorageSection(isDark),
-                        const SizedBox(height: 32),
-                        _buildBilibiliSection(isDark),
+                        _buildMediaSection(isDark),
                         const SizedBox(height: 32),
                         _buildPlaybackSection(isDark),
                         const SizedBox(height: 32),
@@ -231,15 +229,15 @@ class SettingsPageState extends State<SettingsPage> with ShowAwarePage {
     );
   }
 
-  // 构建存储设置分组
-  Widget _buildStorageSection(bool isDark) {
+  // 构建媒体与Bilibili分组（合并后）
+  Widget _buildMediaSection(bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 16, bottom: 8),
           child: Text(
-            '媒体与存储',
+            '媒体与Bilibili',
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w400,
@@ -276,51 +274,6 @@ class SettingsPageState extends State<SettingsPage> with ShowAwarePage {
                 },
               ),
               Divider(height: 1, indent: 56, endIndent: 0),
-              ListTile(
-                leading: Icon(Icons.storage_rounded, color: Colors.blue),
-                title: const Text('存储管理', style: TextStyle(fontWeight: FontWeight.w400)),
-                subtitle: Text(
-                  '本地存储、WebDAV等',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: isDark ? Colors.white.withOpacity(0.5) : Colors.grey[600],
-                  ),
-                ),
-                trailing: Icon(CupertinoIcons.chevron_right, size: 18, color: Colors.grey[400]),
-                onTap: () {
-                  NestedNavigationHelper.push(context, "/settings/storage");
-                },
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  // 构建 Bilibili 分组
-  Widget _buildBilibiliSection(bool isDark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 16, bottom: 8),
-          child: Text(
-            'Bilibili',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w400,
-              color: Colors.red,
-            ),
-          ),
-        ),
-        Container(
-          decoration: BoxDecoration(
-            color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Column(
-            children: [
               ListTile(
                 leading: Icon(CupertinoIcons.arrow_down_circle, color: Colors.blue),
                 title: const Text('下载管理', style: TextStyle(fontWeight: FontWeight.w400)),

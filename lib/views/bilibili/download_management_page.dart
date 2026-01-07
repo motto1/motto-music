@@ -6,7 +6,6 @@ import 'package:motto_music/services/bilibili/download_manager.dart';
 import 'package:motto_music/services/player_provider.dart';
 import 'package:motto_music/services/cache/album_art_cache_service.dart';
 import 'package:motto_music/widgets/bilibili/download_task_card.dart';
-import 'package:motto_music/widgets/frosted_page_header.dart';
 import 'package:motto_music/utils/theme_utils.dart';
 import 'dart:ui';
 
@@ -26,10 +25,14 @@ class DownloadManagementPage extends StatefulWidget {
 
 class _DownloadManagementPageState extends State<DownloadManagementPage> {
   int _selectedSegment = 0; // 0:全部, 1:下载中, 2:已完成, 3:失败
+  final ScrollController _scrollController = ScrollController();
+  double _collapseProgress = 0.0;
+  static const double _collapseDistance = 40.0;
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_handleScroll);
     // 刷新任务列表
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<DownloadManager>().refreshTasks();
@@ -37,97 +40,199 @@ class _DownloadManagementPageState extends State<DownloadManagementPage> {
   }
 
   @override
+  void dispose() {
+    _scrollController.removeListener(_handleScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _handleScroll() {
+    if (!_scrollController.hasClients) return;
+    final progress = (_scrollController.offset / _collapseDistance).clamp(0.0, 1.0);
+    if ((progress - _collapseProgress).abs() > 0.01) {
+      setState(() => _collapseProgress = progress);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+    final topPadding = MediaQuery.of(context).padding.top;
+    const topBarHeight = 52.0;
+
     return Scaffold(
       backgroundColor: isDark
           ? ThemeUtils.backgroundColor(context)
           : const Color(0xFFFFFFFF),
-      body: NotificationListener<OverscrollIndicatorNotification>(
-        onNotification: (notification) {
-          notification.disallowIndicator();
-          return true;
-        },
-        child: CustomScrollView(
-          physics: const ClampingScrollPhysics(),
-          slivers: [
-          // 液态玻璃头部
-          SliverToBoxAdapter(
-            child: FrostedPageHeader(
-              title: '下载管理',
-              actions: [
-                // 批量操作菜单
-                PopupMenuButton<String>(
-                  icon: const Icon(CupertinoIcons.ellipsis_vertical, size: 22),
-                  onSelected: _handleMenuAction,
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'pause_all',
-                      child: Row(
-                        children: [
-                          Icon(CupertinoIcons.pause_circle, size: 20),
-                          SizedBox(width: 8),
-                          Text('暂停全部'),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'resume_all',
-                      child: Row(
-                        children: [
-                          Icon(CupertinoIcons.play_circle, size: 20),
-                          SizedBox(width: 8),
-                          Text('恢复全部'),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'retry_failed',
-                      child: Row(
-                        children: [
-                          Icon(CupertinoIcons.refresh, size: 20),
-                          SizedBox(width: 8),
-                          Text('重试失败'),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'clear_completed',
-                      child: Row(
-                        children: [
-                          Icon(CupertinoIcons.trash, size: 20),
-                          SizedBox(width: 8),
-                          Text('清空已完成'),
-                        ],
-                      ),
-                    ),
-                  ],
+      body: Stack(
+        children: [
+          NotificationListener<OverscrollIndicatorNotification>(
+            onNotification: (notification) {
+              notification.disallowIndicator();
+              return true;
+            },
+            child: CustomScrollView(
+              controller: _scrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverToBoxAdapter(
+                  child: SizedBox(height: topPadding + topBarHeight + 1),
+                ),
+                SliverToBoxAdapter(
+                  child: _buildLargeTitle(),
+                ),
+                // iOS 风格分段控件
+                SliverToBoxAdapter(
+                  child: _buildSegmentedControl(),
+                ),
+                // 任务列表
+                Consumer<DownloadManager>(
+                  builder: (context, downloadManager, child) {
+                    if (downloadManager.isLoading) {
+                      return const SliverFillRemaining(
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
+
+                    final tasks = _getFilteredTasks(downloadManager);
+                    return _buildTaskList(tasks);
+                  },
                 ),
               ],
             ),
           ),
-          
-          // iOS 风格分段控件
-          SliverToBoxAdapter(
-            child: _buildSegmentedControl(),
-          ),
-          
-          // 任务列表
-          Consumer<DownloadManager>(
-            builder: (context, downloadManager, child) {
-              if (downloadManager.isLoading) {
-                return const SliverFillRemaining(
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              }
-              
-              final tasks = _getFilteredTasks(downloadManager);
-              return _buildTaskList(tasks);
-            },
-          ),
+          _buildTopBar(topPadding, topBarHeight, isDark),
         ],
       ),
+    );
+  }
+
+  Widget _buildTopBar(double topPadding, double topBarHeight, bool isDark) {
+    final eased = Curves.easeOutCubic.transform(_collapseProgress);
+    final bgOpacity = (eased * 0.95).clamp(0.0, 0.95);
+    final titleOpacity = eased.clamp(0.0, 1.0);
+
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20 * eased, sigmaY: 20 * eased),
+          child: Container(
+            height: topPadding + topBarHeight,
+            decoration: BoxDecoration(
+              color: isDark
+                  ? ThemeUtils.backgroundColor(context).withOpacity(bgOpacity)
+                  : Colors.white.withOpacity(bgOpacity),
+              border: Border(
+                bottom: BorderSide(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.08 * eased)
+                      : Colors.black.withOpacity(0.08 * eased),
+                  width: 0.5,
+                ),
+              ),
+            ),
+            child: SafeArea(
+              bottom: false,
+              child: SizedBox(
+                height: topBarHeight,
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_ios, size: 20),
+                      onPressed: () => Navigator.of(context).pop(),
+                      tooltip: '返回',
+                    ),
+                    Expanded(
+                      child: Opacity(
+                        opacity: titleOpacity,
+                        child: const Text(
+                          '下载管理',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    // 批量操作菜单
+                    PopupMenuButton<String>(
+                      icon: const Icon(CupertinoIcons.ellipsis_vertical, size: 22),
+                      onSelected: _handleMenuAction,
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'pause_all',
+                          child: Row(
+                            children: [
+                              Icon(CupertinoIcons.pause_circle, size: 20),
+                              SizedBox(width: 8),
+                              Text('暂停全部'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'resume_all',
+                          child: Row(
+                            children: [
+                              Icon(CupertinoIcons.play_circle, size: 20),
+                              SizedBox(width: 8),
+                              Text('恢复全部'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'retry_failed',
+                          child: Row(
+                            children: [
+                              Icon(CupertinoIcons.refresh, size: 20),
+                              SizedBox(width: 8),
+                              Text('重试失败'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'clear_completed',
+                          child: Row(
+                            children: [
+                              Icon(CupertinoIcons.trash, size: 20),
+                              SizedBox(width: 8),
+                              Text('清空已完成'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLargeTitle() {
+    final eased = Curves.easeOutCubic.transform(_collapseProgress);
+    final opacity = (1 - eased).clamp(0.0, 1.0);
+    final translateY = -14 * eased;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),
+      child: Transform.translate(
+        offset: Offset(0, translateY),
+        child: Opacity(
+          opacity: opacity,
+          child: const Text(
+            '下载管理',
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.w700,
+              height: 1.05,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -138,7 +243,7 @@ class _DownloadManagementPageState extends State<DownloadManagementPage> {
       builder: (context, downloadManager, child) {
         final stats = downloadManager.getStatistics();
         final isDark = Theme.of(context).brightness == Brightness.dark;
-        
+
         return Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
           child: Container(
@@ -168,7 +273,7 @@ class _DownloadManagementPageState extends State<DownloadManagementPage> {
                 filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: isDark 
+                    color: isDark
                         ? Colors.white.withOpacity(0.09)
                         : Colors.white.withOpacity(0.92),
                     borderRadius: BorderRadius.circular(12),
@@ -228,7 +333,7 @@ class _DownloadManagementPageState extends State<DownloadManagementPage> {
     required bool isDark,
   }) {
     final isSelected = _selectedSegment == index;
-    
+
     return Expanded(
       child: GestureDetector(
         onTap: () {
@@ -242,7 +347,7 @@ class _DownloadManagementPageState extends State<DownloadManagementPage> {
           padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 6),
           decoration: BoxDecoration(
             color: isSelected
-                ? (isDark 
+                ? (isDark
                     ? Colors.white.withOpacity(0.18)
                     : Colors.white.withOpacity(0.85))
                 : Colors.transparent,
@@ -435,7 +540,7 @@ class _DownloadManagementPageState extends State<DownloadManagementPage> {
       // 播放歌曲(参考收藏夹页面的方式)
       final playerProvider = context.read<PlayerProvider>();
       await playerProvider.playSong(song);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

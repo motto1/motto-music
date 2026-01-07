@@ -2418,55 +2418,10 @@ class _AddFavoriteBottomSheetState extends State<_AddFavoriteBottomSheet> {
                 // 搜索框
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Container(
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(left: 8),
-                          child: Icon(
-                            Icons.search,
-                            size: 20,
-                            color: isDark ? Colors.white.withOpacity(0.5) : Colors.black.withOpacity(0.5),
-                          ),
-                        ),
-                        Expanded(
-                          child: TextField(
-                            controller: _searchController,
-                            onChanged: _filterFavorites,
-                            style: TextStyle(fontSize: 17, color: isDark ? Colors.white : Colors.black),
-                            decoration: InputDecoration(
-                              hintText: '搜索收藏夹',
-                              hintStyle: TextStyle(
-                                fontSize: 17,
-                                color: isDark ? Colors.white.withOpacity(0.3) : Colors.black.withOpacity(0.3),
-                              ),
-                              border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                              isDense: true,
-                            ),
-                          ),
-                        ),
-                        if (_searchController.text.isNotEmpty)
-                          IconButton(
-                            icon: Icon(
-                              Icons.cancel,
-                              size: 18,
-                              color: isDark ? Colors.white.withOpacity(0.5) : Colors.black.withOpacity(0.5),
-                            ),
-                            onPressed: () {
-                              _searchController.clear();
-                              _filterFavorites('');
-                            },
-                            padding: const EdgeInsets.all(8),
-                            constraints: const BoxConstraints(),
-                          ),
-                      ],
-                    ),
+                  child: MottoSearchField(
+                    controller: _searchController,
+                    hintText: '搜索收藏夹',
+                    onChanged: _filterFavorites,
                   ),
                 ),
                 

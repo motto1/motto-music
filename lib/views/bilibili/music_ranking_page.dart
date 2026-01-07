@@ -12,6 +12,12 @@ import 'package:motto_music/views/bilibili/video_detail_page.dart';
 import 'package:motto_music/widgets/global_top_bar.dart';
 import 'package:motto_music/widgets/unified_cover_image.dart';
 import 'package:motto_music/router/route_observer.dart';
+import 'package:provider/provider.dart';
+import 'package:motto_music/database/database.dart' as db;
+import 'package:motto_music/services/player_provider.dart';
+import 'package:motto_music/services/cache/album_art_cache_service.dart';
+import 'package:motto_music/utils/bilibili_song_utils.dart';
+import 'package:motto_music/main.dart';
 
 enum MusicZoneBrowseMode {
   /// 自动选择：主分区用 ranking/v2，子分区用 newlist_rank。
@@ -234,11 +240,7 @@ class _MusicRankingPageState extends State<MusicRankingPage> with RouteAware {
     return 'music_zone:$modeKey:tid=${widget.zoneTid}:filter=$_filterValue:page=$page:pageSize=${widget.pageSize}';
   }
 
-  Duration get _cacheTtl {
-    return _browseMode == MusicZoneBrowseMode.rankingV2
-        ? const Duration(hours: 1)
-        : const Duration(minutes: 30);
-  }
+  Duration get _cacheTtl => const Duration(hours: 12);
 
   void _handleScroll() {
     if (!_scrollController.hasClients) return;
@@ -304,17 +306,41 @@ class _MusicRankingPageState extends State<MusicRankingPage> with RouteAware {
     final topPadding = MediaQuery.of(context).padding.top;
     const topBarHeight = 52.0;
 
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      body: Column(
-        children: [
-          SizedBox(
-            height: topPadding + topBarHeight + _topBarBottomHeight + 1,
-          ),
-          Expanded(
-            child: _buildContent(textColor, isDark),
-          ),
-        ],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          // 优先检查全局播放器是否全屏
+          final playerKey = GlobalPlayerManager.playerKey;
+          final playerState = playerKey?.currentState;
+          final percentage = playerState?.percentage ?? -1;
+
+          debugPrint('[MusicRankingPage PopScope] 播放器展开百分比: ${(percentage * 100).toStringAsFixed(1)}%');
+
+          if (playerState != null && percentage >= 0.9) {
+            // 播放器全屏，优先缩小播放器
+            debugPrint('[MusicRankingPage PopScope] ✓ 拦截返回，缩小播放器');
+            playerState.animateToState(false);
+            return;
+          }
+
+          // 播放器非全屏，正常返回上一页
+          debugPrint('[MusicRankingPage PopScope] → 返回上一页');
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: backgroundColor,
+        body: Column(
+          children: [
+            SizedBox(
+              height: topPadding + topBarHeight + _topBarBottomHeight + 1,
+            ),
+            Expanded(
+              child: _buildContent(textColor, isDark),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -445,13 +471,16 @@ class _MusicRankingPageState extends State<MusicRankingPage> with RouteAware {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.grey),
+            const Icon(Icons.error_outline, size: 64, color: Colors.grey),
             const SizedBox(height: 16),
-            Text(_errorMessage!, style: const TextStyle(color: Colors.grey)),
+            const Text('加载失败', style: TextStyle(fontSize: 18, color: Colors.grey)),
+            const SizedBox(height: 8),
+            Text(_errorMessage!, style: const TextStyle(fontSize: 14, color: Colors.grey)),
             const SizedBox(height: 16),
-            ElevatedButton(
+            ElevatedButton.icon(
               onPressed: _loadFirstPage,
-              child: const Text('重试'),
+              icon: const Icon(Icons.refresh),
+              label: const Text('重试'),
             ),
           ],
         ),
@@ -492,14 +521,7 @@ class _MusicRankingPageState extends State<MusicRankingPage> with RouteAware {
   Widget _buildGridItem(BilibiliVideo video, int index, Color textColor, bool isDark) {
     final isFeatured = index < 2;
     return InkWell(
-      onTap: () {
-        Navigator.of(context).push(
-          NamidaPageRoute(
-            page: VideoDetailPage(bvid: video.bvid),
-            type: PageTransitionType.slideUp,
-          ),
-        );
-      },
+      onTap: () => _handleVideoTap(video, index),
       borderRadius: BorderRadius.circular(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -533,6 +555,114 @@ class _MusicRankingPageState extends State<MusicRankingPage> with RouteAware {
         ],
       ),
     );
+  }
+
+  Future<void> _handleVideoTap(BilibiliVideo video, int index) async {
+    final bvid = video.bvid;
+    if (bvid.isEmpty) return;
+
+    try {
+      final pages = await _pageCache.getOrFetchVideoPages(
+        bvid,
+        () => _apiService.getVideoPages(bvid),
+      );
+
+      debugPrint(
+        '[MusicRankingPage] tap: bvid=$bvid pages=${pages.length} index=$index',
+      );
+
+      if (!mounted) return;
+
+      if (pages.length <= 1) {
+        await _playSingleVideo(video, index);
+        return;
+      }
+
+      Navigator.of(context).push(
+        NamidaPageRoute(
+          page: VideoDetailPage(bvid: bvid),
+          type: PageTransitionType.slideUp,
+        ),
+      );
+    } catch (e) {
+      debugPrint('[MusicRankingPage] 获取分P失败: $e');
+      if (!mounted) return;
+
+      // 无法判断时，保守进入多P页（避免把多P误当单P直接播放）
+      Navigator.of(context).push(
+        NamidaPageRoute(
+          page: VideoDetailPage(bvid: bvid),
+          type: PageTransitionType.slideUp,
+        ),
+      );
+    }
+  }
+
+  Future<void> _playSingleVideo(BilibiliVideo video, int index) async {
+    try {
+      final cookieManager = CookieManager();
+      final cookie = await cookieManager.getCookieString();
+
+      String? localCoverPath;
+      try {
+        localCoverPath = await AlbumArtCacheService.instance.ensureLocalPath(
+          video.pic,
+          cookie: cookie.isEmpty ? null : cookie,
+        );
+      } catch (_) {
+        // ignore: 封面缓存失败不阻塞播放
+      }
+
+      final playlist = <db.Song>[];
+      for (final entry in _videos.asMap().entries) {
+        final idx = entry.key;
+        final v = entry.value;
+        playlist.add(
+          db.Song(
+            id: -(idx + 1),
+            title: v.title,
+            artist: v.owner.name,
+            album: widget.title,
+            filePath: buildBilibiliFilePath(
+              bvid: v.bvid,
+              cid: null,
+            ),
+            lyrics: null,
+            bitrate: null,
+            sampleRate: null,
+            duration: v.duration,
+            albumArtPath: idx == index ? (localCoverPath ?? v.pic) : v.pic,
+            dateAdded: DateTime.now(),
+            isFavorite: false,
+            lastPlayedTime: DateTime.now(),
+            playedCount: 0,
+            source: 'bilibili',
+            bvid: v.bvid,
+            cid: null,
+            pageNumber: null,
+            bilibiliVideoId: null,
+          ),
+        );
+      }
+
+      final currentSong = playlist[index];
+      final playerProvider = context.read<PlayerProvider>();
+      await playerProvider.playSong(
+        currentSong,
+        playlist: playlist,
+        index: index,
+        shuffle: false,
+        playNow: true,
+      );
+
+      debugPrint('[MusicRankingPage] ✅ 单P直接播放: ${video.title}');
+    } catch (e) {
+      debugPrint('[MusicRankingPage] ❌ 单P播放失败: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('播放失败: $e')),
+      );
+    }
   }
 
   Widget _buildCoverCard(String imageUrl, bool isDark, bool showAvatars) {
